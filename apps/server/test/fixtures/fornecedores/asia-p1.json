@@ -1,0 +1,80 @@
+{
+ "total_paginas": 2,
+ "produtos": [
+  {
+   "codigo": "MC511",
+   "foto": "https://media.asiaimport.com.br/pai1.jpg",
+   "variacoes": [
+    {
+     "nome": "Bolsa Multifuncional",
+     "referencia": "MC511-CZ",
+     "preco": 89.0,
+     "qtd_estoque": 533,
+     "atributos": {
+      "cor": {
+       "value": "Cinza"
+      }
+     },
+     "imagens": [
+      {
+       "url": "https://media.asiaimport.com.br/var1.jpg"
+      }
+     ]
+    },
+    {
+     "nome": "Bolsa Multifuncional",
+     "referencia": "MC511-PT",
+     "preco": 89,
+     "qtd_estoque": 0,
+     "atributos": {
+      "cor": {
+       "value": "Preto"
+      }
+     },
+     "imagens": []
+    },
+    {
+     "nome": "Bolsa Sem Cor",
+     "referencia": "MC511-X",
+     "preco": "79.50",
+     "qtd_estoque": null,
+     "atributos": {}
+    }
+   ]
+  },
+  {
+   "codigo": "CA01",
+   "imagens": [
+    "arquivo.jpg",
+    "https://media.asiaimport.com.br/pai2.png"
+   ],
+   "variacoes": [
+    {
+     "nome": "Caneca - ",
+     "referencia": "CA01-AZ",
+     "preco": 15.9,
+     "qtd_estoque": 5603.0,
+     "atributos": {
+      "cor": {
+       "value": "Azul"
+      }
+     },
+     "foto": {
+      "src": " https://media.asiaimport.com.br/var2.jpg "
+     }
+    },
+    {
+     "nome": null,
+     "referencia": null,
+     "preco": null,
+     "qtd_estoque": 12,
+     "atributos": {
+      "cor": {
+       "value": null
+      }
+     }
+    }
+   ]
+  }
+ ]
+}

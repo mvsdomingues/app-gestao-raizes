@@ -1,0 +1,68 @@
+/* ══════════════════════════════════
+   VIEW ORÇAMENTO (aba interna)
+   ══════════════════════════════════ */
+#view-orcamento {
+  display: none;
+  flex: 1;
+  overflow-y: auto;
+  background: var(--creme);
+  padding: 28px 32px 60px;
+}
+.orc-toolbar {
+  max-width: 1100px;
+  margin: 0 auto 18px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 12px;
+}
+.btn-back {
+  background: var(--surface);
+  border: 1.5px solid var(--border);
+  border-radius: var(--radius);
+  padding: 9px 18px;
+  font-family: var(--font-body);
+  font-size: .85rem;
+  font-weight: 500;
+  color: var(--berinjela);
+  cursor: pointer;
+  transition: all .18s;
+}
+.btn-back:hover { border-color: var(--uva); background: #fff; color: var(--uva); }
+.orc-toolbar-actions { display: flex; gap: 8px; }
+.btn-print-inline {
+  background: var(--berinjela);
+  color: var(--creme);
+  border: none;
+  border-radius: var(--radius);
+  padding: 9px 18px;
+  font-family: var(--font-body);
+  font-weight: 600;
+  font-size: .82rem;
+  cursor: pointer;
+  transition: background .2s;
+}
+.btn-print-inline:hover { background: var(--uva); }
+.orcamento-sheet-full {
+  background: #fff;
+  max-width: 1100px;
+  margin: 0 auto;
+  padding: 52px 60px;
+  border-radius: 10px;
+  box-shadow: var(--shadow);
+  color: var(--grafite);
+  font-family: var(--font-body);
+}
+.orc-empty-state {
+  text-align: center;
+  padding: 60px 20px;
+  color: var(--muted);
+}
+.orc-empty-state h2 {
+  font-family: var(--font-display);
+  color: var(--berinjela);
+  font-size: 1.5rem;
+  margin: 8px 0;
+}
+.orc-empty-icon { font-size: 2.5rem; opacity: .5; margin-bottom: 6px; }
+

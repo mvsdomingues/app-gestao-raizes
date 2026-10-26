@@ -1,0 +1,36 @@
+[
+ {
+  "CodigoAmigavel": "06520",
+  "Nome": "CANECA ACRÍLICA 400 ML COM TAMPA",
+  "CorWebPrincipal": "AZUL",
+  "PrecoVenda": 13.08,
+  "QuantidadeDisponivel": 5356,
+  "ImagemUrl": "https://cdn.xbzbrindes.com.br/img/6520.jpg",
+  "Peso": 0.2
+ },
+ {
+  "CodigoAmigavel": "10250",
+  "Nome": "ESPELHO PLÁSTICO",
+  "CorWebPrincipal": "PRATA",
+  "PrecoVenda": 2.16,
+  "QuantidadeDisponivel": 92593,
+  "ImagemUrl": "arquivo-sem-base.jpg",
+  "Peso": 0.05
+ },
+ {
+  "CodigoAmigavel": "10251",
+  "Nome": "SEM COR",
+  "CorWebPrincipal": null,
+  "PrecoVenda": 5,
+  "QuantidadeDisponivel": 0,
+  "ImagemUrl": null
+ },
+ {
+  "CodigoAmigavel": "10252",
+  "Nome": "NAN TESTE",
+  "CorWebPrincipal": "VERDE",
+  "PrecoVenda": null,
+  "QuantidadeDisponivel": 7,
+  "ImagemUrl": "nan"
+ }
+]

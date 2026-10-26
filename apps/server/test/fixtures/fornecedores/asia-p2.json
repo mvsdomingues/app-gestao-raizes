@@ -1,0 +1,26 @@
+{
+ "total_paginas": "2",
+ "produtos": [
+  {
+   "codigo": "GA46",
+   "variacoes": [
+    {
+     "nome": "Garrafa Aço Inox",
+     "referencia": "GA4600-BR",
+     "preco": 17.85,
+     "qtd_estoque": 3,
+     "atributos": {
+      "cor": {
+       "value": "Branco"
+      }
+     },
+     "imagem": "http://media.asiaimport.com.br/var3.jpg"
+    }
+   ]
+  },
+  {
+   "codigo": "SEMVAR",
+   "variacoes": []
+  }
+ ]
+}

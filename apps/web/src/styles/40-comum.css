@@ -1,0 +1,44 @@
+/* ══════════════════════════════════
+   BARRA DE STATUS (rodapé)
+══════════════════════════════════ */
+.status-bar {
+  background: var(--berinjela);
+  padding: 5px 24px;
+  display: flex;
+  gap: 20px;
+  flex-wrap: wrap;
+  font-size: .7rem;
+  color: rgba(246,244,239,.5);
+  border-top: 1px solid rgba(255,255,255,.08);
+}
+.status-item { display: flex; align-items: center; gap: 5px; }
+.status-dot { width: 5px; height: 5px; border-radius: 50%; background: var(--verde); }
+.status-dot.error { background: var(--salmon); }
+.status-dot.none  { background: rgba(255,255,255,.3); }
+.status-item strong { color: rgba(246,244,239,.75); }
+
+/* ══════════════════════════════════
+   LOADING
+══════════════════════════════════ */
+.loading { display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 14px; padding: 60px 0; color: var(--muted); }
+.spinner {
+  width: 30px; height: 30px;
+  border: 2.5px solid var(--border);
+  border-top-color: var(--uva);
+  border-radius: 50%;
+  animation: spin .75s linear infinite;
+}
+@keyframes spin { to { transform: rotate(360deg); } }
+
+/* ══════════════════════════════════
+   LIGHTBOX
+══════════════════════════════════ */
+#img-modal {
+  display: none; position: fixed; inset: 0;
+  background: rgba(31,35,41,.94);
+  z-index: 300; align-items: center; justify-content: center;
+  cursor: zoom-out;
+}
+#img-modal.open { display: flex; }
+#img-modal img { max-width: 88vw; max-height: 88vh; object-fit: contain; border-radius: 6px; box-shadow: 0 12px 60px rgba(0,0,0,.6); }
+

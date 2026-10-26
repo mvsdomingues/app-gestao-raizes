@@ -1,0 +1,13 @@
+{
+  "name": "@raizes/shared",
+  "version": "2.0.0",
+  "private": true,
+  "type": "module",
+  "description": "Tipos e regras de negócio compartilhados entre servidor e front-end",
+  "exports": {
+    ".": "./src/index.ts"
+  },
+  "scripts": {
+    "typecheck": "tsc -p tsconfig.json"
+  }
+}
