@@ -1,0 +1,16 @@
+/* Estilos da aplicação — mesma identidade visual da versão anterior.
+   A ordem dos arquivos importa (cascata). */
+@import './00-tokens-base.css';
+@import './10-cabecalho-layout.css';
+@import './20-catalogo.css';
+@import './30-carrinho-itens.css';
+@import './40-comum.css';
+@import './50-atualizacao-historico.css';
+@import './60-orcamento.css';
+@import './70-carrinho-calculadora.css';
+@import './80-produto-avulso.css';
+@import './90-mockups.css';
+
+/* O React monta a aplicação dentro de #root; "display: contents" mantém
+   header, telas e rodapé como filhos diretos do layout flex do <body>. */
+#root { display: contents; }

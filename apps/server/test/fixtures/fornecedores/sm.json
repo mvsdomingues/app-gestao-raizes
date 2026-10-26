@@ -1,0 +1,38 @@
+{
+ "produtos": [
+  {
+   "Sku": "AS-00610",
+   "Descricao": "Garrafa em alumínio branco.\nCapacidade: 600ml",
+   "PrecoVenda": 18.15,
+   "Saldo": 330,
+   "Fotos": [
+    {
+     "url": "https://cdn.exemplo.com/a.webp"
+    }
+   ],
+   "Categoria": "Garrafas"
+  },
+  {
+   "Sku": "AS-00611",
+   "Descricao": "Garrafa preta",
+   "PrecoVenda": "18.15",
+   "Saldo": null,
+   "Fotos": [],
+   "Categoria": "Garrafas"
+  },
+  {
+   "Sku": "AS-00612",
+   "Descricao": "Sem saldo",
+   "PrecoVenda": 0,
+   "Fotos": "https://cdn.exemplo.com/c.jpg"
+  },
+  {
+   "Sku": "AS-00613",
+   "Descricao": null,
+   "PrecoVenda": 7,
+   "Saldo": 0,
+   "Fotos": null,
+   "Categoria": null
+  }
+ ]
+}

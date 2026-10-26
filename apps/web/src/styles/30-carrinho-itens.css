@@ -1,0 +1,208 @@
+/* ══════════════════════════════════
+   PAINEL DO ORÇAMENTO (CARRINHO)
+══════════════════════════════════ */
+.cart-header {
+  padding: 18px 20px 14px;
+  border-bottom: 1px solid var(--border);
+  background: var(--creme);
+}
+.cart-title {
+  font-family: var(--font-display);
+  font-weight: 600;
+  font-size: 1.2rem;
+  color: var(--berinjela);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  letter-spacing: .2px;
+}
+.cart-count {
+  background: var(--uva);
+  color: #fff;
+  font-family: var(--font-body);
+  font-size: .7rem;
+  font-weight: 600;
+  padding: 3px 9px;
+  border-radius: 20px;
+  letter-spacing: .3px;
+}
+.cart-summary-mini { margin-top: 6px; font-size: .78rem; color: var(--muted); }
+.cart-summary-mini strong { color: var(--berinjela); font-family: var(--font-display); font-size: .95rem; }
+
+.cart-items { flex: 1; overflow-y: auto; padding: 10px 14px; }
+
+.cart-item {
+  background: var(--creme);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 10px;
+  margin-bottom: 8px;
+  display: flex;
+  gap: 10px;
+  align-items: flex-start;
+  transition: border-color .2s;
+}
+.cart-item:hover { border-color: var(--border2); }
+
+.cart-thumb {
+  width: 48px; height: 48px;
+  border-radius: 6px; overflow: hidden; flex-shrink: 0;
+  background: var(--creme2); border: 1px solid var(--border);
+}
+.cart-thumb img { width: 100%; height: 100%; object-fit: cover; display: block; }
+.cart-thumb-empty { width: 100%; height: 100%; display: flex; align-items: center; justify-content: center; font-size: 1.1rem; color: var(--border2); }
+
+.cart-item-info { flex: 1; min-width: 0; }
+.cart-item-name { font-size: .82rem; font-weight: 400; line-height: 1.35; margin-bottom: 4px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; color: var(--text); }
+.cart-item-price { font-size: .74rem; color: var(--muted); }
+
+.qty-control { display: flex; align-items: center; gap: 8px; margin-top: 8px; }
+.qty-btn {
+  width: 28px; height: 28px; border-radius: 50%;
+  border: 1px solid var(--border2);
+  background: var(--surface);
+  color: var(--text); font-size: 1rem; font-weight: 600;
+  cursor: pointer; display: flex; align-items: center; justify-content: center;
+  transition: all .18s;
+}
+.qty-btn:hover { border-color: var(--uva); color: var(--uva); background: #fff; }
+.qty-input {
+  width: 64px; text-align: center;
+  background: var(--surface); border: 1.5px solid var(--border);
+  border-radius: 6px; color: var(--text);
+  font-family: var(--font-body); font-size: .95rem; font-weight: 500;
+  padding: 6px 8px; outline: none;
+  /* Remove setas do input number para liberar espaço (mantém controle pelos botões +/−) */
+  -moz-appearance: textfield;
+}
+.qty-input::-webkit-outer-spin-button,
+.qty-input::-webkit-inner-spin-button {
+  -webkit-appearance: none;
+  margin: 0;
+}
+.qty-input:focus { border-color: var(--uva); box-shadow: 0 0 0 3px rgba(94,58,115,.1); }
+
+.cart-item-right { display: flex; flex-direction: column; align-items: flex-end; gap: 8px; }
+.remove-btn { background: none; border: none; color: var(--border2); cursor: pointer; font-size: .85rem; transition: color .18s; }
+.remove-btn:hover { color: var(--danger); }
+.cart-item-subtotal { font-family: var(--font-display); font-weight: 700; font-size: .95rem; color: var(--berinjela); }
+
+.cart-empty {
+  text-align: center;
+  color: var(--muted);
+  padding: 40px 16px;
+  font-size: .88rem;
+  line-height: 1.7;
+}
+.cart-empty-icon { font-size: 2.2rem; margin-bottom: 12px; opacity: .5; }
+.cart-empty p { font-style: italic; }
+
+.cart-footer {
+  padding: 14px 16px;
+  border-top: 1px solid var(--border);
+  background: var(--creme);
+}
+.cart-total-row { display: flex; justify-content: space-between; align-items: baseline; margin-bottom: 12px; }
+.cart-total-label { font-size: .78rem; text-transform: uppercase; letter-spacing: 1px; color: var(--muted); }
+.cart-total-value { font-family: var(--font-display); font-weight: 700; font-size: 1.55rem; color: var(--berinjela); }
+
+.btn-primary {
+  width: 100%;
+  padding: 13px;
+  background: var(--uva);
+  color: #fff;
+  border: none;
+  border-radius: var(--radius);
+  font-family: var(--font-body);
+  font-weight: 600;
+  font-size: .85rem;
+  letter-spacing: .8px;
+  text-transform: uppercase;
+  cursor: pointer;
+  transition: all .2s;
+}
+.btn-primary:hover { background: var(--berinjela); transform: translateY(-1px); box-shadow: 0 4px 16px rgba(94,58,115,.3); }
+.btn-primary:disabled { opacity: .4; cursor: default; transform: none; box-shadow: none; }
+
+.btn-secondary {
+  width: 100%;
+  padding: 9px;
+  background: transparent;
+  color: var(--muted);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  font-family: var(--font-body);
+  font-size: .8rem;
+  cursor: pointer;
+  transition: all .18s;
+  margin-top: 7px;
+  letter-spacing: .3px;
+}
+.btn-secondary:hover { border-color: var(--danger); color: var(--danger); }
+
+/* Campos de margem e frete no rodapé do carrinho */
+.cart-extra-fields {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 10px 0 12px;
+  border-bottom: 1px solid var(--border);
+  margin-bottom: 10px;
+}
+.cart-field-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+.cart-field-label {
+  font-size: .72rem;
+  color: var(--muted);
+  text-transform: uppercase;
+  letter-spacing: .6px;
+  flex: 1;
+}
+.cart-field-input-wrap {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+.cart-field-input {
+  background: var(--creme);
+  border: 1.5px solid var(--border);
+  border-radius: 6px;
+  color: var(--text);
+  font-family: var(--font-body);
+  font-size: .88rem;
+  font-weight: 500;
+  padding: 5px 9px;
+  outline: none;
+  transition: border-color .18s, box-shadow .18s;
+  text-align: right;
+  width: 82px;
+}
+.cart-field-input:focus {
+  border-color: var(--uva);
+  box-shadow: 0 0 0 3px rgba(94,58,115,.1);
+  background: #fff;
+}
+.cart-field-suffix {
+  font-size: .78rem;
+  color: var(--muted);
+}
+/* Linhas de subtotal empilhadas acima do total */
+.cart-subtotals {
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+  margin-bottom: 8px;
+}
+.cart-subtotal-row {
+  display: flex;
+  justify-content: space-between;
+  font-size: .78rem;
+  color: var(--muted);
+}
+.cart-subtotal-row.destaque { color: var(--text); font-weight: 500; }
+.cart-subtotal-val { font-variant-numeric: tabular-nums; }
+

@@ -1,0 +1,35 @@
+{
+  "name": "raizes-gestao",
+  "version": "2.0.0",
+  "private": true,
+  "description": "Raízes Personalizados · Catálogo, Orçamento e Mockups",
+  "type": "module",
+  "workspaces": [
+    "packages/*",
+    "apps/*"
+  ],
+  "engines": {
+    "node": ">=22"
+  },
+  "scripts": {
+    "dev": "concurrently -k -n api,web -c magenta,cyan \"npm run dev -w @raizes/server\" \"npm run dev -w @raizes/web\"",
+    "build": "npm run build -w @raizes/web && npm run build -w @raizes/server",
+    "start": "npm run start -w @raizes/server",
+    "atualizar": "npm run atualizar -w @raizes/server --",
+    "imagens:spot": "npm run imagens:spot -w @raizes/server --",
+    "setup:playwright": "npm run setup:playwright -w @raizes/server",
+    "typecheck": "npm run typecheck --workspaces --if-present",
+    "test": "vitest run"
+  },
+  "devDependencies": {
+    "@types/node": "^22.20.5",
+    "concurrently": "^9.2.1",
+    "typescript": "~5.9.3",
+    "vitest": "^5.0.5"
+  },
+  "overrides": {
+    "tsup": {
+      "esbuild": "^0.28.2"
+    }
+  }
+}

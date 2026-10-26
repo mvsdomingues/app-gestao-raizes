@@ -1,0 +1,211 @@
+/* ══════════════════════════════════
+   PRODUTO AVULSO
+   ══════════════════════════════════ */
+.btn-add-custom {
+  background: var(--uva);
+  color: #fff;
+  border: 1.5px solid var(--uva);
+  border-radius: var(--radius);
+  padding: 9px 18px;
+  font-family: var(--font-body);
+  font-size: .85rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all .18s;
+  white-space: nowrap;
+}
+.btn-add-custom:hover {
+  background: var(--berinjela);
+  border-color: var(--berinjela);
+  transform: translateY(-1px);
+  box-shadow: 0 4px 12px rgba(94,58,115,.25);
+}
+
+/* Item custom: borda lateral distintiva */
+.cart-item-custom {
+  border-left: 3px solid var(--uva) !important;
+}
+.btn-edit-custom {
+  background: none;
+  border: none;
+  color: var(--uva);
+  cursor: pointer;
+  font-size: .78rem;
+  padding: 0 4px;
+  margin-left: 4px;
+  vertical-align: middle;
+  opacity: .7;
+  transition: opacity .15s;
+}
+.btn-edit-custom:hover { opacity: 1; color: var(--berinjela); }
+
+/* Badge para fornecedor CUSTOM/avulso */
+.sup-CUSTOM, .orc-sup-CUSTOM {
+  background: #F0E8FA !important;
+  color: #5E3A73 !important;
+  border: 1px dashed #B89DD6;
+}
+
+/* Modal de produto avulso */
+#custom-modal {
+  display: none;
+  position: fixed;
+  inset: 0;
+  background: rgba(31,35,41,.65);
+  z-index: 500;
+  align-items: center;
+  justify-content: center;
+  padding: 20px;
+  backdrop-filter: blur(2px);
+}
+#custom-modal.open { display: flex; }
+.custom-modal-card {
+  background: var(--surface);
+  width: 100%;
+  max-width: 520px;
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-lg);
+  padding: 26px 28px 22px;
+  max-height: 92vh;
+  overflow-y: auto;
+}
+.custom-modal-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  margin-bottom: 4px;
+}
+.custom-modal-title {
+  font-family: var(--font-display);
+  font-size: 1.45rem;
+  font-weight: 600;
+  color: var(--berinjela);
+  margin: 0;
+}
+.custom-modal-close {
+  background: none;
+  border: none;
+  color: var(--muted);
+  font-size: 1.2rem;
+  cursor: pointer;
+  padding: 2px 6px;
+  border-radius: 4px;
+  transition: all .15s;
+}
+.custom-modal-close:hover { background: var(--creme2); color: var(--danger); }
+.custom-modal-sub {
+  font-size: .82rem;
+  color: var(--muted);
+  margin: 4px 0 18px;
+  font-style: italic;
+  line-height: 1.45;
+}
+.custom-modal-field { margin-bottom: 14px; }
+.custom-modal-row {
+  display: flex;
+  gap: 12px;
+  margin-bottom: 0;
+  flex-wrap: wrap;
+}
+.custom-modal-row .custom-modal-field { margin-bottom: 14px; }
+.custom-modal-label {
+  display: block;
+  font-size: .7rem;
+  text-transform: uppercase;
+  letter-spacing: .8px;
+  color: var(--muted);
+  font-weight: 600;
+  margin-bottom: 5px;
+}
+.custom-input {
+  width: 100%;
+  background: var(--creme);
+  border: 1.5px solid var(--border);
+  border-radius: 6px;
+  color: var(--text);
+  font-family: var(--font-body);
+  font-size: .9rem;
+  padding: 9px 11px;
+  outline: none;
+  transition: border-color .15s, box-shadow .15s;
+}
+.custom-input:focus {
+  border-color: var(--uva);
+  background: #fff;
+  box-shadow: 0 0 0 3px rgba(94,58,115,.12);
+}
+.custom-modal-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 10px;
+  margin-top: 16px;
+  padding-top: 14px;
+  border-top: 1px solid var(--border);
+}
+.custom-modal-actions .btn-primary,
+.custom-modal-actions .btn-secondary { width: auto; padding: 9px 22px; }
+
+/* Upload de foto no modal avulso */
+.custom-foto-zone {
+  border: 2px dashed var(--border2);
+  border-radius: 8px;
+  padding: 14px 12px;
+  text-align: center;
+  cursor: pointer;
+  background: var(--creme);
+  transition: border-color .2s, background .2s;
+  position: relative;
+}
+.custom-foto-zone:hover {
+  border-color: var(--uva);
+  background: #faf6fb;
+}
+.custom-foto-zone.has-foto {
+  border-color: var(--success);
+  background: #f2fbf5;
+  border-style: solid;
+}
+.custom-foto-preview-wrap {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  text-align: left;
+}
+.custom-foto-preview {
+  width: 56px;
+  height: 56px;
+  border-radius: 6px;
+  object-fit: cover;
+  border: 1px solid var(--border);
+  background: #fff;
+  flex-shrink: 0;
+}
+.custom-foto-preview-info {
+  flex: 1;
+  min-width: 0;
+}
+.custom-foto-preview-name {
+  font-size: .82rem;
+  font-weight: 600;
+  color: var(--text);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.custom-foto-preview-size {
+  font-size: .72rem;
+  color: var(--muted);
+  margin-top: 2px;
+}
+.btn-remove-foto {
+  border: none;
+  background: transparent;
+  color: var(--muted);
+  font-size: 1.1rem;
+  cursor: pointer;
+  padding: 4px;
+  line-height: 1;
+  flex-shrink: 0;
+}
+.btn-remove-foto:hover { color: var(--danger); }
+

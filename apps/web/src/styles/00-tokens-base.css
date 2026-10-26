@@ -1,0 +1,61 @@
+/* ═══════════════════════════════════════════════
+   TOKENS — Identidade Visual Raízes Personalizados
+═══════════════════════════════════════════════ */
+:root {
+  /* Paleta */
+  --uva:        #5E3A73;   /* Roxo Uva — cor institucional */
+  --berinjela:  #3A183F;   /* Roxo Berinjela — luxo/ênfase */
+  --grafite:    #1F2329;   /* Grafite — textos */
+  --creme:      #F6F4EF;   /* Off-white/Creme — fundo */
+  --creme2:     #EDE9E1;   /* Creme mais escuro — superfícies */
+  --salmon:     #F7B3A0;   /* Salmão — encantamento */
+  --verde:      #97D48F;   /* Verde — sustentabilidade */
+  --lavanda:    #99A3E8;   /* Lavanda — criatividade */
+
+  /* Funcionais */
+  --bg:         var(--creme);
+  --surface:    #fff;
+  --surface2:   var(--creme2);
+  --border:     #DDD8CF;
+  --border2:    #C8C2B8;
+  --text:       var(--grafite);
+  --muted:      #7A7167;
+  --accent:     var(--uva);
+  --accent-dk:  var(--berinjela);
+  --danger:     #C0392B;
+  --success:    #2E7D50;
+  --radius:     8px;
+  --radius-lg:  14px;
+  --shadow-sm:  0 2px 8px rgba(58,24,63,.08);
+  --shadow:     0 6px 24px rgba(58,24,63,.12);
+  --shadow-lg:  0 16px 48px rgba(58,24,63,.18);
+
+  /* Tipografia */
+  --font-display: 'Cormorant Garamond', Georgia, serif;
+  --font-body:    'Jost', sans-serif;
+}
+
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+html, body { height: 100%; }
+body {
+  font-family: var(--font-body);
+  background: var(--bg);
+  color: var(--text);
+  display: flex;
+  flex-direction: column;
+  min-height: 100vh;
+  font-size: 15px;
+}
+
+/* ── SCROLLBARS ── */
+::-webkit-scrollbar { width: 12px; height: 12px; }
+::-webkit-scrollbar-track { background: var(--creme2); }
+::-webkit-scrollbar-thumb {
+  background: var(--border2);
+  border-radius: 6px;
+  border: 2px solid var(--creme2);
+}
+::-webkit-scrollbar-thumb:hover { background: var(--uva); }
+/* Firefox */
+* { scrollbar-width: auto; scrollbar-color: var(--border2) var(--creme2); }
+

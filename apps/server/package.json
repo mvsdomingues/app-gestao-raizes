@@ -1,0 +1,29 @@
+{
+  "name": "@raizes/server",
+  "version": "2.0.0",
+  "private": true,
+  "type": "module",
+  "description": "API (Express + SQLite), atualização de fornecedores e scraper de imagens SPOT",
+  "scripts": {
+    "dev": "tsx watch --clear-screen=false src/index.ts",
+    "build": "tsup",
+    "start": "node dist/index.js",
+    "atualizar": "tsx src/cli/atualizar-produtos.ts",
+    "imagens:spot": "tsx src/cli/baixar-imagens-spot.ts",
+    "setup:playwright": "playwright install chromium",
+    "typecheck": "tsc -p tsconfig.json"
+  },
+  "dependencies": {
+    "better-sqlite3": "^12.11.1",
+    "csv-parse": "^7.0.3",
+    "express": "^5.2.1",
+    "playwright": "~1.63.0"
+  },
+  "devDependencies": {
+    "@raizes/shared": "^2.0.0",
+    "@types/better-sqlite3": "^7.6.13",
+    "@types/express": "^5.0.3",
+    "tsup": "^8.5.1",
+    "tsx": "^4.20.6"
+  }
+}
