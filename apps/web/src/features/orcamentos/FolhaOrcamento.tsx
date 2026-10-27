@@ -1,59 +1,12 @@
 import { formatBRL } from '@raizes/shared';
-import { useApp, type FolhaOrcamento } from '../../app/contexto';
+import type { FolhaOrcamento as DadosFolha } from '../../app/contexto';
 import { ImagemProduto } from '../../components/ImagemProduto';
 import { classeFornecedor } from '../../lib/fornecedor';
-import { useEditarOrcamento } from './editar-orcamento';
-
-/** Aba "Orçamento": folha timbrada pronta para imprimir / salvar em PDF. */
-export function Orcamento() {
-  const { tela, folha, irPara } = useApp();
-  const { editar, carregando } = useEditarOrcamento();
-
-  return (
-    <div id="view-orcamento" style={{ display: tela === 'orcamento' ? 'block' : 'none' }}>
-      <div className="orc-toolbar">
-        <button className="btn-back" onClick={() => irPara('catalogo')}>
-          ← Voltar ao catálogo
-        </button>
-        <div className="orc-toolbar-actions">
-          {folha?.id !== undefined && (
-            <button
-              className="btn-back"
-              id="btn-editar-orcamento"
-              disabled={carregando !== null}
-              onClick={() => void editar(folha.id!, folha.numero)}
-            >
-              {carregando !== null ? 'Abrindo…' : `✎ Editar ${folha.numero}`}
-            </button>
-          )}
-          <button className="btn-print-inline" onClick={() => window.print()}>
-            🖨 Imprimir / Salvar PDF
-          </button>
-        </div>
-      </div>
-      <div className="orcamento-sheet-full" id="orcamento-sheet">
-        {folha ? (
-          <Folha folha={folha} />
-        ) : (
-          <div className="orc-empty-state">
-            <div className="orc-empty-icon">📄</div>
-            <h2>Nenhum orçamento ainda</h2>
-            <p>
-              Adicione produtos ao carrinho e clique em <b>"📄 Gerar Orçamento"</b> para visualizar aqui.
-            </p>
-            <button className="btn-back" onClick={() => irPara('catalogo')} style={{ marginTop: 14 }}>
-              Ir ao catálogo
-            </button>
-          </div>
-        )}
-      </div>
-    </div>
-  );
-}
 
 const cinza = { fontSize: '.82rem', color: '#7A7167' } as const;
 
-function Folha({ folha }: { folha: FolhaOrcamento }) {
+/** Folha timbrada do orçamento (a mesma impressa / salva em PDF). */
+export function FolhaOrcamento({ folha }: { folha: DadosFolha }) {
   const { numero, dataHora, itens, subtotal, frete, total } = folha;
   const d = dataHora ? new Date(dataHora) : new Date();
   const hoje = d.toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit', year: 'numeric' });

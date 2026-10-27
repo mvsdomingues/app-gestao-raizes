@@ -26,7 +26,7 @@ Aplicação interna para consultar produtos de vários fornecedores, montar orç
 │   └── web/                    ← interface React
 │       └── src/
 │           ├── app/            ← App e contexto (navegação entre abas)
-│           ├── features/       ← catalogo, carrinho, orcamento, mockup, historico, produtos-proprios, parametros, atualizacao
+│           ├── features/       ← catalogo, carrinho, orcamentos, mockup, produtos-proprios, parametros, atualizacao
 │           ├── components/     ← barra lateral (menu), rodapé, lightbox, imagem de produto
 │           ├── state/          ← estado do carrinho
 │           ├── lib/            ← cliente da API
@@ -122,18 +122,21 @@ O menu fica na **barra lateral** (pode ser recolhido para mostrar só os ícones
 
 1. **Catálogo**: busque por nome ou código, filtre por fornecedor/estoque, alterne grade/lista e clique no produto para incluí-lo no carrinho. Mostra os produtos dos fornecedores e os produtos próprios.
 2. **Carrinho**: ajuste quantidades e, em *Ajustar custos e margem*, os custos de personalização e os custos fixos de cada item (começam com os valores da tela **Parâmetros**). Imposto de compra, imposto sobre venda e margem não aparecem no carrinho: são sempre os cadastrados em **Parâmetros**.
-3. **Orçamento**: *Gerar Orçamento* salva no histórico (numeração `ORC-0001`…), esvazia o carrinho e abre a folha para **Imprimir / Salvar PDF**. Ao salvar a alteração de um orçamento, o carrinho também é esvaziado.
+3. **Orçamentos**: tela única com duas abas.
+   - **Todos os orçamentos**: lista paginada (20 por página) com filtros por número (`ORC-0005` ou `5`), produto (descrição ou código de qualquer item), período (de/até) e faixa de valor total. Clique em uma linha para ver os detalhes; **✎ Editar** carrega o orçamento de volta no carrinho (o carrinho precisa estar vazio).
+   - **Detalhes**: folha do orçamento selecionado, com **Editar** e **Imprimir / Salvar PDF**.
+
+   *Gerar Orçamento* no carrinho grava o orçamento (numeração `ORC-0001`…), esvazia o carrinho e abre a aba **Detalhes**. Ao salvar uma alteração, o orçamento mantém o mesmo número e recebe a data da alteração; não há limite de alterações.
 4. **Mockups**: aplique a logomarca sobre a foto dos produtos do carrinho e baixe o PNG.
-5. **Histórico**: reabra qualquer orçamento salvo ou clique em **✎ Editar** para carregá-lo de volta no carrinho (o carrinho precisa estar vazio). Ao salvar, o orçamento mantém o mesmo número e recebe a data da alteração; não há limite de alterações. O mesmo botão aparece na folha do orçamento.
 
 **Cadastros**
 
-6. **Produtos Próprios**: inclua, busque, altere e exclua produtos da própria empresa. Cada um recebe um código sequencial `PDP-000001`, `PDP-000002`… (códigos excluídos não são reutilizados). A foto pode ser enviada do computador ou informada por URL; os arquivos ficam em `data/imagens/proprios/`.
-7. **Parâmetros**: valores da calculadora (material, mão de obra, imposto de compra, designer, logística, imposto sobre venda e margem), com simulação de preço. Material, mão de obra, designer e logística são o ponto de partida de cada item novo; imposto de compra, imposto sobre venda e margem valem sempre para todos os itens do carrinho.
+5. **Produtos Próprios**: inclua, busque, altere e exclua produtos da própria empresa. Cada um recebe um código sequencial `PDP-000001`, `PDP-000002`… (códigos excluídos não são reutilizados). A foto pode ser enviada do computador ou informada por URL; os arquivos ficam em `data/imagens/proprios/`.
+6. **Parâmetros**: valores da calculadora (material, mão de obra, imposto de compra, designer, logística, imposto sobre venda e margem), com simulação de preço. Material, mão de obra, designer e logística são o ponto de partida de cada item novo; imposto de compra, imposto sobre venda e margem valem sempre para todos os itens do carrinho.
 
 **Sistema**
 
-8. **Atualização**: atualiza a base dos fornecedores integrados e mostra o log.
+7. **Atualização**: atualiza a base dos fornecedores integrados e mostra o log.
 
 ### Calculadora de preço
 
@@ -152,5 +155,6 @@ Valores de fábrica (usados até a primeira gravação em **Parâmetros**): mate
 | `GET/POST /api/produtos-proprios` | Lista (`?q=` busca) / inclui produto próprio |
 | `GET/PUT/PATCH/DELETE /api/produtos-proprios/:codigo` | Consulta, substitui, altera campos ou exclui (`PDP-000001`) |
 | `GET/PUT /api/parametros` | Lê / grava os parâmetros da calculadora |
-| `GET/POST /api/orcamentos` · `GET/PUT /api/orcamentos/:id` | Histórico de orçamentos (PUT altera mantendo o número) |
+| `GET /api/orcamentos` | Lista paginada (`numero`, `produto`, `de`, `ate`, `min`, `max`, `limit`, `offset`) → `{ total, orcamentos }` |
+| `POST /api/orcamentos` · `GET/PUT /api/orcamentos/:id` | Grava, consulta e altera (PUT mantém o número) |
 | `POST /api/atualizar` · `GET /api/atualizar/status` | Atualização dos fornecedores |

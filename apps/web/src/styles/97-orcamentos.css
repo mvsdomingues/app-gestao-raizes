@@ -1,0 +1,84 @@
+/* ══════════════════════════════════
+   TELA ORÇAMENTOS (lista + detalhes)
+   ══════════════════════════════════ */
+.orc-wrap { max-width: 1100px; margin: 0 auto; }
+.orc-cabecalho { margin-bottom: 18px; }
+.orc-wrap .orc-toolbar { max-width: none; }
+
+/* Abas internas */
+.subabas {
+  display: flex;
+  gap: 2px;
+  margin-bottom: 22px;
+  border-bottom: 1.5px solid var(--border);
+}
+.subaba {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  background: none;
+  border: none;
+  border-bottom: 3px solid transparent;
+  margin-bottom: -1.5px;
+  padding: 10px 18px;
+  font-family: var(--font-body);
+  font-size: .8rem;
+  font-weight: 500;
+  letter-spacing: .5px;
+  text-transform: uppercase;
+  color: var(--muted);
+  cursor: pointer;
+  transition: color .2s, border-color .2s;
+}
+.subaba:hover:not(.active) { color: var(--berinjela); }
+.subaba.active { color: var(--uva); font-weight: 600; border-bottom-color: var(--uva); }
+.subaba-badge {
+  font-family: var(--font-display);
+  font-size: .85rem;
+  font-weight: 700;
+  letter-spacing: 0;
+  text-transform: none;
+  color: var(--uva);
+  background: #F0EAF6;
+  border-radius: 10px;
+  padding: 1px 9px;
+}
+
+/* Filtros da lista */
+.orc-filtros {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-end;
+  gap: 12px;
+  padding: 16px 18px;
+  margin-bottom: 14px;
+  background: var(--surface);
+  border: 1.5px solid var(--border);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-sm);
+}
+.orc-filtro { display: flex; flex-direction: column; gap: 5px; width: 130px; }
+.orc-filtro-largo { flex: 1; min-width: 200px; }
+.orc-filtro-valor { width: 230px; }
+.orc-filtro label {
+  font-size: .66rem;
+  font-weight: 600;
+  letter-spacing: 1px;
+  text-transform: uppercase;
+  color: var(--muted);
+}
+.orc-filtro .custom-input { padding: 8px 10px; font-size: .84rem; }
+.orc-filtro-faixa { display: flex; align-items: center; gap: 6px; }
+.orc-filtro-faixa span { font-size: .78rem; color: var(--muted); }
+.orc-filtro-acoes { display: flex; gap: 8px; }
+.orc-filtro-acoes .btn-novo, .orc-filtro-acoes .btn-back { padding: 8px 16px; }
+.orc-filtro-acoes .btn-back:disabled { opacity: .45; cursor: default; }
+
+.orc-lista-info {
+  min-height: 18px;
+  margin: 0 2px 10px;
+  font-size: .8rem;
+  font-style: italic;
+  color: var(--muted);
+}
+#orc-paginacao { margin-top: 6px; }

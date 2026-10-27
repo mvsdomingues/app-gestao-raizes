@@ -74,7 +74,8 @@ describe('API', () => {
     expect(criado.json.numero).toBe('ORC-0001');
     expect(criado.json.data_hora).toMatch(/^\d{4}-\d\d-\d\dT\d\d:\d\d:\d\d$/);
     const lista = await get('/api/orcamentos');
-    expect(lista.json[0]).toMatchObject({ id: 1, numero: 'ORC-0001', frete: 5, total: 25, qtd_itens: 1 });
+    expect(lista.json.total).toBe(1);
+    expect(lista.json.orcamentos[0]).toMatchObject({ id: 1, numero: 'ORC-0001', frete: 5, total: 25, qtd_itens: 1 });
     const det = await get('/api/orcamentos/1');
     expect(det.json.itens).toEqual([item]);
     expect(det.json.itens_json).toBeUndefined();
@@ -99,9 +100,40 @@ describe('API', () => {
     }
     const depois = (await get('/api/orcamentos/1')).json;
     expect(depois).toMatchObject({ numero: antes.numero, qtd_itens: 2, total: 32, itens: [item, item] });
-    expect((await get('/api/orcamentos')).json).toHaveLength(1);
+    expect((await get('/api/orcamentos')).json.total).toBe(1);
     expect((await put('/api/orcamentos/99', { itens: [item] })).status).toBe(404);
     expect((await put('/api/orcamentos/1', { itens: [] })).json).toEqual({ erro: 'itens vazio' });
+  });
+
+  it('filtra e pagina a lista de orçamentos', async () => {
+    const ins = db.prepare(
+      'INSERT INTO orcamentos (data_hora, subtotal, frete, total, qtd_itens, itens_json) VALUES (?,?,?,?,?,?)',
+    );
+    // 30 orçamentos extras (ids 2..31), em dias diferentes de outubro
+    for (let i = 2; i <= 31; i++) {
+      const itens = [{ nome: i % 2 ? 'Caneca Térmica' : 'Garrafa Inox', codigo: `CD-${i}` }];
+      ins.run(`2026-10-${String(i).padStart(2, '0')}T10:00:00`, i * 10, 0, i * 10, 1, JSON.stringify(itens));
+    }
+    const lista = async (qs: string) => (await get('/api/orcamentos' + qs)).json;
+
+    const p1 = await lista('');
+    expect(p1.total).toBe(31);
+    expect(p1.orcamentos).toHaveLength(20);
+    expect(p1.orcamentos[0].numero).toBe('ORC-0031');
+    const p2 = await lista('?limit=20&offset=20');
+    expect(p2.orcamentos).toHaveLength(11);
+    expect(p2.orcamentos.at(-1).numero).toBe('ORC-0001');
+
+    expect((await lista('?numero=ORC-0007')).orcamentos.map((o: { id: number }) => o.id)).toEqual([7]);
+    expect((await lista('?numero=7')).total).toBe(1);
+    expect((await lista('?numero=xyz')).total).toBe(0);
+    expect((await lista('?produto=caneca')).total).toBe(15);
+    expect((await lista('?produto=CD-12')).orcamentos[0].id).toBe(12);
+    expect((await lista('?de=2026-10-10&ate=2026-10-12')).total).toBe(3);
+    expect((await lista('?min=100&max=150')).total).toBe(6);
+    expect((await lista('?produto=garrafa&min=200&de=2026-10-25')).orcamentos.map((o: { id: number }) => o.id)).toEqual([
+      30, 28, 26,
+    ]);
   });
 
   it('valida o proxy de imagens', async () => {

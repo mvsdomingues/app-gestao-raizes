@@ -4,9 +4,8 @@ import { Lightbox } from '../components/Lightbox';
 import { Atualizacao } from '../features/atualizacao/Atualizacao';
 import { Carrinho } from '../features/carrinho/Carrinho';
 import { Catalogo } from '../features/catalogo/Catalogo';
-import { Historico } from '../features/historico/Historico';
 import { EstudioMockup } from '../features/mockup/EstudioMockup';
-import { Orcamento } from '../features/orcamento/Orcamento';
+import { Orcamentos } from '../features/orcamentos/Orcamentos';
 import { Parametros } from '../features/parametros/Parametros';
 import { ProdutosProprios } from '../features/produtos-proprios/ProdutosProprios';
 import { ProvedorCarrinho } from '../state/carrinho';
@@ -29,9 +28,8 @@ export function App() {
               <Catalogo />
               <Carrinho />
               <Atualizacao />
-              <Orcamento />
+              <Orcamentos />
               <EstudioMockup />
-              <Historico />
               <ProdutosProprios />
               <Parametros />
             </main>

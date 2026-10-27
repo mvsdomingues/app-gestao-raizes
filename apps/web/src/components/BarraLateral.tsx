@@ -20,9 +20,8 @@ const GRUPOS: { titulo: string; itens: ItemMenu[] }[] = [
     itens: [
       { tela: 'catalogo', rotulo: 'Catálogo', icone: 'catalogo', id: 'tab-catalogo' },
       { tela: 'carrinho', rotulo: 'Carrinho', icone: 'carrinho', id: 'tab-carrinho' },
-      { tela: 'orcamento', rotulo: 'Orçamento', icone: 'orcamento', id: 'tab-orcamento' },
+      { tela: 'orcamentos', rotulo: 'Orçamentos', icone: 'orcamento', id: 'tab-orcamentos' },
       { tela: 'mockup', rotulo: 'Mockups', icone: 'mockup', id: 'tab-mockup' },
-      { tela: 'historico', rotulo: 'Histórico', icone: 'historico', id: 'tab-historico' },
     ],
   },
   {
@@ -49,7 +48,7 @@ function lerRecolhida(): boolean {
 }
 
 export function BarraLateral() {
-  const { tela, irPara } = useApp();
+  const { tela, irPara, setAbaOrcamentos } = useApp();
   const { estado } = useCarrinho();
   const qtdItens = Object.keys(estado.itens).length;
   const [recolhida, setRecolhida] = useState(lerRecolhida);
@@ -81,7 +80,11 @@ export function BarraLateral() {
                 key={item.tela}
                 id={item.id}
                 className={`sidebar-item${tela === item.tela ? ' active' : ''}`}
-                onClick={() => irPara(item.tela)}
+                onClick={() => {
+                  // Pelo menu, Orçamentos abre sempre na lista
+                  if (item.tela === 'orcamentos') setAbaOrcamentos('lista');
+                  irPara(item.tela);
+                }}
                 title={item.rotulo}
                 aria-current={tela === item.tela ? 'page' : undefined}
               >

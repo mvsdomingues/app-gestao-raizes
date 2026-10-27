@@ -15,12 +15,14 @@ import { api } from '../lib/api';
 export type Tela =
   | 'catalogo'
   | 'carrinho'
-  | 'orcamento'
+  | 'orcamentos'
   | 'mockup'
-  | 'historico'
   | 'produtos-proprios'
   | 'parametros'
   | 'status';
+
+/** Abas da tela Orçamentos */
+export type AbaOrcamentos = 'lista' | 'detalhe';
 
 export interface FolhaOrcamento {
   /** id do orçamento salvo (ausente se não foi possível gravar) */
@@ -59,7 +61,10 @@ interface ContextoApp {
   avisarCatalogoAlterado: () => void;
 
   folha: FolhaOrcamento | null;
+  /** Mostra o orçamento na aba "Detalhes" da tela Orçamentos. */
   mostrarOrcamento: (f: FolhaOrcamento) => void;
+  abaOrcamentos: AbaOrcamentos;
+  setAbaOrcamentos: (a: AbaOrcamentos) => void;
 
   /** Produto pedido pelo botão "🎨 Mockup" de um item do carrinho. */
   mockupSolicitado: RefObject<number | string | null>;
@@ -71,9 +76,8 @@ const Ctx = createContext<ContextoApp | null>(null);
 const VISITAS_INICIAIS: Record<Tela, number> = {
   catalogo: 0,
   carrinho: 0,
-  orcamento: 0,
+  orcamentos: 0,
   mockup: 0,
-  historico: 0,
   'produtos-proprios': 0,
   parametros: 0,
   status: 0,
@@ -89,12 +93,13 @@ export function ProvedorApp({ children }: { children: ReactNode }) {
   const [parametrosAtualizado, setParametrosAtualizado] = useState<string | null>(null);
   const [versaoCatalogo, setVersaoCatalogo] = useState(0);
   const [folha, setFolha] = useState<FolhaOrcamento | null>(null);
+  const [abaOrcamentos, setAbaOrcamentos] = useState<AbaOrcamentos>('lista');
   const mockupSolicitado = useRef<number | string | null>(null);
 
   const irPara = useCallback((t: Tela) => {
     setTela(t);
     setVisitas((v) => ({ ...v, [t]: v[t] + 1 }));
-    if (t !== 'orcamento' && t !== 'mockup') {
+    if (t !== 'orcamentos' && t !== 'mockup') {
       window.scrollTo(0, 0);
       document.querySelector('.app-views')?.scrollTo(0, 0);
     }
@@ -159,15 +164,19 @@ export function ProvedorApp({ children }: { children: ReactNode }) {
       folha,
       mostrarOrcamento: (f) => {
         setFolha(f);
-        irPara('orcamento');
+        setAbaOrcamentos('detalhe');
+        irPara('orcamentos');
+        document.querySelector('.app-views')?.scrollTo(0, 0);
       },
+      abaOrcamentos,
+      setAbaOrcamentos,
       mockupSolicitado,
       abrirMockupParaProduto: (id) => {
         mockupSolicitado.current = id;
         irPara('mockup');
       },
     }),
-    [tela, visitas, irPara, fornecedores, carregarFornecedores, status, carregarStatus, imagemAmpliada, parametros, parametrosAtualizado, carregarParametros, versaoCatalogo, folha],
+    [tela, visitas, irPara, fornecedores, carregarFornecedores, status, carregarStatus, imagemAmpliada, parametros, parametrosAtualizado, carregarParametros, versaoCatalogo, folha, abaOrcamentos],
   );
 
   return <Ctx.Provider value={valor}>{children}</Ctx.Provider>;

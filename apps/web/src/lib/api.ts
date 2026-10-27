@@ -9,7 +9,8 @@ import type {
   Produto,
   RespostaAtualizar,
   RespostaProdutos,
-  ResumoOrcamento,
+  FiltrosOrcamentos,
+  RespostaOrcamentos,
   StatusAtualizacao,
   StatusFornecedor,
 } from '@raizes/shared';
@@ -73,10 +74,11 @@ export const api = {
   atualizarOrcamento: (id: number, dados: NovoOrcamento) =>
     enviar<OrcamentoCriado>('PUT', `/api/orcamentos/${id}`, dados),
 
-  async orcamentos(): Promise<ResumoOrcamento[]> {
-    const resp = await fetch('/api/orcamentos');
-    if (!resp.ok) throw new Error('Falha ao carregar histórico');
-    return (await resp.json()) as ResumoOrcamento[];
+  /** Lista paginada de orçamentos com filtros. */
+  orcamentos: (filtros: FiltrosOrcamentos, limit: number, offset: number) => {
+    const qs = new URLSearchParams({ limit: String(limit), offset: String(offset) });
+    for (const [k, v] of Object.entries(filtros)) if (v && String(v).trim()) qs.set(k, String(v).trim());
+    return enviar<RespostaOrcamentos>('GET', `/api/orcamentos?${qs}`);
   },
 
   async orcamento(id: number): Promise<Orcamento> {

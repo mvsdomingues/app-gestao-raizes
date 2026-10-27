@@ -38,7 +38,6 @@
 /* ══════════════════════════════════
    VIEW HISTÓRICO
 ══════════════════════════════════ */
-#view-historico { display: none; flex: 1; padding: 40px 32px; overflow-y: auto; background: var(--creme); }
 .hist-row { cursor: pointer; transition: background .15s; }
 .hist-row:hover { background: var(--creme2); }
 .orc-num-badge {

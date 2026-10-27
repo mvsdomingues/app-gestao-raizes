@@ -61,6 +61,24 @@ export interface ResumoOrcamento {
   qtd_itens: number;
 }
 
+/** Resposta paginada de GET /api/orcamentos */
+export interface RespostaOrcamentos {
+  total: number;
+  orcamentos: ResumoOrcamento[];
+}
+
+/** Filtros da consulta de orçamentos. */
+export interface FiltrosOrcamentos {
+  numero?: string;
+  produto?: string;
+  /** AAAA-MM-DD */
+  de?: string;
+  /** AAAA-MM-DD */
+  ate?: string;
+  min?: string;
+  max?: string;
+}
+
 /** Orçamento completo (GET /api/orcamentos/:id). */
 export interface Orcamento extends ResumoOrcamento {
   itens: ItemOrcamento[];
