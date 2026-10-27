@@ -1,7 +1,8 @@
 /* ══════════════════════════════════
-   PRODUTO AVULSO
+   FORMULÁRIOS EM MODAL E PRODUTOS PRÓPRIOS
    ══════════════════════════════════ */
-.btn-add-custom {
+/* Botão de ação principal no cabeçalho das telas (ex.: "+ Novo produto") */
+.btn-novo {
   background: var(--uva);
   color: #fff;
   border: 1.5px solid var(--uva);
@@ -14,30 +15,17 @@
   transition: all .18s;
   white-space: nowrap;
 }
-.btn-add-custom:hover {
+.btn-novo:hover {
   background: var(--berinjela);
   border-color: var(--berinjela);
   transform: translateY(-1px);
   box-shadow: 0 4px 12px rgba(94,58,115,.25);
 }
 
-/* Item custom: borda lateral distintiva */
+/* Produto próprio no carrinho: borda lateral distintiva */
 .cart-item-custom {
   border-left: 3px solid var(--uva) !important;
 }
-.btn-edit-custom {
-  background: none;
-  border: none;
-  color: var(--uva);
-  cursor: pointer;
-  font-size: .78rem;
-  padding: 0 4px;
-  margin-left: 4px;
-  vertical-align: middle;
-  opacity: .7;
-  transition: opacity .15s;
-}
-.btn-edit-custom:hover { opacity: 1; color: var(--berinjela); }
 
 /* Badge para fornecedor CUSTOM/avulso */
 .sup-CUSTOM, .orc-sup-CUSTOM {
@@ -47,7 +35,7 @@
 }
 
 /* Modal de produto avulso */
-#custom-modal {
+.custom-modal-backdrop {
   display: none;
   position: fixed;
   inset: 0;
@@ -58,7 +46,7 @@
   padding: 20px;
   backdrop-filter: blur(2px);
 }
-#custom-modal.open { display: flex; }
+.custom-modal-backdrop.open { display: flex; }
 .custom-modal-card {
   background: var(--surface);
   width: 100%;

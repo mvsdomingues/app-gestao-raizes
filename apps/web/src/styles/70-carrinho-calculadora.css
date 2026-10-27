@@ -80,7 +80,8 @@
 
 @media print {
   body { background: #fff; }
-  header, .status-bar, .orc-toolbar { display: none !important; }
+  .sidebar, .status-bar, .orc-toolbar { display: none !important; }
+  .app-shell, .app-main, .app-views { display: block !important; height: auto !important; overflow: visible !important; }
   #view-catalogo, #view-status { display: none !important; }
   #view-orcamento { display: block !important; padding: 0 !important; background: #fff !important; overflow: visible !important; }
   .orcamento-sheet-full { box-shadow: none; border-radius: 0; max-width: 100%; padding: 20px 24px; }

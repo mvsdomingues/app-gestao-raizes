@@ -1,0 +1,124 @@
+/* ══════════════════════════════════
+   TELAS DE CADASTRO (Produtos Próprios, Parâmetros)
+   ══════════════════════════════════ */
+.view-cadastro {
+  flex: 1;
+  overflow-y: auto;
+  background: var(--creme);
+  padding: 28px 32px 60px;
+}
+.cadastro-wrap {
+  max-width: 1100px;
+  margin: 0 auto;
+}
+
+/* Barra de busca acima da tabela */
+.cadastro-toolbar {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  margin-bottom: 16px;
+}
+.cadastro-toolbar .search-input-wrap { max-width: 520px; }
+
+/* Tabela de produtos */
+.cadastro-table td { vertical-align: middle; }
+.cadastro-row { transition: background .15s; }
+.cadastro-row:hover td { background: #FBF9FD; }
+.cadastro-thumb {
+  width: 42px;
+  height: 42px;
+  border-radius: 8px;
+  overflow: hidden;
+  background: var(--creme2);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.cadastro-thumb .cart-thumb-empty { font-size: .95rem; }
+.cadastro-nome { font-weight: 500; color: var(--text); }
+.cadastro-data { font-size: .78rem; color: var(--muted); white-space: nowrap; }
+.cadastro-acoes { text-align: right; white-space: nowrap; }
+.cadastro-acao {
+  width: 30px;
+  height: 30px;
+  border-radius: 50%;
+  border: 1.5px solid var(--border);
+  background: var(--surface);
+  color: var(--uva);
+  font-size: .85rem;
+  cursor: pointer;
+  transition: all .15s;
+}
+.cadastro-acao + .cadastro-acao { margin-left: 6px; }
+.cadastro-acao:hover { border-color: var(--uva); background: var(--uva); color: #fff; }
+.cadastro-acao.perigo { color: var(--muted); }
+.cadastro-acao.perigo:hover { border-color: var(--danger); background: var(--danger); color: #fff; }
+
+/* Mensagens de formulário */
+.form-mensagem {
+  margin: 12px 0;
+  padding: 10px 14px;
+  border-radius: var(--radius);
+  font-size: .82rem;
+  cursor: default;
+}
+.form-mensagem.ok { background: #EAF5E8; color: #2E7D50; border: 1px solid #B3D8AC; }
+.form-mensagem.erro { background: #FEF0EC; color: var(--danger); border: 1px solid #F7B3A0; }
+.form-erros {
+  margin: 12px 0 0;
+  padding: 10px 14px 10px 30px;
+  border-radius: var(--radius);
+  background: #FEF0EC;
+  border: 1px solid #F7B3A0;
+  color: var(--danger);
+  font-size: .8rem;
+}
+.custom-modal-card .custom-input:disabled { opacity: .65; cursor: not-allowed; }
+
+/* Parâmetros: formulário + simulação */
+.param-grid {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 300px;
+  gap: 20px;
+  align-items: start;
+}
+.param-panel { margin-bottom: 0; }
+.param-form { padding: 6px 0 0; }
+.param-form .calc-row { padding: 6px 0; }
+.param-form .calc-input { width: 110px; }
+.param-acoes {
+  display: flex;
+  justify-content: flex-end;
+  gap: 10px;
+  margin-top: 18px;
+  padding-top: 16px;
+  border-top: 1px solid var(--border);
+}
+.param-acoes .btn-secondary { width: auto; padding: 9px 18px; }
+.param-acoes .btn-secondary:hover { border-color: var(--uva); color: var(--uva); }
+.param-exemplo {
+  background: var(--surface);
+  border: 1.5px solid var(--border);
+  border-radius: var(--radius-lg);
+  padding: 18px 20px;
+  box-shadow: var(--shadow-sm);
+  position: sticky;
+  top: 0;
+}
+.param-exemplo .carrinho-resumo-title { margin-bottom: 8px; }
+.param-exemplo-sub { font-size: .8rem; color: var(--muted); margin-bottom: 12px; line-height: 1.45; }
+.param-nota {
+  margin-top: 14px;
+  padding-top: 12px;
+  border-top: 1px dotted var(--border);
+  font-size: .74rem;
+  color: var(--muted);
+  font-style: italic;
+}
+
+@media (max-width: 960px) {
+  .param-grid { grid-template-columns: 1fr; }
+  .param-exemplo { position: static; }
+  .cadastro-table th:nth-child(7), .cadastro-table td:nth-child(7) { display: none; }
+}

@@ -1,6 +1,13 @@
-/** Produto como armazenado na tabela `produtos`. */
+/** Origem de um produto do catálogo. */
+export type OrigemProduto = 'fornecedor' | 'proprio';
+
+/**
+ * Produto do catálogo (visão `catalogo`): produtos dos fornecedores integrados
+ * e produtos próprios (estes com id negativo e origem "proprio").
+ */
 export interface Produto {
   id: number;
+  origem?: OrigemProduto;
   fornecedor: string;
   codigo: string | null;
   nome: string | null;
@@ -33,6 +40,8 @@ export interface ItemOrcamento {
   qty: number;
   preco: number;
   composicao: string;
+  /** Presente nos orçamentos novos; "proprio" para produtos próprios. */
+  origem?: OrigemProduto;
 }
 
 /** Linha do histórico (GET /api/orcamentos). */
@@ -86,4 +95,37 @@ export interface RespostaAtualizar {
 
 export interface RespostaErro {
   erro: string;
+}
+
+/** Produto próprio (tabela `produtos_proprios`). Código no formato PDP-000001. */
+export interface ProdutoProprio {
+  id: number;
+  codigo: string;
+  fornecedor: string;
+  nome: string;
+  preco: number;
+  qtd_estoque: number;
+  imagem_url: string | null;
+  criado: string;
+  atualizado: string;
+}
+
+/**
+ * Dados enviados ao criar/alterar um produto próprio.
+ * `imagem_upload` (data URL) substitui `imagem_url` quando enviado.
+ */
+export interface DadosProdutoProprio {
+  fornecedor?: string;
+  nome?: string;
+  preco?: number;
+  qtd_estoque?: number;
+  imagem_url?: string | null;
+  imagem_upload?: string;
+}
+
+/** Resposta de GET/PUT /api/parametros */
+export interface RespostaParametros {
+  valores: import('./calculadora').ParametrosCalculo;
+  /** Data/hora da última alteração (null = valores padrão de fábrica). */
+  atualizado: string | null;
 }

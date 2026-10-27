@@ -9,10 +9,18 @@ import {
   type ReactNode,
   type RefObject,
 } from 'react';
-import type { ItemOrcamento, StatusFornecedor } from '@raizes/shared';
+import { CALC_DEFAULTS, type ItemOrcamento, type ParametrosCalculo, type StatusFornecedor } from '@raizes/shared';
 import { api } from '../lib/api';
 
-export type Tela = 'catalogo' | 'carrinho' | 'orcamento' | 'mockup' | 'historico' | 'status';
+export type Tela =
+  | 'catalogo'
+  | 'carrinho'
+  | 'orcamento'
+  | 'mockup'
+  | 'historico'
+  | 'produtos-proprios'
+  | 'parametros'
+  | 'status';
 
 export interface FolhaOrcamento {
   numero: string;
@@ -38,10 +46,15 @@ interface ContextoApp {
   abrirImagem: (url: string) => void;
   fecharImagem: () => void;
 
-  /** Modal de produto avulso: null = fechado; 'novo' ou id do item em edição. */
-  modalAvulso: 'novo' | number | null;
-  abrirModalAvulso: (idEditar?: number) => void;
-  fecharModalAvulso: () => void;
+  /** Parâmetros cadastrados da calculadora (usados nos itens novos do carrinho). */
+  parametros: ParametrosCalculo;
+  parametrosAtualizado: string | null;
+  carregarParametros: () => Promise<void>;
+  definirParametros: (valores: ParametrosCalculo, atualizado: string | null) => void;
+
+  /** Incrementado quando produtos próprios mudam (o catálogo recarrega). */
+  versaoCatalogo: number;
+  avisarCatalogoAlterado: () => void;
 
   folha: FolhaOrcamento | null;
   mostrarOrcamento: (f: FolhaOrcamento) => void;
@@ -59,6 +72,8 @@ const VISITAS_INICIAIS: Record<Tela, number> = {
   orcamento: 0,
   mockup: 0,
   historico: 0,
+  'produtos-proprios': 0,
+  parametros: 0,
   status: 0,
 };
 
@@ -68,14 +83,19 @@ export function ProvedorApp({ children }: { children: ReactNode }) {
   const [fornecedores, setFornecedores] = useState<string[]>([]);
   const [status, setStatus] = useState<StatusFornecedor[] | null>(null);
   const [imagemAmpliada, setImagemAmpliada] = useState<string | null>(null);
-  const [modalAvulso, setModalAvulso] = useState<'novo' | number | null>(null);
+  const [parametros, setParametros] = useState<ParametrosCalculo>({ ...CALC_DEFAULTS });
+  const [parametrosAtualizado, setParametrosAtualizado] = useState<string | null>(null);
+  const [versaoCatalogo, setVersaoCatalogo] = useState(0);
   const [folha, setFolha] = useState<FolhaOrcamento | null>(null);
   const mockupSolicitado = useRef<number | string | null>(null);
 
   const irPara = useCallback((t: Tela) => {
     setTela(t);
     setVisitas((v) => ({ ...v, [t]: v[t] + 1 }));
-    if (t !== 'orcamento' && t !== 'mockup') window.scrollTo(0, 0);
+    if (t !== 'orcamento' && t !== 'mockup') {
+      window.scrollTo(0, 0);
+      document.querySelector('.app-views')?.scrollTo(0, 0);
+    }
   }, []);
 
   const carregarFornecedores = useCallback(async () => {
@@ -94,6 +114,20 @@ export function ProvedorApp({ children }: { children: ReactNode }) {
     }
   }, []);
 
+  const carregarParametros = useCallback(async () => {
+    try {
+      const r = await api.parametros();
+      setParametros(r.valores);
+      setParametrosAtualizado(r.atualizado);
+    } catch {
+      /* mantém os valores atuais */
+    }
+  }, []);
+
+  useEffect(() => {
+    void carregarParametros();
+  }, [carregarParametros]);
+
   // A aba "Atualização" recarrega o status sempre que é aberta
   useEffect(() => {
     if (visitas.status > 0) void carregarStatus();
@@ -111,9 +145,15 @@ export function ProvedorApp({ children }: { children: ReactNode }) {
       imagemAmpliada,
       abrirImagem: (url) => setImagemAmpliada(url),
       fecharImagem: () => setImagemAmpliada(null),
-      modalAvulso,
-      abrirModalAvulso: (id) => setModalAvulso(id ?? 'novo'),
-      fecharModalAvulso: () => setModalAvulso(null),
+      parametros,
+      parametrosAtualizado,
+      carregarParametros,
+      definirParametros: (valores, atualizado) => {
+        setParametros(valores);
+        setParametrosAtualizado(atualizado);
+      },
+      versaoCatalogo,
+      avisarCatalogoAlterado: () => setVersaoCatalogo((v) => v + 1),
       folha,
       mostrarOrcamento: (f) => {
         setFolha(f);
@@ -125,7 +165,7 @@ export function ProvedorApp({ children }: { children: ReactNode }) {
         irPara('mockup');
       },
     }),
-    [tela, visitas, irPara, fornecedores, carregarFornecedores, status, carregarStatus, imagemAmpliada, modalAvulso, folha],
+    [tela, visitas, irPara, fornecedores, carregarFornecedores, status, carregarStatus, imagemAmpliada, parametros, parametrosAtualizado, carregarParametros, versaoCatalogo, folha],
   );
 
   return <Ctx.Provider value={valor}>{children}</Ctx.Provider>;

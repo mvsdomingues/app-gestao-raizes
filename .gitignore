@@ -31,3 +31,9 @@ desktop.ini
 
 # Configurações locais do Claude Code
 .claude/settings.local.json
+
+# Chaves SSH (nunca versionar)
+ssh_*
+*.pem
+id_rsa*
+id_ed25519*

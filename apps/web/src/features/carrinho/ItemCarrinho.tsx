@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState, type FocusEvent, type FormEvent } from 'react';
 import { calcPreco, formatBRL, getFaixa, type CampoNumerico } from '@raizes/shared';
 import { useApp } from '../../app/contexto';
+import { classeFornecedor } from '../../lib/fornecedor';
 import { ImagemProduto } from '../../components/ImagemProduto';
 import { useCarrinho, type ItemCarrinho as Item } from '../../state/carrinho';
 
@@ -10,7 +11,7 @@ import { useCarrinho, type ItemCarrinho as Item } from '../../state/carrinho';
  * redesenhada (mesmo comportamento da versão anterior).
  */
 export function ItemCarrinho({ item }: { item: Item }) {
-  const { abrirModalAvulso, abrirMockupParaProduto } = useApp();
+  const { abrirMockupParaProduto } = useApp();
   const { remover, definirQtd, definirCalc, definirCalcBool } = useCarrinho();
   const { produto: p, qty, calc: c } = item;
   const id = p.id;
@@ -42,7 +43,7 @@ export function ItemCarrinho({ item }: { item: Item }) {
   });
 
   return (
-    <div className={`cart-item${p.is_custom ? ' cart-item-custom' : ''}`} id={`cartitem-${id}`}>
+    <div className={`cart-item${p.origem === 'proprio' ? ' cart-item-custom' : ''}`} id={`cartitem-${id}`}>
       <div className="cart-thumb">
         <ImagemProduto
           url={p.imagem_url}
@@ -53,17 +54,9 @@ export function ItemCarrinho({ item }: { item: Item }) {
       <div className="cart-item-info" style={{ minWidth: 0, flex: 1 }}>
         <div className="cart-item-name">
           {p.nome}
-          {p.is_custom && (
-            <>
-              {' '}
-              <button className="btn-edit-custom" onClick={() => abrirModalAvulso(id)} title="Editar produto avulso">
-                ✎
-              </button>
-            </>
-          )}
         </div>
         <div className="cart-item-price">
-          <span className={`sup-badge sup-${p.is_custom ? 'CUSTOM' : p.fornecedor}`}>{p.fornecedor}</span>
+          <span className={`sup-badge ${classeFornecedor(p.fornecedor, p.origem)}`}>{p.fornecedor}</span>
           {' \u00a0Custo fornecedor: '}
           {formatBRL(p.preco)}/un{' '}
           <button className="btn-item-mockup" onClick={() => abrirMockupParaProduto(id)} title="Gerar Mockup deste produto">

@@ -3,6 +3,7 @@ import type { Produto } from '@raizes/shared';
 import { useApp } from '../../app/contexto';
 import { Aviso, Carregando } from '../../components/Carregando';
 import { api } from '../../lib/api';
+import { classeFornecedor } from '../../lib/fornecedor';
 import { useCarrinho } from '../../state/carrinho';
 import { CartaoProduto, LinhaProduto } from './ItemProduto';
 import { Paginacao } from './Paginacao';
@@ -15,7 +16,7 @@ type Conteudo =
   | { tipo: 'produtos'; produtos: Produto[] };
 
 export function Catalogo() {
-  const { tela, fornecedores, carregarFornecedores, carregarStatus } = useApp();
+  const { tela, fornecedores, carregarFornecedores, carregarStatus, parametros, versaoCatalogo } = useApp();
   const { estado, adicionar, remover } = useCarrinho();
 
   const [busca, setBusca] = useState('');
@@ -66,6 +67,11 @@ export function Catalogo() {
     })();
   }, [carregarFornecedores, buscar, carregarStatus]);
 
+  // Produtos próprios incluídos/alterados/excluídos: recarrega a página atual
+  useEffect(() => {
+    if (versaoCatalogo > 0) void buscar();
+  }, [versaoCatalogo, buscar]);
+
   const aoDigitar = (valor: string) => {
     setBusca(valor);
     filtros.current.busca = valor;
@@ -84,7 +90,8 @@ export function Catalogo() {
       return;
     }
     try {
-      adicionar(await api.produto(id));
+      // Itens novos começam com os parâmetros cadastrados
+      adicionar(await api.produto(id), parametros);
     } catch {
       /* ignora falha de rede */
     }
@@ -225,7 +232,7 @@ function ListaProdutos({ produtos, modo, noCarrinho, alternar }: PropsLista) {
   return (
     <>
       {[...grupos].map(([forn, prods]) => (
-        <GrupoFornecedor key={forn} forn={forn} qtd={prods.length}>
+        <GrupoFornecedor key={forn} forn={forn} qtd={prods.length} proprio={prods.every((p) => p.origem === 'proprio')}>
           {modo === 'grid' ? (
             <div className="products-grid">
               {prods.map((p) => (
@@ -245,12 +252,22 @@ function ListaProdutos({ produtos, modo, noCarrinho, alternar }: PropsLista) {
   );
 }
 
-function GrupoFornecedor({ forn, qtd, children }: { forn: string; qtd: number; children: ReactNode }) {
+function GrupoFornecedor({
+  forn,
+  qtd,
+  proprio,
+  children,
+}: {
+  forn: string;
+  qtd: number;
+  proprio: boolean;
+  children: ReactNode;
+}) {
   return (
     <>
       <div className="section-header">
         <span className="section-title">{forn}</span>
-        <span className={`sup-badge sup-${forn}`}>{forn}</span>
+        <span className={`sup-badge ${classeFornecedor(forn, proprio ? 'proprio' : 'fornecedor')}`}>{forn}</span>
         <span className="section-badge">
           {qtd} item{qtd > 1 ? 's' : ''}
         </span>

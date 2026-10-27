@@ -1,35 +1,44 @@
+import { BarraLateral } from '../components/BarraLateral';
 import { BarraStatus } from '../components/BarraStatus';
-import { Cabecalho } from '../components/Cabecalho';
 import { Lightbox } from '../components/Lightbox';
 import { Atualizacao } from '../features/atualizacao/Atualizacao';
 import { Carrinho } from '../features/carrinho/Carrinho';
-import { ModalProdutoAvulso } from '../features/carrinho/ModalProdutoAvulso';
 import { Catalogo } from '../features/catalogo/Catalogo';
 import { Historico } from '../features/historico/Historico';
 import { EstudioMockup } from '../features/mockup/EstudioMockup';
 import { Orcamento } from '../features/orcamento/Orcamento';
+import { Parametros } from '../features/parametros/Parametros';
+import { ProdutosProprios } from '../features/produtos-proprios/ProdutosProprios';
 import { ProvedorCarrinho } from '../state/carrinho';
 import { ProvedorApp } from './contexto';
 
 /**
- * Aplicação de página única. Todas as telas ficam montadas e apenas a ativa
- * é exibida — assim o estado de cada uma (busca, mockup, log…) é preservado
- * ao trocar de aba, como na versão anterior.
+ * Aplicação de página única: menu lateral + área de telas + rodapé de status.
+ * Todas as telas ficam montadas e apenas a ativa é exibida — assim o estado de
+ * cada uma (busca, mockup, log…) é preservado ao trocar de tela.
+ * Novas telas: crie em features/, registre aqui e adicione ao menu em BarraLateral.
  */
 export function App() {
   return (
     <ProvedorApp>
       <ProvedorCarrinho>
-        <Cabecalho />
-        <Catalogo />
-        <Carrinho />
-        <Atualizacao />
-        <Orcamento />
-        <EstudioMockup />
-        <Historico />
-        <BarraStatus />
+        <div className="app-shell">
+          <BarraLateral />
+          <div className="app-main">
+            <main className="app-views">
+              <Catalogo />
+              <Carrinho />
+              <Atualizacao />
+              <Orcamento />
+              <EstudioMockup />
+              <Historico />
+              <ProdutosProprios />
+              <Parametros />
+            </main>
+            <BarraStatus />
+          </div>
+        </div>
         <Lightbox />
-        <ModalProdutoAvulso />
       </ProvedorCarrinho>
     </ProvedorApp>
   );

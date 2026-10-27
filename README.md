@@ -16,18 +16,18 @@ Aplicação interna para consultar produtos de vários fornecedores, montar orç
 │   │   │   ├── index.ts        ← inicia o servidor (porta 5000)
 │   │   │   ├── app.ts          ← rotas e arquivos estáticos
 │   │   │   ├── config.ts       ← lê o .env e resolve caminhos
-│   │   │   ├── routes/         ← catálogo, orçamentos, atualização, proxy de imagens
+│   │   │   ├── routes/         ← catálogo, produtos próprios, parâmetros, orçamentos, atualização, proxy
 │   │   │   ├── services/       ← gerenciador da atualização, extração de imagens SPOT
 │   │   │   ├── fornecedores/   ← coletores ASIA, SM, SPOT, XBZ
-│   │   │   ├── db/             ← conexão, esquema e gravação de produtos
+│   │   │   ├── db/             ← conexão, esquema e repositórios
 │   │   │   ├── lib/            ← datas, conversões, utilitários HTTP
 │   │   │   └── cli/            ← comandos de linha (atualizar-produtos, baixar-imagens-spot)
 │   │   └── test/               ← testes da API, dos coletores e do scraper
 │   └── web/                    ← interface React
 │       └── src/
 │           ├── app/            ← App e contexto (navegação entre abas)
-│           ├── features/       ← catalogo, carrinho, orcamento, mockup, historico, atualizacao
-│           ├── components/     ← cabeçalho, rodapé, lightbox, imagem de produto
+│           ├── features/       ← catalogo, carrinho, orcamento, mockup, historico, produtos-proprios, parametros, atualizacao
+│           ├── components/     ← barra lateral (menu), rodapé, lightbox, imagem de produto
 │           ├── state/          ← estado do carrinho
 │           ├── lib/            ← cliente da API
 │           └── styles/         ← CSS da identidade visual
@@ -116,11 +116,24 @@ npm run imagens:spot -- --force   # reprocessa todos
 
 ## 💡 Uso da interface
 
-1. **Catálogo**: busque por nome ou código, filtre por fornecedor/estoque, alterne grade/lista e clique no produto para incluí-lo no carrinho.
-2. **Carrinho**: ajuste quantidades e, em *Ajustar custos e margem*, os parâmetros da calculadora de cada item. Use **+ Produto avulso** para itens fora da base.
-3. **Gerar Orçamento**: salva no histórico (numeração `ORC-0001`…) e abre a folha para **Imprimir / Salvar PDF**.
-4. **🎨 Mockups**: aplique a logomarca sobre a foto dos produtos do carrinho e baixe o PNG.
+O menu fica na **barra lateral** (pode ser recolhido para mostrar só os ícones). Toda nova tela deve ser adicionada a esse menu, em `apps/web/src/components/BarraLateral.tsx`.
+
+**Vendas**
+
+1. **Catálogo**: busque por nome ou código, filtre por fornecedor/estoque, alterne grade/lista e clique no produto para incluí-lo no carrinho. Mostra os produtos dos fornecedores e os produtos próprios.
+2. **Carrinho**: ajuste quantidades e, em *Ajustar custos e margem*, os valores da calculadora de cada item. Todo item entra no carrinho com os valores da tela **Parâmetros**.
+3. **Orçamento**: *Gerar Orçamento* salva no histórico (numeração `ORC-0001`…) e abre a folha para **Imprimir / Salvar PDF**.
+4. **Mockups**: aplique a logomarca sobre a foto dos produtos do carrinho e baixe o PNG.
 5. **Histórico**: reabra qualquer orçamento salvo.
+
+**Cadastros**
+
+6. **Produtos Próprios**: inclua, busque, altere e exclua produtos da própria empresa. Cada um recebe um código sequencial `PDP-000001`, `PDP-000002`… (códigos excluídos não são reutilizados). A foto pode ser enviada do computador ou informada por URL; os arquivos ficam em `data/imagens/proprios/`.
+7. **Parâmetros**: valores iniciais da calculadora (material, mão de obra, imposto de compra, designer, logística, imposto sobre venda e margem), com simulação de preço. Itens que já estão no carrinho mantêm os valores com que foram adicionados.
+
+**Sistema**
+
+8. **Atualização**: atualiza a base dos fornecedores integrados e mostra o log.
 
 ### Calculadora de preço
 
@@ -129,4 +142,15 @@ Custo total/un = custo × (1 + imposto de compra*) + material + mão de obra + (
 Preço          = Custo total ÷ (1 − imposto sobre venda − margem)
 ```
 
-Padrões: material R$ 1,00 · mão de obra R$ 3,00 · designer R$ 60 · logística R$ 60 · imposto de compra 14% (ativo) · imposto sobre venda 6% · margem 35%.
+Valores de fábrica (usados até a primeira gravação em **Parâmetros**): material R$ 1,00 · mão de obra R$ 3,00 · designer R$ 60 · logística R$ 60 · imposto de compra 14% (ativo) · imposto sobre venda 6% · margem 35%.
+
+### API
+
+| Rota | Uso |
+|---|---|
+| `GET /api/produtos` · `GET /api/produto/:id` | Catálogo (fornecedores + próprios; próprios têm id negativo) |
+| `GET/POST /api/produtos-proprios` | Lista (`?q=` busca) / inclui produto próprio |
+| `GET/PUT/PATCH/DELETE /api/produtos-proprios/:codigo` | Consulta, substitui, altera campos ou exclui (`PDP-000001`) |
+| `GET/PUT /api/parametros` | Lê / grava os parâmetros da calculadora |
+| `GET/POST /api/orcamentos` · `GET /api/orcamentos/:id` | Histórico de orçamentos |
+| `POST /api/atualizar` · `GET /api/atualizar/status` | Atualização dos fornecedores |

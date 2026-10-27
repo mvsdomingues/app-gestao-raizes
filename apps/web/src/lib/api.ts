@@ -1,5 +1,9 @@
 import type {
+  DadosProdutoProprio,
   NovoOrcamento,
+  ParametrosCalculo,
+  ProdutoProprio,
+  RespostaParametros,
   Orcamento,
   OrcamentoCriado,
   Produto,
@@ -21,6 +25,21 @@ async function postJson(url: string, corpo: unknown): Promise<Response> {
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify(corpo),
   });
+}
+
+/** Erro devolvido pela API com a mensagem do servidor ({ erro: "…" }). */
+export class ErroApi extends Error {}
+
+/** Requisição JSON que lança ErroApi com a mensagem do servidor quando falha. */
+async function enviar<T>(metodo: string, url: string, corpo?: unknown): Promise<T> {
+  const resp = await fetch(url, {
+    method: metodo,
+    headers: corpo === undefined ? undefined : { 'Content-Type': 'application/json' },
+    body: corpo === undefined ? undefined : JSON.stringify(corpo),
+  });
+  const dados = (await resp.json().catch(() => ({}))) as T & { erro?: string };
+  if (!resp.ok) throw new ErroApi(dados.erro || `Erro ${resp.status}`);
+  return dados;
 }
 
 export interface FiltrosProdutos {
@@ -68,6 +87,20 @@ export const api = {
   },
 
   statusAtualizacao: () => getJson<StatusAtualizacao>('/api/atualizar/status'),
+
+  // ── Produtos próprios ──
+  produtosProprios: (q = '') =>
+    enviar<ProdutoProprio[]>('GET', `/api/produtos-proprios?q=${encodeURIComponent(q)}`),
+  criarProdutoProprio: (dados: DadosProdutoProprio) =>
+    enviar<ProdutoProprio>('POST', '/api/produtos-proprios', dados),
+  alterarProdutoProprio: (codigo: string, dados: DadosProdutoProprio) =>
+    enviar<ProdutoProprio>('PATCH', `/api/produtos-proprios/${encodeURIComponent(codigo)}`, dados),
+  excluirProdutoProprio: (codigo: string) =>
+    enviar<{ ok: boolean }>('DELETE', `/api/produtos-proprios/${encodeURIComponent(codigo)}`),
+
+  // ── Parâmetros da calculadora ──
+  parametros: () => enviar<RespostaParametros>('GET', '/api/parametros'),
+  salvarParametros: (valores: ParametrosCalculo) => enviar<RespostaParametros>('PUT', '/api/parametros', valores),
 };
 
 /** URL usada para carregar imagens externas no canvas sem bloqueio de CORS. */

@@ -6,7 +6,7 @@ import { subtotalCarrinho, useCarrinho } from '../../state/carrinho';
 import { ItemCarrinho } from './ItemCarrinho';
 
 export function Carrinho() {
-  const { tela, visitas, irPara, abrirModalAvulso, mostrarOrcamento } = useApp();
+  const { tela, visitas, irPara, mostrarOrcamento } = useApp();
   const { estado, limpar, redesenhar } = useCarrinho();
   const [frete, setFrete] = useState('0');
   const [gerando, setGerando] = useState(false);
@@ -71,9 +71,6 @@ export function Carrinho() {
             </p>
           </div>
           <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
-            <button className="btn-add-custom" onClick={() => abrirModalAvulso()}>
-              + Produto avulso
-            </button>
             <button className="btn-back" onClick={() => irPara('catalogo')}>
               ← Voltar ao catálogo
             </button>

@@ -1,6 +1,7 @@
 import { useEffect, useReducer, useRef, useState } from 'react';
 import { useApp } from '../../app/contexto';
 import { ImagemProduto } from '../../components/ImagemProduto';
+import { classeFornecedor } from '../../lib/fornecedor';
 import { useCarrinho } from '../../state/carrinho';
 import {
   carregarImagemProduto,
@@ -248,7 +249,7 @@ export function EstudioMockup() {
                             {p.nome}
                           </div>
                           <div className="mockup-prod-sub">
-                            <span className={`sup-badge sup-${p.is_custom ? 'CUSTOM' : p.fornecedor}`}>
+                            <span className={`sup-badge ${classeFornecedor(p.fornecedor, p.origem)}`}>
                               {p.fornecedor}
                             </span>
                             <span>Cód: {p.codigo || '—'}</span>

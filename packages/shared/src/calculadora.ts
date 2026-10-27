@@ -5,7 +5,7 @@
 // Custo Total = (Produto*(1+ICompra?)) + Mat.Pers. + MO.Pers. + (Fixos ÷ Qtd)
 // ══════════════════════════════════════════════════════════
 import { formatBRL } from './formatacao';
-import type { ItemOrcamento } from './tipos';
+import type { ItemOrcamento, OrigemProduto } from './tipos';
 
 export interface ParametrosCalculo {
   /** R$/un — tinta, papel, adesivo, embalagem */
@@ -138,6 +138,7 @@ export interface ProdutoCalculavel {
   fornecedor: string;
   imagem_url: string | null;
   preco: number | null;
+  origem?: OrigemProduto;
 }
 
 /** Gera o snapshot de um item do carrinho, como salvo no histórico. */
@@ -155,5 +156,44 @@ export function montarItemOrcamento(
     qty,
     preco: res.preco,
     composicao: montarComposicao(p.preco as number, calc, res),
+    origem: p.origem ?? 'fornecedor',
   };
+}
+
+/** Rótulos e unidades dos parâmetros (usados na tela de cadastro e nas mensagens). */
+export const CAMPOS_PARAMETROS: readonly { campo: CampoNumerico; rotulo: string; percentual: boolean }[] = [
+  { campo: 'mat_personalizacao', rotulo: 'Material de personalização', percentual: false },
+  { campo: 'mo_personalizacao', rotulo: 'Mão de obra / serviço', percentual: false },
+  { campo: 'imposto_compra', rotulo: 'Imposto de compra', percentual: true },
+  { campo: 'designer_total', rotulo: 'Designer / mockup', percentual: false },
+  { campo: 'logistica_total', rotulo: 'Logística / frete compra', percentual: false },
+  { campo: 'imposto', rotulo: 'Imposto sobre venda', percentual: true },
+  { campo: 'margem', rotulo: 'Margem desejada', percentual: true },
+];
+
+/**
+ * Valida um conjunto completo de parâmetros.
+ * Retorna a lista de erros (vazia quando está tudo certo).
+ */
+export function validarParametros(p: Partial<Record<keyof ParametrosCalculo, unknown>>): string[] {
+  const erros: string[] = [];
+  for (const { campo, rotulo, percentual } of CAMPOS_PARAMETROS) {
+    const v = p[campo];
+    if (typeof v !== 'number' || !Number.isFinite(v)) {
+      erros.push(`${rotulo}: informe um número`);
+    } else if (v < 0) {
+      erros.push(`${rotulo}: não pode ser negativo`);
+    } else if (percentual && v >= 1) {
+      erros.push(`${rotulo}: deve ser menor que 100%`);
+    }
+  }
+  if (typeof p.imposto_compra_ativo !== 'boolean') {
+    erros.push('Aplicar imposto de compra: informe sim ou não');
+  }
+  const imposto = p.imposto as number;
+  const margem = p.margem as number;
+  if (!erros.length && imposto + margem >= 1) {
+    erros.push('Imposto sobre venda + margem devem somar menos de 100%');
+  }
+  return erros;
 }

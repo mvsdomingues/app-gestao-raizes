@@ -2,6 +2,7 @@ import type { Produto } from '@raizes/shared';
 import { formatBRL } from '@raizes/shared';
 import { useApp } from '../../app/contexto';
 import { ImagemProduto } from '../../components/ImagemProduto';
+import { classeFornecedor } from '../../lib/fornecedor';
 
 interface Props {
   p: Produto;
@@ -53,7 +54,7 @@ export function CartaoProduto({ p, noCarrinho, alternar }: Props) {
         />
       </div>
       <div className="card-body">
-        <span className={`sup-badge sup-${forn}`}>{forn}</span>
+        <span className={`sup-badge ${classeFornecedor(forn, p.origem)}`}>{forn}</span>
         <span className="product-code">{p.codigo || '–'}</span>
         <span className="product-name">{p.nome ?? ''}</span>
         <div className="product-footer">
@@ -88,7 +89,7 @@ export function LinhaProduto({ p, noCarrinho, alternar }: Props) {
       <div className="row-info">
         <span className="row-name">{p.nome ?? ''}</span>
         <div className="row-meta">
-          <span className={`sup-badge sup-${forn}`}>{forn}</span>
+          <span className={`sup-badge ${classeFornecedor(forn, p.origem)}`}>{forn}</span>
           <span className="row-code">{p.codigo || '–'}</span>
         </div>
       </div>

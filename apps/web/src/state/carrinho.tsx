@@ -1,21 +1,21 @@
 import { createContext, useContext, useMemo, useReducer, type ReactNode } from 'react';
 import {
-  CALC_DEFAULTS,
   calcPreco,
   type CampoNumerico,
+  type OrigemProduto,
   type ParametrosCalculo,
   type Produto,
 } from '@raizes/shared';
 
-/** Produto no carrinho: do catálogo ou avulso (id negativo, is_custom). */
+/** Produto no carrinho (do catálogo: fornecedor integrado ou produto próprio, id negativo). */
 export interface ProdutoCarrinho {
   id: number;
+  origem?: OrigemProduto;
   nome: string | null;
   fornecedor: string;
   preco: number | null;
   codigo: string | null;
   imagem_url: string | null;
-  is_custom?: boolean;
   qtd_estoque?: number | null;
   atualizado?: string | null;
 }
@@ -30,8 +30,8 @@ export interface ItemCarrinho {
 
 /**
  * Itens indexados pelo id do produto (como string). A ordem de iteração segue a
- * regra dos objetos JS — ids positivos em ordem crescente, depois os avulsos na
- * ordem de inclusão — exatamente como na versão anterior.
+ * regra dos objetos JS — ids positivos em ordem crescente, depois os produtos
+ * próprios (ids negativos) na ordem de inclusão.
  */
 export type Itens = Record<string, ItemCarrinho>;
 
@@ -45,22 +45,13 @@ export interface EstadoCarrinho {
   versao: number;
 }
 
-export interface DadosAvulso {
-  nome: string;
-  fornecedor: string;
-  preco: number;
-  codigo: string;
-  imagem_url: string | null;
-}
-
 type Acao =
-  | { tipo: 'adicionar'; produto: Produto }
+  | { tipo: 'adicionar'; produto: Produto; calc: ParametrosCalculo }
   | { tipo: 'remover'; id: string }
   | { tipo: 'limpar' }
   | { tipo: 'qtd'; id: string; qty: number; redesenhar: boolean }
   | { tipo: 'calc'; id: string; campo: CampoNumerico; valor: number }
   | { tipo: 'calcBool'; id: string; valor: boolean }
-  | { tipo: 'salvarAvulso'; editarId: string | null; dados: DadosAvulso }
   | { tipo: 'mockup'; id: string; imagem: string }
   | { tipo: 'redesenhar' };
 
@@ -70,16 +61,6 @@ function semItem(itens: Itens, id: string): Itens {
   return novo;
 }
 
-function proximoIdAvulso(itens: Itens): number {
-  // IDs negativos identificam itens avulsos (não conflitam com IDs do banco)
-  let min = 0;
-  for (const id of Object.keys(itens)) {
-    const n = Number.parseInt(id, 10);
-    if (n < min) min = n;
-  }
-  return min - 1;
-}
-
 function redutor(estado: EstadoCarrinho, acao: Acao): EstadoCarrinho {
   const { itens } = estado;
   const redesenho = { versao: estado.versao + 1 };
@@ -87,7 +68,8 @@ function redutor(estado: EstadoCarrinho, acao: Acao): EstadoCarrinho {
     case 'adicionar':
       return {
         ...redesenho,
-        itens: { ...itens, [acao.produto.id]: { produto: acao.produto, qty: 1, calc: { ...CALC_DEFAULTS } } },
+        // Os ajustes de custo e margem começam com os parâmetros cadastrados
+        itens: { ...itens, [acao.produto.id]: { produto: acao.produto, qty: 1, calc: { ...acao.calc } } },
       };
     case 'remover':
       return { ...redesenho, itens: semItem(itens, acao.id) };
@@ -111,53 +93,6 @@ function redutor(estado: EstadoCarrinho, acao: Acao): EstadoCarrinho {
           : { ...item.calc, imposto_compra_ativo: acao.valor };
       return { ...estado, itens: { ...itens, [acao.id]: { ...item, calc } } };
     }
-    case 'salvarAvulso': {
-      const { dados, editarId } = acao;
-      const fornecedor = dados.fornecedor.toUpperCase().slice(0, 20);
-      const existente = editarId ? itens[editarId] : undefined;
-      if (editarId && existente) {
-        // Edição: preserva qty e calc, só atualiza o produto
-        return {
-          ...redesenho,
-          itens: {
-            ...itens,
-            [editarId]: {
-              ...existente,
-              produto: {
-                ...existente.produto,
-                nome: dados.nome,
-                fornecedor,
-                preco: dados.preco,
-                codigo: dados.codigo,
-                // foto nova substitui; sem foto nova, preserva a anterior
-                imagem_url:
-                  dados.imagem_url !== null ? dados.imagem_url : existente.produto.imagem_url || '',
-              },
-            },
-          },
-        };
-      }
-      const id = proximoIdAvulso(itens);
-      return {
-        ...redesenho,
-        itens: {
-          ...itens,
-          [id]: {
-            produto: {
-              id,
-              nome: dados.nome,
-              fornecedor,
-              preco: dados.preco,
-              codigo: dados.codigo,
-              imagem_url: dados.imagem_url || '',
-              is_custom: true,
-            },
-            qty: 1,
-            calc: { ...CALC_DEFAULTS },
-          },
-        },
-      };
-    }
     case 'mockup': {
       const item = itens[acao.id];
       if (!item) return estado;
@@ -170,13 +105,12 @@ function redutor(estado: EstadoCarrinho, acao: Acao): EstadoCarrinho {
 
 interface ContextoCarrinho {
   estado: EstadoCarrinho;
-  adicionar: (produto: Produto) => void;
+  adicionar: (produto: Produto, calc: ParametrosCalculo) => void;
   remover: (id: number | string) => void;
   limpar: () => void;
   definirQtd: (id: number | string, qty: number, redesenhar: boolean) => void;
   definirCalc: (id: number | string, campo: CampoNumerico, valor: number) => void;
   definirCalcBool: (id: number | string, valor: boolean) => void;
-  salvarAvulso: (editarId: number | string | null, dados: DadosAvulso) => void;
   vincularMockup: (id: number | string, imagem: string) => void;
   redesenhar: () => void;
 }
@@ -188,14 +122,12 @@ export function ProvedorCarrinho({ children }: { children: ReactNode }) {
   const valor = useMemo<ContextoCarrinho>(
     () => ({
       estado,
-      adicionar: (produto) => despachar({ tipo: 'adicionar', produto }),
+      adicionar: (produto, calc) => despachar({ tipo: 'adicionar', produto, calc }),
       remover: (id) => despachar({ tipo: 'remover', id: String(id) }),
       limpar: () => despachar({ tipo: 'limpar' }),
       definirQtd: (id, qty, redesenhar) => despachar({ tipo: 'qtd', id: String(id), qty, redesenhar }),
       definirCalc: (id, campo, v) => despachar({ tipo: 'calc', id: String(id), campo, valor: v }),
       definirCalcBool: (id, v) => despachar({ tipo: 'calcBool', id: String(id), valor: v }),
-      salvarAvulso: (editarId, dados) =>
-        despachar({ tipo: 'salvarAvulso', editarId: editarId === null ? null : String(editarId), dados }),
       vincularMockup: (id, imagem) => despachar({ tipo: 'mockup', id: String(id), imagem }),
       redesenhar: () => despachar({ tipo: 'redesenhar' }),
     }),

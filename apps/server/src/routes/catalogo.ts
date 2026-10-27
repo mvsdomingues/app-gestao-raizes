@@ -8,7 +8,7 @@ export function rotasCatalogo(db: Banco): Router {
 
   r.get('/api/fornecedores', (_req, res) => {
     const rows = db
-      .prepare('SELECT DISTINCT fornecedor FROM produtos ORDER BY fornecedor')
+      .prepare('SELECT DISTINCT fornecedor FROM catalogo ORDER BY fornecedor')
       .all() as { fornecedor: string }[];
     res.json(rows.map((x) => x.fornecedor));
   });
@@ -48,18 +48,19 @@ export function rotasCatalogo(db: Banco): Router {
     const whereSql = wheres.length ? 'WHERE ' + wheres.join(' AND ') : '';
 
     const { c: total } = db
-      .prepare(`SELECT COUNT(*) as c FROM produtos ${whereSql}`)
+      .prepare(`SELECT COUNT(*) as c FROM catalogo ${whereSql}`)
       .get(...params) as { c: number };
     const produtos = db
-      .prepare(`SELECT * FROM produtos ${whereSql} ORDER BY fornecedor, nome LIMIT ? OFFSET ?`)
+      .prepare(`SELECT * FROM catalogo ${whereSql} ORDER BY fornecedor, nome LIMIT ? OFFSET ?`)
       .all(...params, limit, offset) as Produto[];
     const corpo: RespostaProdutos = { total, produtos };
     res.json(corpo);
   });
 
   r.get('/api/produto/:pid', (req, res, next) => {
-    if (!/^\d+$/.test(req.params.pid)) return next();
-    const row = db.prepare('SELECT * FROM produtos WHERE id = ?').get(Number(req.params.pid));
+    // ids negativos = produtos próprios (visão catalogo)
+    if (!/^-?\d+$/.test(req.params.pid)) return next();
+    const row = db.prepare('SELECT * FROM catalogo WHERE id = ?').get(Number(req.params.pid));
     if (!row) {
       res.status(404).json({ erro: 'não encontrado' });
       return;

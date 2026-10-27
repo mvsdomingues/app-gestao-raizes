@@ -6,6 +6,8 @@ import { ErroHttp } from './lib/http';
 import { rotasAtualizacao } from './routes/atualizacao';
 import { rotasCatalogo } from './routes/catalogo';
 import { rotasOrcamentos } from './routes/orcamentos';
+import { rotasParametros } from './routes/parametros';
+import { rotasProdutosProprios } from './routes/produtos-proprios';
 import { rotaProxyImagem } from './routes/proxy-imagem';
 import type { GerenciadorAtualizacao } from './services/gerenciador-atualizacao';
 
@@ -31,6 +33,8 @@ export function criarApp({ db, gerenciador, imagensDir, webDist }: OpcoesApp) {
 
   app.use(rotasCatalogo(db));
   app.use(rotasOrcamentos(db));
+  app.use(rotasProdutosProprios(db, imagensDir));
+  app.use(rotasParametros(db));
   app.use(rotasAtualizacao(gerenciador));
   app.use(rotaProxyImagem());
 

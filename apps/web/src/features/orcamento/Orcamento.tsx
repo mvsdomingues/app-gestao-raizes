@@ -1,6 +1,7 @@
 import { formatBRL } from '@raizes/shared';
 import { useApp, type FolhaOrcamento } from '../../app/contexto';
 import { ImagemProduto } from '../../components/ImagemProduto';
+import { classeFornecedor } from '../../lib/fornecedor';
 
 /** Aba "Orçamento": folha timbrada pronta para imprimir / salvar em PDF. */
 export function Orcamento() {
@@ -115,7 +116,7 @@ function Folha({ folha }: { folha: FolhaOrcamento }) {
                   <div>
                     <div>
                       {item.nome}
-                      <span className={`orc-sup-badge orc-sup-${item.fornecedor}`}>{item.fornecedor}</span>
+                      <span className={`orc-sup-badge ${classeFornecedor(item.fornecedor, item.origem, 'orc-sup-')}`}>{item.fornecedor}</span>
                     </div>
                     <div className="orc-prod-code">Cód: {item.codigo || '–'}</div>
                     <div className="orc-prod-composicao">
