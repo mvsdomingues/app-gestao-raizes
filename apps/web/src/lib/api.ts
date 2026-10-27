@@ -14,6 +14,7 @@ import type {
   Pedido,
   RespostaOrcamentos,
   RespostaPedidos,
+  RespostaQuadroPedidos,
   StatusAtualizacao,
   StatusFornecedor,
 } from '@raizes/shared';
@@ -113,11 +114,14 @@ export const api = {
     for (const [k, v] of Object.entries(filtros)) if (v && String(v).trim()) qs.set(k, String(v).trim());
     return enviar<RespostaPedidos>('GET', `/api/pedidos?${qs}`);
   },
+  quadroPedidos: (limite = 20) => enviar<RespostaQuadroPedidos>('GET', `/api/pedidos/quadro?limite=${limite}`),
   pedido: (codigo: string) => enviar<Pedido>('GET', `/api/pedidos/${encodeURIComponent(codigo)}`),
   criarPedido: (orcamentoId: number, observacao: string) =>
     enviar<Pedido>('POST', '/api/pedidos', { orcamento_id: orcamentoId, observacao }),
   avancarPedido: (codigo: string, statusAtual: string) =>
     enviar<Pedido>('POST', `/api/pedidos/${encodeURIComponent(codigo)}/avancar`, { status_atual: statusAtual }),
+  retrocederPedido: (codigo: string, statusAtual: string) =>
+    enviar<Pedido>('POST', `/api/pedidos/${encodeURIComponent(codigo)}/retroceder`, { status_atual: statusAtual }),
   cancelarPedido: (codigo: string, motivo: string) =>
     enviar<Pedido>('POST', `/api/pedidos/${encodeURIComponent(codigo)}/cancelar`, { motivo }),
 

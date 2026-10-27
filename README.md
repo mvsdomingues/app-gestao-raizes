@@ -132,6 +132,7 @@ O menu fica na **barra lateral** (pode ser recolhido para mostrar só os ícones
    - Todo pedido nasce de um orçamento (**+ Novo pedido** ou **Gerar pedido** na tela Orçamentos) e recebe o código `PED-000001`, `PED-000002`…; o pedido guarda a referência ao orçamento, que descreve o que será entregue.
    - Fluxo: **Criado → Em Produção → Produzido → Faturado → Enviado → Encerrado**. O botão de ação (na lista ou nos detalhes) move o pedido para a etapa seguinte, e cada movimentação grava a data e a hora (base para controle de SLA).
    - **Todos os pedidos**: lista paginada com tag da etapa e filtros por código, orçamento, situação (incluindo *Em andamento*) e período.
+   - **Quadro**: kanban com uma coluna por etapa, nas mesmas cores das tags. Cada coluna mostra até 20 pedidos pela data/hora em que entraram na etapa (os que estão há mais tempo primeiro; em *Encerrado*, os mais recentes) e o total da etapa. O cartão pode ser arrastado, ou movido pelos botões ‹ ›, **apenas para a etapa anterior ou a próxima**; voltar uma etapa também fica registrado nas movimentações. Pedidos cancelados não aparecem no quadro.
    - **Detalhes**: etapas com data/hora, tempo total, histórico de movimentações com o tempo em cada etapa e os itens do orçamento.
    - Pedidos não são editados: se estiver errado, **Cancelar pedido** (com motivo). O orçamento fica livre para ser alterado ou usado em outro pedido. Nunca há dois pedidos ativos (não cancelados) para o mesmo orçamento; pedidos encerrados não podem ser cancelados.
 5. **Mockups**: aplique a logomarca sobre a foto dos produtos do carrinho e baixe o PNG.
@@ -167,5 +168,7 @@ Valores de fábrica (usados até a primeira gravação em **Parâmetros**): mate
 | `GET /api/pedidos` | Lista paginada (`codigo`, `orcamento`, `status` ou `EM_ANDAMENTO`, `de`, `ate`, `limit`, `offset`) → `{ total, pedidos }` |
 | `POST /api/pedidos` | Cria pedido `{ orcamento_id, observacao? }` (409 se o orçamento já tem pedido ativo) |
 | `GET /api/pedidos/:codigo` | Pedido com movimentações e orçamento (`PED-000001`) |
-| `POST /api/pedidos/:codigo/avancar` · `POST /api/pedidos/:codigo/cancelar` | Avança para a próxima etapa (`{ status_atual }`) / cancela (`{ motivo }`) |
+| `GET /api/pedidos/quadro` | Quadro por etapa (`limite`, padrão 20) → `{ limite, colunas: [{ status, total, pedidos }] }` |
+| `POST /api/pedidos/:codigo/avancar` · `POST /api/pedidos/:codigo/retroceder` | Próxima / etapa anterior (`{ status_atual }`, 409 se o pedido já mudou) |
+| `POST /api/pedidos/:codigo/cancelar` | Cancela (`{ motivo }`) |
 | `POST /api/atualizar` · `GET /api/atualizar/status` | Atualização dos fornecedores |

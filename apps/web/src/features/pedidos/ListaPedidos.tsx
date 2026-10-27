@@ -23,7 +23,13 @@ type Estado =
   | { tipo: 'ok'; linhas: ResumoPedido[]; total: number };
 
 /** Aba "Todos os pedidos": filtros, tabela paginada e avanço rápido de etapa. */
-export function ListaPedidos() {
+interface Props {
+  /** Muda quando um pedido é movimentado em outra aba (ex.: no quadro). */
+  versao: number;
+  aoAlterar: () => void;
+}
+
+export function ListaPedidos({ versao, aoAlterar }: Props) {
   const { visitas, abrirPedido, atualizarPedidoAberto, pedidoAberto } = useApp();
   const [filtros, setFiltros] = useState<FiltrosPedidos>(FILTROS_VAZIOS);
   const [aplicados, setAplicados] = useState<FiltrosPedidos>(FILTROS_VAZIOS);
@@ -47,11 +53,12 @@ export function ListaPedidos() {
   // Recarrega ao abrir a tela e quando um pedido é criado/movimentado
   useEffect(() => {
     if (visitas.pedidos > 0) void carregar(aplicados, pagina);
-  }, [visitas.pedidos, pedidoAberto]);
+  }, [visitas.pedidos, pedidoAberto, versao]);
 
   const { avancar, processando } = useAcoesPedido((p) => {
     atualizarPedidoAberto(p); // mantém a aba Detalhes em dia sem trocar de aba
     void carregar(aplicados, pagina);
+    aoAlterar();
   });
 
   const filtrar = (e?: FormEvent) => {

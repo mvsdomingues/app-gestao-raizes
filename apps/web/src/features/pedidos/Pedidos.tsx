@@ -1,17 +1,28 @@
-import { useApp } from '../../app/contexto';
+import { useState } from 'react';
+import { useApp, type AbaPedidos } from '../../app/contexto';
 import { DetalhePedido } from './DetalhePedido';
 import { ListaPedidos } from './ListaPedidos';
+import { QuadroPedidos } from './QuadroPedidos';
+
+const ABAS: { id: AbaPedidos; rotulo: string }[] = [
+  { id: 'lista', rotulo: 'Todos os pedidos' },
+  { id: 'quadro', rotulo: 'Quadro' },
+  { id: 'detalhe', rotulo: 'Detalhes' },
+];
 
 /**
- * Tela "Pedidos" (mesma montagem da tela Orçamentos): aba com a lista de
- * pedidos e aba com os detalhes e o fluxo do pedido selecionado.
+ * Tela "Pedidos" (mesma montagem da tela Orçamentos): lista de pedidos,
+ * quadro por etapa (kanban) e detalhes do pedido selecionado.
  */
 export function Pedidos() {
   const { tela, pedidoAberto, abaPedidos, setAbaPedidos } = useApp();
+  // Incrementado quando um pedido é movimentado numa aba, para a outra recarregar
+  const [versao, setVersao] = useState(0);
+  const alterou = () => setVersao((v) => v + 1);
 
   return (
     <div id="view-pedidos" className="view-cadastro" style={{ display: tela === 'pedidos' ? 'block' : 'none' }}>
-      <div className="orc-wrap">
+      <div className={`orc-wrap${abaPedidos === 'quadro' ? ' pedidos-wrap-quadro' : ''}`}>
         <div className="orc-cabecalho">
           <h2 className="carrinho-page-title">Pedidos</h2>
           <p className="carrinho-page-sub">
@@ -20,29 +31,26 @@ export function Pedidos() {
         </div>
 
         <div className="subabas" role="tablist" aria-label="Pedidos">
-          <button
-            role="tab"
-            id="aba-pedidos-lista"
-            aria-selected={abaPedidos === 'lista'}
-            className={`subaba${abaPedidos === 'lista' ? ' active' : ''}`}
-            onClick={() => setAbaPedidos('lista')}
-          >
-            Todos os pedidos
-          </button>
-          <button
-            role="tab"
-            id="aba-pedidos-detalhe"
-            aria-selected={abaPedidos === 'detalhe'}
-            className={`subaba${abaPedidos === 'detalhe' ? ' active' : ''}`}
-            onClick={() => setAbaPedidos('detalhe')}
-          >
-            Detalhes
-            {pedidoAberto && <span className="subaba-badge">{pedidoAberto.codigo}</span>}
-          </button>
+          {ABAS.map((a) => (
+            <button
+              key={a.id}
+              role="tab"
+              id={`aba-pedidos-${a.id}`}
+              aria-selected={abaPedidos === a.id}
+              className={`subaba${abaPedidos === a.id ? ' active' : ''}`}
+              onClick={() => setAbaPedidos(a.id)}
+            >
+              {a.rotulo}
+              {a.id === 'detalhe' && pedidoAberto && <span className="subaba-badge">{pedidoAberto.codigo}</span>}
+            </button>
+          ))}
         </div>
 
         <div style={{ display: abaPedidos === 'lista' ? 'block' : 'none' }}>
-          <ListaPedidos />
+          <ListaPedidos versao={versao} aoAlterar={alterou} />
+        </div>
+        <div style={{ display: abaPedidos === 'quadro' ? 'block' : 'none' }}>
+          <QuadroPedidos ativo={tela === 'pedidos' && abaPedidos === 'quadro'} versao={versao} aoAlterar={alterou} />
         </div>
         <div style={{ display: abaPedidos === 'detalhe' ? 'block' : 'none' }}>
           <DetalhePedido />

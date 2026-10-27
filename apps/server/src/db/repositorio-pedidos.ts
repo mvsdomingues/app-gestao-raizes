@@ -1,5 +1,9 @@
 import {
   codigoPedido,
+  FLUXO_PEDIDO,
+  statusAnterior,
+  type CartaoPedido,
+  type ColunaQuadro,
   numeroOrcamento,
   podeCancelar,
   proximoStatus,
@@ -89,6 +93,33 @@ export function listarPedidos(
   return { total, pedidos: linhas.map(resumo) };
 }
 
+/**
+ * Quadro (kanban): para cada etapa do fluxo, os `limite` primeiros pedidos pela
+ * data/hora em que entraram na etapa. Nas etapas em andamento, os que estão há
+ * mais tempo vêm primeiro (fila); em Encerrado, os encerrados mais recentes.
+ */
+export function quadroPedidos(db: Banco, limite: number): ColunaQuadro[] {
+  const contar = db.prepare('SELECT COUNT(*) AS c FROM pedidos WHERE status = ?');
+  return FLUXO_PEDIDO.map((status) => {
+    const ordem = status === 'ENCERRADO' ? 'DESC' : 'ASC';
+    const linhas = db
+      .prepare(
+        `SELECT * FROM (
+           ${SELECT_PEDIDO.replace(
+             'o.total, o.qtd_itens',
+             `o.total, o.qtd_itens,
+              COALESCE((SELECT MAX(m.data_hora) FROM pedidos_movimentos m
+                         WHERE m.pedido_id = p.id AND m.status_novo = p.status), p.atualizado) AS entrada`,
+           )}
+           WHERE p.status = ?
+         ) ORDER BY entrada ${ordem}, id ${ordem} LIMIT ?`,
+      )
+      .all(status, limite) as (LinhaPedido & { entrada: string })[];
+    const { c } = contar.get(status) as { c: number };
+    return { status, total: c, pedidos: linhas.map((l): CartaoPedido => ({ ...resumo(l), entrada: l.entrada })) };
+  });
+}
+
 export function buscarPedido(db: Banco, codigo: string) {
   const l = db.prepare(`${SELECT_PEDIDO} WHERE p.codigo = ? COLLATE NOCASE`).get(codigo) as LinhaPedido | undefined;
   if (!l) return undefined;
@@ -159,6 +190,26 @@ export function avancarPedido(db: Banco, codigo: string, esperado?: string): voi
     const agora = isoLocal();
     db.prepare('UPDATE pedidos SET status = ?, atualizado = ? WHERE id = ?').run(prox, agora, p.id);
     registrarMovimento(db, p.id, p.status, prox, agora, null);
+  })();
+}
+
+/** Devolve o pedido para a etapa anterior do fluxo (correção de movimentação). */
+export function retrocederPedido(db: Banco, codigo: string, esperado?: string): void {
+  db.transaction(() => {
+    const p = db.prepare('SELECT id, status FROM pedidos WHERE codigo = ? COLLATE NOCASE').get(codigo) as
+      | { id: number; status: StatusPedido }
+      | undefined;
+    if (!p) throw new ErroHttp(404, 'Pedido não encontrado');
+    if (esperado && esperado !== p.status) {
+      throw new ErroHttp(409, 'O pedido foi movimentado por outra pessoa. Atualize a tela.');
+    }
+    const ant = statusAnterior(p.status);
+    if (!ant) {
+      throw new ErroHttp(409, p.status === 'CANCELADO' ? 'Pedido cancelado não pode ser movimentado' : 'O pedido já está na primeira etapa');
+    }
+    const agora = isoLocal();
+    db.prepare('UPDATE pedidos SET status = ?, atualizado = ? WHERE id = ?').run(ant, agora, p.id);
+    registrarMovimento(db, p.id, p.status, ant, agora, null);
   })();
 }
 

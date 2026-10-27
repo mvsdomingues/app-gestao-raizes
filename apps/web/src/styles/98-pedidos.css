@@ -14,13 +14,16 @@
   white-space: nowrap;
   border: 1px solid transparent;
 }
-.tag-pedido.s-CRIADO      { background: #F0EAF6; color: var(--uva); border-color: #DCCDEA; }
-.tag-pedido.s-EM_PRODUCAO { background: #FFF3DC; color: #9A6200; border-color: #F2D9A6; }
-.tag-pedido.s-PRODUZIDO   { background: #E8ECFB; color: #3F4BA8; border-color: #C9CFF2; }
-.tag-pedido.s-FATURADO    { background: #E3F2F5; color: #1F6E7D; border-color: #BCDDE3; }
-.tag-pedido.s-ENVIADO     { background: #EAF5E8; color: var(--success); border-color: #C3E3BE; }
-.tag-pedido.s-ENCERRADO   { background: var(--berinjela); color: #fff; }
-.tag-pedido.s-CANCELADO   { background: #FDECEA; color: var(--danger); border-color: #F5C3BC; text-decoration: line-through; }
+/* Cores de cada etapa — as mesmas nas tags, no fluxo e no quadro (kanban) */
+.s-CRIADO      { --st-fundo: #F0EAF6; --st-texto: var(--uva);       --st-borda: #DCCDEA; }
+.s-EM_PRODUCAO { --st-fundo: #FFF3DC; --st-texto: #9A6200;          --st-borda: #F2D9A6; }
+.s-PRODUZIDO   { --st-fundo: #E8ECFB; --st-texto: #3F4BA8;          --st-borda: #C9CFF2; }
+.s-FATURADO    { --st-fundo: #E3F2F5; --st-texto: #1F6E7D;          --st-borda: #BCDDE3; }
+.s-ENVIADO     { --st-fundo: #EAF5E8; --st-texto: var(--success);   --st-borda: #C3E3BE; }
+.s-ENCERRADO   { --st-fundo: var(--berinjela); --st-texto: #fff;    --st-borda: var(--berinjela); }
+.s-CANCELADO   { --st-fundo: #FDECEA; --st-texto: var(--danger);    --st-borda: #F5C3BC; }
+.tag-pedido[class*=' s-'] { background: var(--st-fundo); color: var(--st-texto); border-color: var(--st-borda); }
+.tag-pedido.s-CANCELADO { text-decoration: line-through; }
 
 /* Tags na lista de orçamentos */
 .tag-orc-pedido {
@@ -58,6 +61,7 @@
 /* Lista de pedidos */
 .pedidos-barra { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin-bottom: 10px; }
 .pedidos-barra .orc-lista-info { margin-bottom: 0; }
+.pedidos-barra > button { flex-shrink: 0; white-space: nowrap; }
 .pedido-ref-orc { font-weight: 500; color: var(--berinjela); }
 #ped-paginacao { margin-top: 6px; }
 
@@ -137,6 +141,133 @@
 .pedido-seta { color: var(--muted); margin: 0 2px; }
 .pedido-mov-obs { font-size: .82rem; color: var(--muted); }
 .btn-cancelar-pedido:hover:not(:disabled) { border-color: var(--danger); color: var(--danger); }
+
+/* ── Quadro (kanban) ── */
+.orc-wrap.pedidos-wrap-quadro { max-width: 1640px; }
+.kanban {
+  display: grid;
+  grid-template-columns: repeat(6, minmax(160px, 1fr));
+  gap: 12px;
+  overflow-x: auto;
+  padding-bottom: 8px;
+  align-items: start;
+}
+.kanban-col {
+  display: flex;
+  flex-direction: column;
+  min-height: 320px;
+  background: var(--surface2);
+  border: 1.5px solid var(--border);
+  border-top: 4px solid var(--st-texto);
+  border-radius: var(--radius-lg);
+  transition: opacity .15s, box-shadow .15s, border-color .15s, background .15s;
+}
+.s-ENCERRADO.kanban-col { border-top-color: var(--berinjela); }
+.kanban-col-topo {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  margin: 10px 10px 8px;
+  padding: 7px 10px;
+  border-radius: var(--radius);
+  background: var(--st-fundo);
+  color: var(--st-texto);
+  border: 1px solid var(--st-borda);
+}
+.kanban-col-nome { font-size: .72rem; font-weight: 600; letter-spacing: .5px; text-transform: uppercase; }
+.kanban-col-qtd {
+  min-width: 24px;
+  padding: 1px 8px;
+  border-radius: 10px;
+  background: rgba(255,255,255,.65);
+  font-size: .74rem;
+  font-weight: 700;
+  text-align: center;
+}
+.s-ENCERRADO .kanban-col-qtd { background: rgba(255,255,255,.18); }
+.kanban-col-aviso { margin: -2px 12px 6px; font-size: .7rem; font-style: italic; color: var(--muted); }
+.kanban-cartoes { display: flex; flex-direction: column; gap: 8px; padding: 0 10px 12px; flex: 1; }
+.kanban-vazio {
+  padding: 18px 8px;
+  border: 1.5px dashed var(--border2);
+  border-radius: var(--radius);
+  text-align: center;
+  font-size: .76rem;
+  color: var(--muted);
+}
+
+/* Destinos válidos ao arrastar: só a etapa anterior e a próxima */
+.kanban.arrastando .kanban-col.bloqueado { opacity: .45; }
+.kanban.arrastando .kanban-col.destino { border-style: dashed; border-color: var(--st-texto); border-top-style: solid; }
+.kanban-col.sobre { background: var(--st-fundo); box-shadow: 0 0 0 3px var(--st-borda); }
+
+.kanban-cartao {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-left: 4px solid var(--st-texto);
+  border-radius: var(--radius);
+  box-shadow: var(--shadow-sm);
+  padding: 10px 10px 8px 11px;
+  cursor: grab;
+  transition: transform .12s, box-shadow .12s, opacity .12s;
+}
+.s-ENCERRADO .kanban-cartao { border-left-color: var(--berinjela); }
+.kanban-cartao:hover { transform: translateY(-1px); box-shadow: var(--shadow); }
+.kanban-cartao:active { cursor: grabbing; }
+.kanban-cartao.fantasma { opacity: .4; }
+.kanban-cartao.movendo { opacity: .6; pointer-events: none; }
+.kanban-col { min-width: 0; }
+.kanban-cartao-topo { flex-wrap: wrap; display: flex; align-items: baseline; justify-content: space-between; gap: 6px; }
+.kanban-codigo { white-space: nowrap; font-family: var(--font-display); font-size: 1.05rem; font-weight: 700; color: var(--berinjela); }
+.kanban-total { font-size: .8rem; font-weight: 600; color: var(--uva); white-space: nowrap; }
+.kanban-ref { margin-top: 2px; font-size: .74rem; color: var(--muted); }
+.kanban-obs {
+  margin-top: 6px;
+  font-size: .76rem;
+  color: var(--grafite);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.kanban-cartao-rodape {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 6px;
+  margin-top: 8px;
+  padding-top: 7px;
+  border-top: 1px solid var(--border);
+}
+.kanban-tempo { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; text-align: center; font-size: .7rem; color: var(--muted); white-space: nowrap; }
+.kanban-mover {
+  flex-shrink: 0;
+  width: 26px;
+  height: 22px;
+  border-radius: 6px;
+  border: 1px solid var(--border);
+  background: var(--surface);
+  color: var(--uva);
+  font-size: 1rem;
+  line-height: 1;
+  cursor: pointer;
+}
+.kanban-mover:hover:not(:disabled) { background: var(--uva); border-color: var(--uva); color: #fff; }
+.kanban-mover:disabled { opacity: .3; cursor: default; }
+
+.kanban-aviso {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 12px;
+  padding: 9px 12px;
+  border-radius: var(--radius);
+  background: #FFF3DC;
+  border: 1px solid #F2D9A6;
+  color: #7A4E00;
+  font-size: .82rem;
+}
 
 /* Modal "Gerar pedido" */
 .pedido-orc-escolhido {

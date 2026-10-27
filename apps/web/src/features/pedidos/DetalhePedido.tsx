@@ -114,8 +114,9 @@ export function DetalhePedido() {
 
         <ol className={`pedido-fluxo${cancelado ? ' cancelado' : ''}`} aria-label="Etapas do pedido">
           {FLUXO_PEDIDO.map((s, i) => {
-            const quando = entrada.get(s);
             const estado = i < indiceAtual ? 'feito' : i === indiceAtual ? 'atual' : 'futuro';
+            // Etapa futura não mostra data (o pedido pode ter voltado de uma etapa)
+            const quando = estado === 'futuro' ? undefined : entrada.get(s);
             return (
               <li key={s} className={`pedido-etapa ${estado}${quando ? ' registrado' : ''}`}>
                 <span className="pedido-etapa-marca">{quando && estado !== 'atual' ? '✓' : i + 1}</span>

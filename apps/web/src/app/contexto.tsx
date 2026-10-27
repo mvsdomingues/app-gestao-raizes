@@ -31,7 +31,7 @@ export type Tela =
 
 /** Abas das telas Orçamentos e Pedidos */
 export type AbaOrcamentos = 'lista' | 'detalhe';
-export type AbaPedidos = 'lista' | 'detalhe';
+export type AbaPedidos = 'lista' | 'quadro' | 'detalhe';
 
 export interface FolhaOrcamento {
   /** id do orçamento salvo (ausente se não foi possível gravar) */

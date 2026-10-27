@@ -1,7 +1,21 @@
 import { Router } from 'express';
-import { numeroOrcamento, type FiltrosPedidos, type Pedido, type RespostaPedidos } from '@raizes/shared';
+import {
+  numeroOrcamento,
+  type FiltrosPedidos,
+  type Pedido,
+  type RespostaPedidos,
+  type RespostaQuadroPedidos,
+} from '@raizes/shared';
 import type { Banco } from '../db/conexao';
-import { avancarPedido, buscarPedido, cancelarPedido, criarPedido, listarPedidos } from '../db/repositorio-pedidos';
+import {
+  avancarPedido,
+  buscarPedido,
+  cancelarPedido,
+  criarPedido,
+  listarPedidos,
+  quadroPedidos,
+  retrocederPedido,
+} from '../db/repositorio-pedidos';
 import { corpoJson, ErroHttp } from '../lib/http';
 import { lerOrcamento } from './orcamentos';
 
@@ -41,6 +55,14 @@ export function rotasPedidos(db: Banco): Router {
     res.json(corpo);
   });
 
+  // Antes de /:codigo
+  r.get('/api/pedidos/quadro', (req, res) => {
+    const bruto = typeof req.query.limite === 'string' ? req.query.limite : '20';
+    const limite = Math.min(100, Math.max(1, Number.parseInt(bruto, 10) || 20));
+    const corpo: RespostaQuadroPedidos = { limite, colunas: quadroPedidos(db, limite) };
+    res.json(corpo);
+  });
+
   r.get('/api/pedidos/:codigo', (req, res) => {
     res.json(detalhe(req.params.codigo));
   });
@@ -58,6 +80,12 @@ export function rotasPedidos(db: Banco): Router {
   r.post('/api/pedidos/:codigo/avancar', (req, res) => {
     const corpo = corpoJson(req);
     avancarPedido(db, req.params.codigo, typeof corpo.status_atual === 'string' ? corpo.status_atual : undefined);
+    res.json(detalhe(req.params.codigo));
+  });
+
+  r.post('/api/pedidos/:codigo/retroceder', (req, res) => {
+    const corpo = corpoJson(req);
+    retrocederPedido(db, req.params.codigo, typeof corpo.status_atual === 'string' ? corpo.status_atual : undefined);
     res.json(detalhe(req.params.codigo));
   });
 

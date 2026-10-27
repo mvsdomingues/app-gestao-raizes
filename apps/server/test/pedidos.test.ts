@@ -129,4 +129,41 @@ describe('pedidos', () => {
     expect((await lista('?limit=2&offset=2')).pedidos).toHaveLength(1);
     expect((await lista('?de=2000-01-01&ate=2000-01-02')).total).toBe(0);
   });
+
+  it('volta para a etapa anterior registrando a movimentação', async () => {
+    // PED-000003 (orçamento 2) está em Criado
+    expect((await req('POST', '/api/pedidos/PED-000003/retroceder', { status_atual: 'CRIADO' })).status).toBe(409);
+    await req('POST', '/api/pedidos/PED-000003/avancar', { status_atual: 'CRIADO' });
+    await req('POST', '/api/pedidos/PED-000003/avancar', { status_atual: 'EM_PRODUCAO' });
+    const r = await req('POST', '/api/pedidos/PED-000003/retroceder', { status_atual: 'PRODUZIDO' });
+    expect(r.status).toBe(200);
+    expect(r.json.status).toBe('EM_PRODUCAO');
+    expect(r.json.movimentos.at(-1)).toMatchObject({ status_anterior: 'PRODUZIDO', status_novo: 'EM_PRODUCAO' });
+    // mesma tela clicada duas vezes
+    expect((await req('POST', '/api/pedidos/PED-000003/retroceder', { status_atual: 'PRODUZIDO' })).status).toBe(409);
+    // cancelado não volta; encerrado volta para Enviado
+    expect((await req('POST', '/api/pedidos/PED-000002/retroceder')).status).toBe(409);
+    expect((await req('POST', '/api/pedidos/PED-000001/retroceder', { status_atual: 'ENCERRADO' })).json.status).toBe('ENVIADO');
+    await req('POST', '/api/pedidos/PED-000001/avancar', { status_atual: 'ENVIADO' });
+    // devolve PED-000003 a Criado para os testes seguintes
+    await req('POST', '/api/pedidos/PED-000003/retroceder', { status_atual: 'EM_PRODUCAO' });
+  });
+
+  it('quadro: colunas por etapa, sem cancelados, com limite', async () => {
+    const q = (await req('GET', '/api/pedidos/quadro')).json;
+    expect(q.limite).toBe(20);
+    expect(q.colunas.map((c: { status: string }) => c.status)).toEqual([...FLUXO_PEDIDO]);
+    const col = (s: string) => q.colunas.find((c: { status: string }) => c.status === s);
+    expect(col('CRIADO').pedidos.map((p: { codigo: string }) => p.codigo)).toEqual(['PED-000003']);
+    expect(col('ENCERRADO').pedidos[0]).toMatchObject({ codigo: 'PED-000001', orcamento_numero: 'ORC-0001' });
+    expect(col('CRIADO').pedidos[0].entrada).toMatch(/^\d{4}-\d\d-\d\dT/);
+    const soma = q.colunas.reduce((n: number, c: { total: number }) => n + c.total, 0);
+    expect(soma).toBe(2); // o cancelado fica fora do quadro
+    // limite: cria mais pedidos em Criado e pede 2 por coluna
+    await req('POST', '/api/pedidos', { orcamento_id: 3 });
+    const lim = (await req('GET', '/api/pedidos/quadro?limite=1')).json;
+    const criado = lim.colunas[0];
+    expect(criado.total).toBe(2);
+    expect(criado.pedidos.map((p: { codigo: string }) => p.codigo)).toEqual(['PED-000003']); // mais antigo na etapa primeiro
+  });
 });

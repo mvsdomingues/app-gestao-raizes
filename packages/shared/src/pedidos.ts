@@ -30,6 +30,13 @@ export function proximoStatus(s: StatusPedido): EtapaPedido | null {
   return i >= 0 && i < FLUXO_PEDIDO.length - 1 ? FLUXO_PEDIDO[i + 1]! : null;
 }
 
+/** Etapa anterior do fluxo (null quando criado, cancelado ou fora do fluxo). */
+export function statusAnterior(s: StatusPedido): EtapaPedido | null {
+  if (s === 'CANCELADO') return null;
+  const i = FLUXO_PEDIDO.indexOf(s);
+  return i > 0 ? FLUXO_PEDIDO[i - 1]! : null;
+}
+
 /** Pode ser cancelado enquanto não estiver encerrado (nem já cancelado). */
 export function podeCancelar(s: StatusPedido): boolean {
   return s !== 'ENCERRADO' && s !== 'CANCELADO';
@@ -83,6 +90,27 @@ export interface Pedido extends ResumoPedido {
 export interface RespostaPedidos {
   total: number;
   pedidos: ResumoPedido[];
+}
+
+/** Cartão do quadro (kanban): pedido + quando entrou na etapa atual. */
+export interface CartaoPedido extends ResumoPedido {
+  observacao: string | null;
+  /** Data/hora da movimentação para a etapa atual */
+  entrada: string;
+}
+
+/** Coluna do quadro: uma etapa do fluxo, com no máximo `limite` cartões. */
+export interface ColunaQuadro {
+  status: EtapaPedido;
+  /** Total de pedidos na etapa (pode ser maior que a quantidade de cartões) */
+  total: number;
+  pedidos: CartaoPedido[];
+}
+
+/** Resposta de GET /api/pedidos/quadro */
+export interface RespostaQuadroPedidos {
+  limite: number;
+  colunas: ColunaQuadro[];
 }
 
 export interface FiltrosPedidos {
