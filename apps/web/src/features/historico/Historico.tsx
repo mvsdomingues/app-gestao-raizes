@@ -3,6 +3,7 @@ import { formatBRL, type ResumoOrcamento } from '@raizes/shared';
 import { useApp } from '../../app/contexto';
 import { Carregando } from '../../components/Carregando';
 import { api } from '../../lib/api';
+import { useEditarOrcamento } from '../orcamento/editar-orcamento';
 
 type Estado = { tipo: 'carregando' } | { tipo: 'erro' } | { tipo: 'ok'; linhas: ResumoOrcamento[] };
 
@@ -20,6 +21,7 @@ function formatarData(dataHora: string): string {
 export function Historico() {
   const { tela, visitas, mostrarOrcamento } = useApp();
   const [estado, setEstado] = useState<Estado>({ tipo: 'carregando' });
+  const { editar, carregando } = useEditarOrcamento();
 
   useEffect(() => {
     if (visitas.historico === 0) return;
@@ -41,6 +43,7 @@ export function Historico() {
     try {
       const o = await api.orcamento(id);
       mostrarOrcamento({
+        id: o.id,
         numero: o.numero,
         dataHora: o.data_hora,
         itens: o.itens,
@@ -87,6 +90,7 @@ export function Historico() {
                   <th className="num" style={{ width: 140 }}>
                     Total
                   </th>
+                  <th style={{ width: 110 }} />
                 </tr>
               </thead>
               <tbody>
@@ -99,6 +103,19 @@ export function Historico() {
                     <td className="num">{r.qtd_itens}</td>
                     <td className="num" style={{ fontWeight: 600 }}>
                       {formatBRL(r.total)}
+                    </td>
+                    <td className="hist-acoes">
+                      <button
+                        className="btn-editar-orc"
+                        title={`Alterar ${r.numero} no carrinho`}
+                        disabled={carregando !== null}
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          void editar(r.id, r.numero);
+                        }}
+                      >
+                        {carregando === r.id ? 'Abrindo…' : '✎ Editar'}
+                      </button>
                     </td>
                   </tr>
                 ))}

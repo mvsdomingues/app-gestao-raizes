@@ -69,6 +69,10 @@ export const api = {
     return (await resp.json()) as OrcamentoCriado;
   },
 
+  /** Altera um orçamento salvo (mantém o número, atualiza a data). */
+  atualizarOrcamento: (id: number, dados: NovoOrcamento) =>
+    enviar<OrcamentoCriado>('PUT', `/api/orcamentos/${id}`, dados),
+
   async orcamentos(): Promise<ResumoOrcamento[]> {
     const resp = await fetch('/api/orcamentos');
     if (!resp.ok) throw new Error('Falha ao carregar histórico');

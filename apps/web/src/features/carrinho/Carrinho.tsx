@@ -1,14 +1,14 @@
 import { useEffect, useState } from 'react';
-import { formatBRL, montarItemOrcamento } from '@raizes/shared';
+import { calcComParametros, formatBRL, montarItemOrcamento } from '@raizes/shared';
 import { useApp } from '../../app/contexto';
 import { api } from '../../lib/api';
 import { subtotalCarrinho, useCarrinho } from '../../state/carrinho';
 import { ItemCarrinho } from './ItemCarrinho';
 
 export function Carrinho() {
-  const { tela, visitas, irPara, mostrarOrcamento } = useApp();
-  const { estado, limpar, redesenhar } = useCarrinho();
-  const [frete, setFrete] = useState('0');
+  const { tela, visitas, irPara, mostrarOrcamento, parametros } = useApp();
+  const { estado, limpar, redesenhar, definirFrete } = useCarrinho();
+  const { frete, edicao } = estado;
   const [gerando, setGerando] = useState(false);
 
   // Abrir a aba redesenha a lista (reinicia campos e fecha os painéis)
@@ -18,14 +18,17 @@ export function Carrinho() {
 
   const itens = Object.values(estado.itens);
   const count = itens.length;
-  const subtotal = subtotalCarrinho(estado.itens);
+  const subtotal = subtotalCarrinho(estado.itens, parametros);
   const valorFrete = Math.max(0, Number.parseFloat(frete) || 0);
   const total = subtotal + valorFrete;
   const unidades = itens.reduce((s, i) => s + i.qty, 0);
 
   const limparTudo = () => {
-    if (!count) return;
-    if (!confirm('Limpar todos os itens do orçamento?')) return;
+    if (!count && !edicao) return;
+    const msg = edicao
+      ? `Limpar o carrinho e sair da alteração do ${edicao.numero}?\n\nO orçamento salvo não é modificado.`
+      : 'Limpar todos os itens do orçamento?';
+    if (!confirm(msg)) return;
     limpar();
   };
 
@@ -34,17 +37,24 @@ export function Carrinho() {
       alert('Adicione produtos ao carrinho antes de gerar o orçamento.');
       return;
     }
-    const snapshot = itens.map(({ produto, qty, calc }) => montarItemOrcamento(produto, qty, calc));
+    // Imposto de compra, imposto sobre venda e margem: sempre os Parâmetros cadastrados
+    const snapshot = itens.map(({ produto, qty, calc }) =>
+      montarItemOrcamento(produto, qty, calcComParametros(calc, parametros)),
+    );
     const sub = snapshot.reduce((s, i) => s + i.preco * i.qty, 0);
     const tot = sub + valorFrete;
 
     setGerando(true);
     let numero = '—';
+    let id: number | undefined;
     let dataHora = new Date().toISOString();
+    const dados = { itens: snapshot, subtotal: sub, frete: valorFrete, total: tot };
     try {
-      const criado = await api.criarOrcamento({ itens: snapshot, subtotal: sub, frete: valorFrete, total: tot });
-      numero = criado.numero;
-      dataHora = criado.data_hora;
+      // Alteração de orçamento salvo: mesmo número, data atualizada
+      const salvo = edicao ? await api.atualizarOrcamento(edicao.id, dados) : await api.criarOrcamento(dados);
+      numero = salvo.numero;
+      id = salvo.id;
+      dataHora = salvo.data_hora;
     } catch (e) {
       console.error('Não foi possível salvar o orçamento no histórico:', e);
       alert(
@@ -53,7 +63,7 @@ export function Carrinho() {
     } finally {
       setGerando(false);
     }
-    mostrarOrcamento({ numero, dataHora, itens: snapshot, subtotal: sub, frete: valorFrete, total: tot });
+    mostrarOrcamento({ id, numero, dataHora, itens: snapshot, subtotal: sub, frete: valorFrete, total: tot });
   };
 
   return (
@@ -76,6 +86,23 @@ export function Carrinho() {
             </button>
           </div>
         </div>
+
+        {edicao && (
+          <div className="edicao-banner" id="edicao-banner">
+            <div>
+              <div className="edicao-banner-titulo">
+                Alterando o orçamento <span className="orc-num-badge">{edicao.numero}</span>
+              </div>
+              <div className="edicao-banner-sub">
+                Ao salvar, o {edicao.numero} é atualizado (mesmo número, com a data de hoje).
+                {edicao.aviso && <span className="edicao-banner-aviso"> {edicao.aviso}</span>}
+              </div>
+            </div>
+            <button className="btn-back" onClick={limparTudo}>
+              Cancelar alteração
+            </button>
+          </div>
+        )}
 
         <div className="carrinho-grid">
           {/* Coluna esquerda: itens */}
@@ -116,7 +143,7 @@ export function Carrinho() {
                       step="0.01"
                       placeholder="0,00"
                       value={frete}
-                      onChange={(e) => setFrete(e.target.value)}
+                      onChange={(e) => definirFrete(e.target.value)}
                     />
                   </div>
                 </div>
@@ -145,7 +172,7 @@ export function Carrinho() {
               </div>
 
               <button className="btn-primary" id="btn-gerar" onClick={() => void gerarOrcamento()} disabled={count === 0 || gerando}>
-                Gerar Orçamento
+                {edicao ? `Salvar ${edicao.numero}` : 'Gerar Orçamento'}
               </button>
               <button className="btn-secondary" onClick={limparTudo}>
                 Limpar tudo

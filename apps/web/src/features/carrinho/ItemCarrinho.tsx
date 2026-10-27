@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState, type FocusEvent, type FormEvent } from 'react';
-import { calcPreco, formatBRL, getFaixa, type CampoNumerico } from '@raizes/shared';
+import { calcComParametros, calcPreco, formatBRL, getFaixa, type CampoNumerico } from '@raizes/shared';
 import { useApp } from '../../app/contexto';
 import { classeFornecedor } from '../../lib/fornecedor';
 import { ImagemProduto } from '../../components/ImagemProduto';
@@ -11,12 +11,13 @@ import { useCarrinho, type ItemCarrinho as Item } from '../../state/carrinho';
  * redesenhada (mesmo comportamento da versão anterior).
  */
 export function ItemCarrinho({ item }: { item: Item }) {
-  const { abrirMockupParaProduto } = useApp();
-  const { remover, definirQtd, definirCalc, definirCalcBool } = useCarrinho();
+  const { abrirMockupParaProduto, parametros } = useApp();
+  const { remover, definirQtd, definirCalc } = useCarrinho();
   const { produto: p, qty, calc: c } = item;
   const id = p.id;
 
-  const res = calcPreco(p.preco as number, qty, c);
+  // Imposto de compra, imposto sobre venda e margem vêm sempre dos Parâmetros cadastrados
+  const res = calcPreco(p.preco as number, qty, calcComParametros(c, parametros));
   const faixa = getFaixa(qty);
   // A faixa ao lado da quantidade é fixada quando o item é desenhado
   const [faixaInicial] = useState(faixa.nome);
@@ -33,13 +34,10 @@ export function ItemCarrinho({ item }: { item: Item }) {
     return () => el.removeEventListener('change', aoMudar);
   });
 
-  const campo = (nome: CampoNumerico, escala = 1) => ({
+  const campo = (nome: CampoNumerico) => ({
     onFocus: (e: FocusEvent<HTMLInputElement>) => e.target.select(),
-    onInput: (e: FormEvent<HTMLInputElement>) => {
-      // Percentuais chegam divididos por 100, como na versão anterior
-      const bruto = escala === 1 ? e.currentTarget.value : String(Number(e.currentTarget.value) / escala);
-      definirCalc(id, nome, Math.max(0, Number.parseFloat(bruto) || 0));
-    },
+    onInput: (e: FormEvent<HTMLInputElement>) =>
+      definirCalc(id, nome, Math.max(0, Number.parseFloat(e.currentTarget.value) || 0)),
   });
 
   return (
@@ -119,19 +117,6 @@ export function ItemCarrinho({ item }: { item: Item }) {
               <input className="calc-input" type="number" min="0" step="0.50"
                 defaultValue={c.mo_personalizacao.toFixed(2)} {...campo('mo_personalizacao')} />
             </div>
-            <div className="calc-section-title">Imposto de Compra (sobre custo do fornecedor)</div>
-            <div className="calc-row calc-row-check">
-              <label className="calc-check">
-                <input type="checkbox" defaultChecked={c.imposto_compra_ativo}
-                  onChange={(e) => definirCalcBool(id, e.target.checked)} />
-                <span>Aplicar imposto de compra</span>
-              </label>
-              <div style={{ display: 'flex', alignItems: 'center', gap: 3 }}>
-                <input className="calc-input" type="number" min="0" max="100" step="0.5" style={{ width: 60 }}
-                  defaultValue={(c.imposto_compra * 100).toFixed(1)} {...campo('imposto_compra', 100)} />
-                <span className="calc-suffix">%</span>
-              </div>
-            </div>
             <div className="calc-section-title">Custos Fixos por Pedido (R$ total, rateado pela qtd)</div>
             <div className="calc-row">
               <span className="calc-label">Designer / mockup</span>
@@ -142,23 +127,6 @@ export function ItemCarrinho({ item }: { item: Item }) {
               <span className="calc-label">Logística / frete compra</span>
               <input className="calc-input" type="number" min="0" step="5"
                 defaultValue={c.logistica_total.toFixed(2)} {...campo('logistica_total')} />
-            </div>
-            <div className="calc-section-title">Parâmetros de Precificação</div>
-            <div className="calc-row">
-              <span className="calc-label">Imposto sobre Venda (Simples Nacional)</span>
-              <div style={{ display: 'flex', alignItems: 'center', gap: 3 }}>
-                <input className="calc-input" type="number" min="0" max="100" step="0.5" style={{ width: 60 }}
-                  defaultValue={(c.imposto * 100).toFixed(1)} {...campo('imposto', 100)} />
-                <span className="calc-suffix">%</span>
-              </div>
-            </div>
-            <div className="calc-row">
-              <span className="calc-label">Margem desejada</span>
-              <div style={{ display: 'flex', alignItems: 'center', gap: 3 }}>
-                <input className="calc-input" type="number" min="0" max="99" step="1" style={{ width: 60 }}
-                  defaultValue={(c.margem * 100).toFixed(0)} {...campo('margem', 100)} />
-                <span className="calc-suffix">%</span>
-              </div>
             </div>
           </div>
         </details>

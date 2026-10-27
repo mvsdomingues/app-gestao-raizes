@@ -42,6 +42,12 @@ export interface ItemOrcamento {
   composicao: string;
   /** Presente nos orçamentos novos; "proprio" para produtos próprios. */
   origem?: OrigemProduto;
+  /** Dados para reabrir o orçamento no carrinho (orçamentos gravados a partir da edição). */
+  produto_id?: number;
+  /** Custo unitário do produto no momento do orçamento. */
+  custo?: number;
+  /** Parâmetros da calculadora usados no item. */
+  calc?: import('./calculadora').ParametrosCalculo;
 }
 
 /** Linha do histórico (GET /api/orcamentos). */

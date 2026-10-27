@@ -1,5 +1,6 @@
 import { createContext, useContext, useMemo, useReducer, type ReactNode } from 'react';
 import {
+  calcComParametros,
   calcPreco,
   type CampoNumerico,
   type OrigemProduto,
@@ -43,6 +44,18 @@ export interface EstadoCarrinho {
    * reinicia os campos digitados e fecha os painéis de ajuste, como antes.
    */
   versao: number;
+  /** Valor digitado no campo Frete (R$). */
+  frete: string;
+  /** Orçamento salvo que está sendo alterado (null = orçamento novo). */
+  edicao: EdicaoOrcamento | null;
+}
+
+/** Orçamento do histórico carregado no carrinho para alteração. */
+export interface EdicaoOrcamento {
+  id: number;
+  numero: string;
+  /** Aviso exibido no carrinho (ex.: orçamento antigo sem os ajustes por item). */
+  aviso?: string;
 }
 
 type Acao =
@@ -51,9 +64,11 @@ type Acao =
   | { tipo: 'limpar' }
   | { tipo: 'qtd'; id: string; qty: number; redesenhar: boolean }
   | { tipo: 'calc'; id: string; campo: CampoNumerico; valor: number }
-  | { tipo: 'calcBool'; id: string; valor: boolean }
   | { tipo: 'mockup'; id: string; imagem: string }
-  | { tipo: 'redesenhar' };
+  | { tipo: 'redesenhar' }
+  | { tipo: 'frete'; valor: string }
+  | { tipo: 'carregarOrcamento'; itens: Itens; frete: string; edicao: EdicaoOrcamento }
+  | { tipo: 'edicao'; edicao: EdicaoOrcamento | null };
 
 function semItem(itens: Itens, id: string): Itens {
   const novo = { ...itens };
@@ -67,30 +82,29 @@ function redutor(estado: EstadoCarrinho, acao: Acao): EstadoCarrinho {
   switch (acao.tipo) {
     case 'adicionar':
       return {
+        ...estado,
         ...redesenho,
         // Os ajustes de custo e margem começam com os parâmetros cadastrados
         itens: { ...itens, [acao.produto.id]: { produto: acao.produto, qty: 1, calc: { ...acao.calc } } },
       };
     case 'remover':
-      return { ...redesenho, itens: semItem(itens, acao.id) };
+      return { ...estado, ...redesenho, itens: semItem(itens, acao.id) };
     case 'limpar':
-      return { ...redesenho, itens: {} };
+      // Esvaziar o carrinho também encerra a alteração de um orçamento salvo
+      return { ...estado, ...redesenho, itens: {}, edicao: null };
     case 'qtd': {
       const item = itens[acao.id];
       if (!item) return estado;
       return {
+        ...estado,
         versao: acao.redesenhar ? estado.versao + 1 : estado.versao,
         itens: { ...itens, [acao.id]: { ...item, qty: acao.qty } },
       };
     }
-    case 'calc':
-    case 'calcBool': {
+    case 'calc': {
       const item = itens[acao.id];
       if (!item) return estado;
-      const calc =
-        acao.tipo === 'calc'
-          ? { ...item.calc, [acao.campo]: acao.valor }
-          : { ...item.calc, imposto_compra_ativo: acao.valor };
+      const calc = { ...item.calc, [acao.campo]: acao.valor };
       return { ...estado, itens: { ...itens, [acao.id]: { ...item, calc } } };
     }
     case 'mockup': {
@@ -100,6 +114,12 @@ function redutor(estado: EstadoCarrinho, acao: Acao): EstadoCarrinho {
     }
     case 'redesenhar':
       return { ...estado, ...redesenho };
+    case 'frete':
+      return { ...estado, frete: acao.valor };
+    case 'carregarOrcamento':
+      return { ...redesenho, itens: acao.itens, frete: acao.frete, edicao: acao.edicao };
+    case 'edicao':
+      return { ...estado, edicao: acao.edicao };
   }
 }
 
@@ -110,15 +130,18 @@ interface ContextoCarrinho {
   limpar: () => void;
   definirQtd: (id: number | string, qty: number, redesenhar: boolean) => void;
   definirCalc: (id: number | string, campo: CampoNumerico, valor: number) => void;
-  definirCalcBool: (id: number | string, valor: boolean) => void;
   vincularMockup: (id: number | string, imagem: string) => void;
   redesenhar: () => void;
+  definirFrete: (valor: string) => void;
+  /** Substitui o carrinho pelos itens de um orçamento salvo (modo de alteração). */
+  carregarOrcamento: (itens: Itens, frete: string, edicao: EdicaoOrcamento) => void;
+  definirEdicao: (edicao: EdicaoOrcamento | null) => void;
 }
 
 const Ctx = createContext<ContextoCarrinho | null>(null);
 
 export function ProvedorCarrinho({ children }: { children: ReactNode }) {
-  const [estado, despachar] = useReducer(redutor, { itens: {}, versao: 0 });
+  const [estado, despachar] = useReducer(redutor, { itens: {}, versao: 0, frete: '0', edicao: null });
   const valor = useMemo<ContextoCarrinho>(
     () => ({
       estado,
@@ -127,9 +150,11 @@ export function ProvedorCarrinho({ children }: { children: ReactNode }) {
       limpar: () => despachar({ tipo: 'limpar' }),
       definirQtd: (id, qty, redesenhar) => despachar({ tipo: 'qtd', id: String(id), qty, redesenhar }),
       definirCalc: (id, campo, v) => despachar({ tipo: 'calc', id: String(id), campo, valor: v }),
-      definirCalcBool: (id, v) => despachar({ tipo: 'calcBool', id: String(id), valor: v }),
       vincularMockup: (id, imagem) => despachar({ tipo: 'mockup', id: String(id), imagem }),
       redesenhar: () => despachar({ tipo: 'redesenhar' }),
+      definirFrete: (valor) => despachar({ tipo: 'frete', valor }),
+      carregarOrcamento: (itens, frete, edicao) => despachar({ tipo: 'carregarOrcamento', itens, frete, edicao }),
+      definirEdicao: (edicao) => despachar({ tipo: 'edicao', edicao }),
     }),
     [estado],
   );
@@ -142,10 +167,11 @@ export function useCarrinho(): ContextoCarrinho {
   return c;
 }
 
-/** Subtotal dos preços calculados (sem frete). */
-export function subtotalCarrinho(itens: Itens): number {
+/** Subtotal dos preços calculados (sem frete), com os parâmetros cadastrados. */
+export function subtotalCarrinho(itens: Itens, parametros: ParametrosCalculo): number {
   return Object.values(itens).reduce(
-    (s, { produto: p, qty, calc }) => s + calcPreco(p.preco as number, qty, calc).preco * qty,
+    (s, { produto: p, qty, calc }) =>
+      s + calcPreco(p.preco as number, qty, calcComParametros(calc, parametros)).preco * qty,
     0,
   );
 }

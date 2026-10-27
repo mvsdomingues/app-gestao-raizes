@@ -131,8 +131,26 @@ export function montarComposicao(
   return partes.join(' + ').replace(/\+ margem/, '· margem');
 }
 
+/**
+ * Parâmetros que NÃO são ajustáveis por item no carrinho: valem sempre os
+ * valores cadastrados na tela Parâmetros.
+ */
+export const CAMPOS_SOMENTE_PARAMETROS = ['imposto_compra', 'imposto_compra_ativo', 'imposto', 'margem'] as const;
+
+/** Parâmetros efetivos de um item: ajustes do item + campos fixos dos parâmetros cadastrados. */
+export function calcComParametros(item: ParametrosCalculo, cadastrados: ParametrosCalculo): ParametrosCalculo {
+  return {
+    ...item,
+    imposto_compra: cadastrados.imposto_compra,
+    imposto_compra_ativo: cadastrados.imposto_compra_ativo,
+    imposto: cadastrados.imposto,
+    margem: cadastrados.margem,
+  };
+}
+
 /** Dados mínimos de um produto para virar item de orçamento. */
 export interface ProdutoCalculavel {
+  id?: number;
   nome: string | null;
   codigo: string | null;
   fornecedor: string;
@@ -157,6 +175,9 @@ export function montarItemOrcamento(
     preco: res.preco,
     composicao: montarComposicao(p.preco as number, calc, res),
     origem: p.origem ?? 'fornecedor',
+    produto_id: p.id,
+    custo: p.preco as number,
+    calc: { ...calc },
   };
 }
 

@@ -23,6 +23,8 @@ export type Tela =
   | 'status';
 
 export interface FolhaOrcamento {
+  /** id do orçamento salvo (ausente se não foi possível gravar) */
+  id?: number;
   numero: string;
   dataHora: string;
   itens: ItemOrcamento[];

@@ -121,15 +121,15 @@ O menu fica na **barra lateral** (pode ser recolhido para mostrar só os ícones
 **Vendas**
 
 1. **Catálogo**: busque por nome ou código, filtre por fornecedor/estoque, alterne grade/lista e clique no produto para incluí-lo no carrinho. Mostra os produtos dos fornecedores e os produtos próprios.
-2. **Carrinho**: ajuste quantidades e, em *Ajustar custos e margem*, os valores da calculadora de cada item. Todo item entra no carrinho com os valores da tela **Parâmetros**.
+2. **Carrinho**: ajuste quantidades e, em *Ajustar custos e margem*, os custos de personalização e os custos fixos de cada item (começam com os valores da tela **Parâmetros**). Imposto de compra, imposto sobre venda e margem não aparecem no carrinho: são sempre os cadastrados em **Parâmetros**.
 3. **Orçamento**: *Gerar Orçamento* salva no histórico (numeração `ORC-0001`…) e abre a folha para **Imprimir / Salvar PDF**.
 4. **Mockups**: aplique a logomarca sobre a foto dos produtos do carrinho e baixe o PNG.
-5. **Histórico**: reabra qualquer orçamento salvo.
+5. **Histórico**: reabra qualquer orçamento salvo ou clique em **✎ Editar** para carregá-lo de volta no carrinho (o carrinho precisa estar vazio). Ao salvar, o orçamento mantém o mesmo número e recebe a data da alteração; não há limite de alterações. O mesmo botão aparece na folha do orçamento.
 
 **Cadastros**
 
 6. **Produtos Próprios**: inclua, busque, altere e exclua produtos da própria empresa. Cada um recebe um código sequencial `PDP-000001`, `PDP-000002`… (códigos excluídos não são reutilizados). A foto pode ser enviada do computador ou informada por URL; os arquivos ficam em `data/imagens/proprios/`.
-7. **Parâmetros**: valores iniciais da calculadora (material, mão de obra, imposto de compra, designer, logística, imposto sobre venda e margem), com simulação de preço. Itens que já estão no carrinho mantêm os valores com que foram adicionados.
+7. **Parâmetros**: valores da calculadora (material, mão de obra, imposto de compra, designer, logística, imposto sobre venda e margem), com simulação de preço. Material, mão de obra, designer e logística são o ponto de partida de cada item novo; imposto de compra, imposto sobre venda e margem valem sempre para todos os itens do carrinho.
 
 **Sistema**
 
@@ -152,5 +152,5 @@ Valores de fábrica (usados até a primeira gravação em **Parâmetros**): mate
 | `GET/POST /api/produtos-proprios` | Lista (`?q=` busca) / inclui produto próprio |
 | `GET/PUT/PATCH/DELETE /api/produtos-proprios/:codigo` | Consulta, substitui, altera campos ou exclui (`PDP-000001`) |
 | `GET/PUT /api/parametros` | Lê / grava os parâmetros da calculadora |
-| `GET/POST /api/orcamentos` · `GET /api/orcamentos/:id` | Histórico de orçamentos |
+| `GET/POST /api/orcamentos` · `GET/PUT /api/orcamentos/:id` | Histórico de orçamentos (PUT altera mantendo o número) |
 | `POST /api/atualizar` · `GET /api/atualizar/status` | Atualização dos fornecedores |

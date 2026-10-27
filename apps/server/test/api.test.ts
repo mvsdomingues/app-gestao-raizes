@@ -80,6 +80,30 @@ describe('API', () => {
     expect(det.json.itens_json).toBeUndefined();
   });
 
+  it('altera um orçamento salvo mantendo o número', async () => {
+    const put = async (url: string, corpo: unknown) => {
+      const r = await fetch(base + url, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(corpo),
+      });
+      return { status: r.status, json: await r.json() };
+    };
+    const antes = (await get('/api/orcamentos/1')).json;
+    db.prepare("UPDATE orcamentos SET data_hora = '2026-01-01T10:00:00' WHERE id = 1").run();
+    const item = { nome: 'Novo', codigo: 'X', fornecedor: 'XBZ', imagem_url: '', qty: 5, preco: 3, composicao: 'c' };
+    for (let i = 0; i < 3; i++) {
+      const r = await put('/api/orcamentos/1', { itens: [item, item], subtotal: 30, frete: 0, total: 30 + i });
+      expect(r.json).toMatchObject({ id: 1, numero: 'ORC-0001' });
+      expect(r.json.data_hora).not.toBe('2026-01-01T10:00:00');
+    }
+    const depois = (await get('/api/orcamentos/1')).json;
+    expect(depois).toMatchObject({ numero: antes.numero, qtd_itens: 2, total: 32, itens: [item, item] });
+    expect((await get('/api/orcamentos')).json).toHaveLength(1);
+    expect((await put('/api/orcamentos/99', { itens: [item] })).status).toBe(404);
+    expect((await put('/api/orcamentos/1', { itens: [] })).json).toEqual({ erro: 'itens vazio' });
+  });
+
   it('valida o proxy de imagens', async () => {
     expect(await get('/api/proxy-img?url=ftp://x')).toEqual({ status: 400, json: { erro: 'URL inválida' } });
   });

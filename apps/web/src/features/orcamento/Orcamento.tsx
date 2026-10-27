@@ -2,10 +2,12 @@ import { formatBRL } from '@raizes/shared';
 import { useApp, type FolhaOrcamento } from '../../app/contexto';
 import { ImagemProduto } from '../../components/ImagemProduto';
 import { classeFornecedor } from '../../lib/fornecedor';
+import { useEditarOrcamento } from './editar-orcamento';
 
 /** Aba "Orçamento": folha timbrada pronta para imprimir / salvar em PDF. */
 export function Orcamento() {
   const { tela, folha, irPara } = useApp();
+  const { editar, carregando } = useEditarOrcamento();
 
   return (
     <div id="view-orcamento" style={{ display: tela === 'orcamento' ? 'block' : 'none' }}>
@@ -14,6 +16,16 @@ export function Orcamento() {
           ← Voltar ao catálogo
         </button>
         <div className="orc-toolbar-actions">
+          {folha?.id !== undefined && (
+            <button
+              className="btn-back"
+              id="btn-editar-orcamento"
+              disabled={carregando !== null}
+              onClick={() => void editar(folha.id!, folha.numero)}
+            >
+              {carregando !== null ? 'Abrindo…' : `✎ Editar ${folha.numero}`}
+            </button>
+          )}
           <button className="btn-print-inline" onClick={() => window.print()}>
             🖨 Imprimir / Salvar PDF
           </button>
