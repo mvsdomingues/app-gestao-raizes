@@ -122,7 +122,7 @@ O menu fica na **barra lateral** (pode ser recolhido para mostrar só os ícones
 
 1. **Catálogo**: busque por nome ou código, filtre por fornecedor/estoque, alterne grade/lista e clique no produto para incluí-lo no carrinho. Mostra os produtos dos fornecedores e os produtos próprios.
 2. **Carrinho**: ajuste quantidades e, em *Ajustar custos e margem*, os custos de personalização e os custos fixos de cada item (começam com os valores da tela **Parâmetros**). Imposto de compra, imposto sobre venda e margem não aparecem no carrinho: são sempre os cadastrados em **Parâmetros**.
-3. **Orçamento**: *Gerar Orçamento* salva no histórico (numeração `ORC-0001`…) e abre a folha para **Imprimir / Salvar PDF**.
+3. **Orçamento**: *Gerar Orçamento* salva no histórico (numeração `ORC-0001`…), esvazia o carrinho e abre a folha para **Imprimir / Salvar PDF**. Ao salvar a alteração de um orçamento, o carrinho também é esvaziado.
 4. **Mockups**: aplique a logomarca sobre a foto dos produtos do carrinho e baixe o PNG.
 5. **Histórico**: reabra qualquer orçamento salvo ou clique em **✎ Editar** para carregá-lo de volta no carrinho (o carrinho precisa estar vazio). Ao salvar, o orçamento mantém o mesmo número e recebe a data da alteração; não há limite de alterações. O mesmo botão aparece na folha do orçamento.
 

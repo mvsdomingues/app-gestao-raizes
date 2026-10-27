@@ -55,10 +55,13 @@ export function Carrinho() {
       numero = salvo.numero;
       id = salvo.id;
       dataHora = salvo.data_hora;
+      // Orçamento gravado (novo ou alterado): o carrinho é esvaziado
+      limpar();
+      definirFrete('0');
     } catch (e) {
       console.error('Não foi possível salvar o orçamento no histórico:', e);
       alert(
-        'Não foi possível salvar o orçamento no histórico (verifique a conexão com o servidor). O orçamento será exibido, mas não ficará registrado.',
+        'Não foi possível salvar o orçamento no histórico (verifique a conexão com o servidor). O orçamento será exibido, mas não ficará registrado; os itens continuam no carrinho para tentar de novo.',
       );
     } finally {
       setGerando(false);
