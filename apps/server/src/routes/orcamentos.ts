@@ -1,17 +1,42 @@
 import { Router, type Request } from 'express';
 import {
   numeroOrcamento,
+  type Orcamento,
   type OrcamentoCriado,
+  type StatusPedido,
   type RespostaOrcamentos,
   type ResumoOrcamento,
 } from '@raizes/shared';
 import type { Banco } from '../db/conexao';
+import { pedidoAtivoDoOrcamento } from '../db/repositorio-pedidos';
 import { falsyPython, floatPython } from '../lib/conversao';
 import { isoLocal } from '../lib/datas';
 import { corpoJson, ErroHttp } from '../lib/http';
 
 interface LinhaOrcamento extends Omit<ResumoOrcamento, 'numero'> {
   itens_json: string;
+}
+
+/** Subconsulta do pedido ativo (não cancelado) de cada orçamento. */
+const SQL_PEDIDO_ATIVO =
+  "SELECT {campo} FROM pedidos p WHERE p.orcamento_id = orcamentos.id AND p.status <> 'CANCELADO'";
+
+interface ColunasPedido {
+  pedido_codigo: string | null;
+  pedido_status: StatusPedido | null;
+}
+
+/** Orçamento completo (itens + pedido ativo, se houver). */
+export function lerOrcamento(db: Banco, id: number): Orcamento | undefined {
+  const row = db.prepare('SELECT * FROM orcamentos WHERE id = ?').get(id) as LinhaOrcamento | undefined;
+  if (!row) return undefined;
+  const { itens_json, ...resto } = row;
+  return {
+    ...resto,
+    numero: numeroOrcamento(row.id),
+    itens: JSON.parse(itens_json),
+    pedido: pedidoAtivoDoOrcamento(db, row.id),
+  };
 }
 
 export function rotasOrcamentos(db: Banco): Router {
@@ -58,6 +83,10 @@ export function rotasOrcamentos(db: Banco): Router {
         params.push(v);
       }
     }
+    const pedido = q('pedido');
+    if (pedido === 'com' || pedido === 'sem') {
+      wheres.push(`${pedido === 'sem' ? 'NOT ' : ''}EXISTS (${SQL_PEDIDO_ATIVO.replace('{campo}', '1')})`);
+    }
     const whereSql = wheres.length ? 'WHERE ' + wheres.join(' AND ') : '';
     const limit = Math.min(200, Math.max(1, Number.parseInt(q('limit') || '20', 10) || 20));
     const offset = Math.max(0, Number.parseInt(q('offset') || '0', 10) || 0);
@@ -67,13 +96,20 @@ export function rotasOrcamentos(db: Banco): Router {
     };
     const rows = db
       .prepare(
-        `SELECT id, data_hora, subtotal, frete, total, qtd_itens FROM orcamentos ${whereSql}
-         ORDER BY id DESC LIMIT ? OFFSET ?`,
+        `SELECT id, data_hora, subtotal, frete, total, qtd_itens,
+                (${SQL_PEDIDO_ATIVO.replace('{campo}', 'codigo')}) AS pedido_codigo,
+                (${SQL_PEDIDO_ATIVO.replace('{campo}', 'status')}) AS pedido_status
+           FROM orcamentos ${whereSql}
+          ORDER BY id DESC LIMIT ? OFFSET ?`,
       )
-      .all(...params, limit, offset) as Omit<ResumoOrcamento, 'numero'>[];
+      .all(...params, limit, offset) as (Omit<ResumoOrcamento, 'numero' | 'pedido'> & ColunasPedido)[];
     const corpo: RespostaOrcamentos = {
       total,
-      orcamentos: rows.map((row) => ({ ...row, numero: numeroOrcamento(row.id) })),
+      orcamentos: rows.map(({ pedido_codigo, pedido_status, ...row }) => ({
+        ...row,
+        numero: numeroOrcamento(row.id),
+        pedido: pedido_codigo ? { codigo: pedido_codigo, status: pedido_status! } : null,
+      })),
     };
     res.json(corpo);
   });
@@ -109,6 +145,11 @@ export function rotasOrcamentos(db: Banco): Router {
     if (!/^\d+$/.test(req.params.oid)) return next();
     const id = Number(req.params.oid);
     const { itens, subtotal, frete, total } = lerCorpo(req);
+    // Orçamento com pedido ativo não pode ser alterado
+    const pedido = pedidoAtivoDoOrcamento(db, id);
+    if (pedido) {
+      throw new ErroHttp(409, `O ${numeroOrcamento(id)} está no pedido ${pedido.codigo} e não pode ser alterado`);
+    }
     const dataHora = isoLocal();
     const info = db
       .prepare(
@@ -122,15 +163,12 @@ export function rotasOrcamentos(db: Banco): Router {
 
   r.get('/api/orcamentos/:oid', (req, res, next) => {
     if (!/^\d+$/.test(req.params.oid)) return next();
-    const row = db.prepare('SELECT * FROM orcamentos WHERE id = ?').get(Number(req.params.oid)) as
-      | LinhaOrcamento
-      | undefined;
-    if (!row) {
+    const o = lerOrcamento(db, Number(req.params.oid));
+    if (!o) {
       res.status(404).json({ erro: 'não encontrado' });
       return;
     }
-    const { itens_json, ...resto } = row;
-    res.json({ ...resto, numero: numeroOrcamento(row.id), itens: JSON.parse(itens_json) });
+    res.json(o);
   });
 
   return r;

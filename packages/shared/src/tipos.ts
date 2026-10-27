@@ -59,6 +59,8 @@ export interface ResumoOrcamento {
   frete: number;
   total: number;
   qtd_itens: number;
+  /** Pedido ativo gerado a partir do orçamento (null = sem pedido; o orçamento pode ser alterado). */
+  pedido?: import('./pedidos').PedidoDoOrcamento | null;
 }
 
 /** Resposta paginada de GET /api/orcamentos */
@@ -77,6 +79,8 @@ export interface FiltrosOrcamentos {
   ate?: string;
   min?: string;
   max?: string;
+  /** "com" = com pedido ativo, "sem" = sem pedido, vazio = todos */
+  pedido?: string;
 }
 
 /** Orçamento completo (GET /api/orcamentos/:id). */

@@ -4,10 +4,11 @@ import { useApp } from '../../app/contexto';
 import { Carregando } from '../../components/Carregando';
 import { api } from '../../lib/api';
 import { Paginacao } from '../catalogo/Paginacao';
+import { ModalNovoPedido } from '../pedidos/ModalNovoPedido';
 import { useEditarOrcamento } from './editar-orcamento';
 
 const POR_PAGINA = 20;
-const FILTROS_VAZIOS: FiltrosOrcamentos = { numero: '', produto: '', de: '', ate: '', min: '', max: '' };
+const FILTROS_VAZIOS: FiltrosOrcamentos = { numero: '', produto: '', de: '', ate: '', min: '', max: '', pedido: '' };
 
 type Estado =
   | { tipo: 'carregando' }
@@ -26,17 +27,18 @@ function formatarData(dataHora: string): string {
 
 /** Aba "Todos os orçamentos": filtros, tabela paginada, abrir e editar. */
 export function ListaOrcamentos() {
-  const { visitas, mostrarOrcamento } = useApp();
+  const { visitas, mostrarOrcamento, abrirPedido, pedidoAberto } = useApp();
   const { editar, carregando } = useEditarOrcamento();
   const [filtros, setFiltros] = useState<FiltrosOrcamentos>(FILTROS_VAZIOS);
   const [aplicados, setAplicados] = useState<FiltrosOrcamentos>(FILTROS_VAZIOS);
   const [pagina, setPagina] = useState(1);
   const [estado, setEstado] = useState<Estado>({ tipo: 'carregando' });
+  const [gerarPara, setGerarPara] = useState<ResumoOrcamento | null>(null);
   const seq = useRef(0);
 
   const carregar = useCallback(async (f: FiltrosOrcamentos, pag: number) => {
     const meu = ++seq.current;
-    setEstado({ tipo: 'carregando' });
+    setEstado((e) => (e.tipo === 'ok' ? e : { tipo: 'carregando' }));
     try {
       const r = await api.orcamentos(f, POR_PAGINA, (pag - 1) * POR_PAGINA);
       if (meu === seq.current) setEstado({ tipo: 'ok', linhas: r.orcamentos, total: r.total });
@@ -50,6 +52,11 @@ export function ListaOrcamentos() {
   useEffect(() => {
     if (visitas.orcamentos > 0) void carregar(aplicados, pagina);
   }, [visitas.orcamentos]);
+
+  // Atualiza as tags quando um pedido é gerado, movimentado ou cancelado
+  useEffect(() => {
+    if (visitas.orcamentos > 0) void carregar(aplicados, pagina);
+  }, [pedidoAberto]);
 
   const filtrar = (e?: FormEvent) => {
     e?.preventDefault();
@@ -82,6 +89,7 @@ export function ListaOrcamentos() {
         subtotal: o.subtotal,
         frete: o.frete,
         total: o.total,
+        pedido: o.pedido ?? null,
       });
     } catch (e) {
       console.error(e);
@@ -123,6 +131,14 @@ export function ListaOrcamentos() {
             <span>a</span>
             <input id="filtro-max" className="custom-input" type="number" min="0" step="0.01" placeholder="máx." {...campo('max')} />
           </div>
+        </div>
+        <div className="orc-filtro">
+          <label htmlFor="filtro-pedido">Pedido</label>
+          <select id="filtro-pedido" className="custom-input" {...campo('pedido')}>
+            <option value="">Todos</option>
+            <option value="com">Com pedido</option>
+            <option value="sem">Sem pedido</option>
+          </select>
         </div>
         <div className="orc-filtro-acoes">
           <button type="submit" className="btn-novo" id="btn-filtrar">
@@ -171,7 +187,8 @@ export function ListaOrcamentos() {
                 <th className="num" style={{ width: 140 }}>
                   Total
                 </th>
-                <th style={{ width: 110 }} />
+                <th style={{ width: 130 }}>Pedido</th>
+                <th style={{ width: 220 }} />
               </tr>
             </thead>
             <tbody>
@@ -185,11 +202,43 @@ export function ListaOrcamentos() {
                   <td className="num" style={{ fontWeight: 600 }}>
                     {formatBRL(r.total)}
                   </td>
+                  <td>
+                    {r.pedido ? (
+                      <button
+                        className="tag-orc-pedido"
+                        title={`Ver o pedido ${r.pedido.codigo}`}
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          void abrirPedido(r.pedido!.codigo);
+                        }}
+                      >
+                        📦 {r.pedido.codigo}
+                      </button>
+                    ) : (
+                      <span className="tag-sem-pedido">sem pedido</span>
+                    )}
+                  </td>
                   <td className="hist-acoes">
+                    {!r.pedido && (
+                      <button
+                        className="btn-editar-orc btn-gerar-pedido"
+                        title={`Gerar um pedido a partir do ${r.numero}`}
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          setGerarPara(r);
+                        }}
+                      >
+                        📦 Gerar pedido
+                      </button>
+                    )}
                     <button
                       className="btn-editar-orc"
-                      title={`Alterar ${r.numero} no carrinho`}
-                      disabled={carregando !== null}
+                      title={
+                        r.pedido
+                          ? `${r.numero} está no pedido ${r.pedido.codigo} e não pode ser alterado`
+                          : `Alterar ${r.numero} no carrinho`
+                      }
+                      disabled={carregando !== null || !!r.pedido}
                       onClick={(e) => {
                         e.stopPropagation();
                         void editar(r.id, r.numero);
@@ -210,6 +259,8 @@ export function ListaOrcamentos() {
           <Paginacao atual={pagina} total={totalPaginas} irPara={irParaPagina} />
         </div>
       )}
+
+      <ModalNovoPedido aberto={gerarPara !== null} orcamento={gerarPara} fechar={() => setGerarPara(null)} />
     </>
   );
 }

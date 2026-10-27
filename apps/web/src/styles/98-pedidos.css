@@ -1,0 +1,191 @@
+/* ══════════════════════════════════
+   TELA PEDIDOS (lista + detalhes) e tags de pedido
+   ══════════════════════════════════ */
+
+/* Tag da etapa do pedido */
+.tag-pedido {
+  display: inline-block;
+  padding: 3px 10px;
+  border-radius: 20px;
+  font-size: .68rem;
+  font-weight: 600;
+  letter-spacing: .4px;
+  text-transform: uppercase;
+  white-space: nowrap;
+  border: 1px solid transparent;
+}
+.tag-pedido.s-CRIADO      { background: #F0EAF6; color: var(--uva); border-color: #DCCDEA; }
+.tag-pedido.s-EM_PRODUCAO { background: #FFF3DC; color: #9A6200; border-color: #F2D9A6; }
+.tag-pedido.s-PRODUZIDO   { background: #E8ECFB; color: #3F4BA8; border-color: #C9CFF2; }
+.tag-pedido.s-FATURADO    { background: #E3F2F5; color: #1F6E7D; border-color: #BCDDE3; }
+.tag-pedido.s-ENVIADO     { background: #EAF5E8; color: var(--success); border-color: #C3E3BE; }
+.tag-pedido.s-ENCERRADO   { background: var(--berinjela); color: #fff; }
+.tag-pedido.s-CANCELADO   { background: #FDECEA; color: var(--danger); border-color: #F5C3BC; text-decoration: line-through; }
+
+/* Tags na lista de orçamentos */
+.tag-orc-pedido {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 3px 10px;
+  border-radius: 20px;
+  border: 1px solid #DCCDEA;
+  background: #F0EAF6;
+  color: var(--uva);
+  font-size: .72rem;
+  font-weight: 600;
+  white-space: nowrap;
+  cursor: pointer;
+  font-family: var(--font-body);
+}
+.tag-orc-pedido:hover { background: var(--uva); color: #fff; border-color: var(--uva); }
+.tag-sem-pedido {
+  display: inline-block;
+  padding: 3px 10px;
+  border-radius: 20px;
+  border: 1px dashed var(--border2);
+  color: var(--muted);
+  font-size: .68rem;
+  font-weight: 500;
+  letter-spacing: .4px;
+  text-transform: uppercase;
+  white-space: nowrap;
+}
+.orc-folha-pedido { display: flex; align-items: center; gap: 8px; font-size: .8rem; color: var(--muted); }
+.hist-acoes { white-space: nowrap; }
+.hist-acoes .btn-editar-orc + .btn-editar-orc { margin-left: 6px; }
+
+/* Lista de pedidos */
+.pedidos-barra { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin-bottom: 10px; }
+.pedidos-barra .orc-lista-info { margin-bottom: 0; }
+.pedido-ref-orc { font-weight: 500; color: var(--berinjela); }
+#ped-paginacao { margin-top: 6px; }
+
+/* Cartão do pedido */
+.pedido-card {
+  background: var(--surface);
+  border: 1.5px solid var(--border);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-sm);
+  padding: 22px 24px;
+  margin-bottom: 22px;
+}
+.pedido-card-topo { display: flex; justify-content: space-between; align-items: flex-start; gap: 16px; }
+.pedido-codigo { font-family: var(--font-display); font-size: 1.9rem; font-weight: 700; color: var(--berinjela); line-height: 1.1; }
+.pedido-sub { margin-top: 4px; font-size: .82rem; color: var(--muted); }
+.pedido-card-dir { display: flex; flex-direction: column; align-items: flex-end; gap: 8px; }
+.pedido-total { font-family: var(--font-display); font-size: 1.5rem; font-weight: 700; color: var(--uva); }
+.pedido-obs { margin-top: 12px; font-size: .85rem; }
+.pedido-obs span { font-weight: 600; color: var(--muted); }
+.pedido-cancelado {
+  margin-top: 14px;
+  padding: 10px 14px;
+  border-radius: var(--radius);
+  background: #FDECEA;
+  border: 1px solid #F5C3BC;
+  color: var(--danger);
+  font-size: .84rem;
+}
+
+/* Fluxo (stepper) */
+.pedido-fluxo { list-style: none; display: grid; grid-template-columns: repeat(6, 1fr); margin-top: 22px; }
+.pedido-etapa { position: relative; display: flex; flex-direction: column; align-items: center; text-align: center; gap: 6px; padding: 0 4px; }
+.pedido-etapa::before {
+  content: '';
+  position: absolute;
+  top: 15px;
+  left: -50%;
+  width: 100%;
+  height: 3px;
+  background: var(--border);
+  z-index: 0;
+}
+.pedido-etapa:first-child::before { display: none; }
+.pedido-etapa.feito::before, .pedido-etapa.atual::before { background: var(--uva); }
+.pedido-etapa-marca {
+  position: relative;
+  z-index: 1;
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: .8rem;
+  font-weight: 700;
+  background: var(--surface);
+  border: 2px solid var(--border2);
+  color: var(--muted);
+}
+.pedido-etapa.feito .pedido-etapa-marca { background: var(--uva); border-color: var(--uva); color: #fff; }
+.pedido-etapa.atual .pedido-etapa-marca { background: var(--surface); border-color: var(--uva); color: var(--uva); box-shadow: 0 0 0 4px #F0EAF6; }
+.pedido-etapa-nome { font-size: .74rem; font-weight: 600; letter-spacing: .4px; text-transform: uppercase; color: var(--grafite); }
+.pedido-etapa.futuro .pedido-etapa-nome { color: var(--muted); font-weight: 500; }
+.pedido-etapa-data { font-size: .72rem; color: var(--muted); }
+.pedido-fluxo.cancelado .pedido-etapa.atual .pedido-etapa-marca { border-color: var(--danger); color: var(--danger); box-shadow: 0 0 0 4px #FDECEA; }
+.pedido-tempo { margin-top: 18px; font-size: .8rem; color: var(--muted); text-align: right; }
+.pedido-tempo b { color: var(--berinjela); }
+
+.pedido-secao {
+  font-family: var(--font-display);
+  font-size: 1.25rem;
+  font-weight: 700;
+  color: var(--berinjela);
+  margin: 4px 0 10px;
+}
+.pedido-movimentos { margin-bottom: 24px; }
+.pedido-seta { color: var(--muted); margin: 0 2px; }
+.pedido-mov-obs { font-size: .82rem; color: var(--muted); }
+.btn-cancelar-pedido:hover:not(:disabled) { border-color: var(--danger); color: var(--danger); }
+
+/* Modal "Gerar pedido" */
+.pedido-orc-escolhido {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  padding: 12px 14px;
+  margin-bottom: 14px;
+  border-radius: var(--radius);
+  background: var(--creme);
+  border: 1.5px solid var(--border);
+  font-size: .88rem;
+}
+.pedido-orc-escolhido .btn-back { margin-left: auto; padding: 5px 12px; }
+.pedido-orc-opcoes {
+  margin-top: 8px;
+  max-height: 260px;
+  overflow-y: auto;
+  border: 1.5px solid var(--border);
+  border-radius: var(--radius);
+}
+.pedido-orc-opcao {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  width: 100%;
+  padding: 9px 12px;
+  border: none;
+  border-bottom: 1px solid var(--border);
+  background: var(--surface);
+  font-family: var(--font-body);
+  font-size: .84rem;
+  text-align: left;
+  cursor: pointer;
+}
+.pedido-orc-opcao:last-child { border-bottom: none; }
+.pedido-orc-opcao:hover { background: #F0EAF6; }
+.pedido-orc-opcao b { margin-left: auto; }
+.pedido-orc-data, .pedido-orc-itens { color: var(--muted); }
+.pedido-orc-vazio { padding: 14px; text-align: center; font-size: .84rem; color: var(--muted); }
+
+@media (max-width: 760px) {
+  .pedido-fluxo { grid-template-columns: repeat(3, 1fr); row-gap: 18px; }
+  .pedido-etapa:nth-child(4)::before { display: none; }
+  .pedido-card-topo { flex-direction: column; }
+  .pedido-card-dir { align-items: flex-start; }
+}
+
+@media print {
+  #view-pedidos .orc-toolbar, #view-pedidos .subabas { display: none !important; }
+}
+#view-orcamento .orc-toolbar-actions { align-items: center; }

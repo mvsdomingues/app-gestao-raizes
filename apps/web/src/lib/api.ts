@@ -10,7 +10,10 @@ import type {
   RespostaAtualizar,
   RespostaProdutos,
   FiltrosOrcamentos,
+  FiltrosPedidos,
+  Pedido,
   RespostaOrcamentos,
+  RespostaPedidos,
   StatusAtualizacao,
   StatusFornecedor,
 } from '@raizes/shared';
@@ -103,6 +106,20 @@ export const api = {
     enviar<ProdutoProprio>('PATCH', `/api/produtos-proprios/${encodeURIComponent(codigo)}`, dados),
   excluirProdutoProprio: (codigo: string) =>
     enviar<{ ok: boolean }>('DELETE', `/api/produtos-proprios/${encodeURIComponent(codigo)}`),
+
+  // ── Pedidos ──
+  pedidos: (filtros: FiltrosPedidos, limit: number, offset: number) => {
+    const qs = new URLSearchParams({ limit: String(limit), offset: String(offset) });
+    for (const [k, v] of Object.entries(filtros)) if (v && String(v).trim()) qs.set(k, String(v).trim());
+    return enviar<RespostaPedidos>('GET', `/api/pedidos?${qs}`);
+  },
+  pedido: (codigo: string) => enviar<Pedido>('GET', `/api/pedidos/${encodeURIComponent(codigo)}`),
+  criarPedido: (orcamentoId: number, observacao: string) =>
+    enviar<Pedido>('POST', '/api/pedidos', { orcamento_id: orcamentoId, observacao }),
+  avancarPedido: (codigo: string, statusAtual: string) =>
+    enviar<Pedido>('POST', `/api/pedidos/${encodeURIComponent(codigo)}/avancar`, { status_atual: statusAtual }),
+  cancelarPedido: (codigo: string, motivo: string) =>
+    enviar<Pedido>('POST', `/api/pedidos/${encodeURIComponent(codigo)}/cancelar`, { motivo }),
 
   // ── Parâmetros da calculadora ──
   parametros: () => enviar<RespostaParametros>('GET', '/api/parametros'),

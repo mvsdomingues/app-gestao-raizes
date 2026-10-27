@@ -6,6 +6,7 @@ import { Carrinho } from '../features/carrinho/Carrinho';
 import { Catalogo } from '../features/catalogo/Catalogo';
 import { EstudioMockup } from '../features/mockup/EstudioMockup';
 import { Orcamentos } from '../features/orcamentos/Orcamentos';
+import { Pedidos } from '../features/pedidos/Pedidos';
 import { Parametros } from '../features/parametros/Parametros';
 import { ProdutosProprios } from '../features/produtos-proprios/ProdutosProprios';
 import { ProvedorCarrinho } from '../state/carrinho';
@@ -29,6 +30,7 @@ export function App() {
               <Carrinho />
               <Atualizacao />
               <Orcamentos />
+              <Pedidos />
               <EstudioMockup />
               <ProdutosProprios />
               <Parametros />

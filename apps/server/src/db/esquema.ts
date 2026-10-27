@@ -61,6 +61,32 @@ export function garantirEsquema(db: Database.Database): void {
       atualizado TEXT NOT NULL
     );
 
+    -- Pedidos: sempre gerados a partir de um orçamento (código PED-000001…).
+    CREATE TABLE IF NOT EXISTS pedidos (
+      id            INTEGER PRIMARY KEY AUTOINCREMENT,
+      codigo        TEXT NOT NULL UNIQUE,
+      orcamento_id  INTEGER NOT NULL REFERENCES orcamentos(id),
+      status        TEXT NOT NULL,
+      observacao    TEXT,
+      criado        TEXT NOT NULL,
+      atualizado    TEXT NOT NULL
+    );
+    -- Regra: no máximo 1 pedido ativo (não cancelado) por orçamento
+    CREATE UNIQUE INDEX IF NOT EXISTS ux_pedidos_orcamento_ativo
+      ON pedidos(orcamento_id) WHERE status <> 'CANCELADO';
+    CREATE INDEX IF NOT EXISTS ix_pedidos_status ON pedidos(status);
+
+    -- Histórico de movimentações do fluxo (data/hora de cada etapa, para SLA)
+    CREATE TABLE IF NOT EXISTS pedidos_movimentos (
+      id              INTEGER PRIMARY KEY AUTOINCREMENT,
+      pedido_id       INTEGER NOT NULL REFERENCES pedidos(id),
+      status_anterior TEXT,
+      status_novo     TEXT NOT NULL,
+      data_hora       TEXT NOT NULL,
+      observacao      TEXT
+    );
+    CREATE INDEX IF NOT EXISTS ix_pedidos_movimentos_pedido ON pedidos_movimentos(pedido_id);
+
     -- Catálogo único: produtos dos fornecedores + produtos próprios.
     -- Os próprios recebem id negativo para nunca colidir com os dos fornecedores.
     DROP VIEW IF EXISTS catalogo;

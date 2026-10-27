@@ -26,7 +26,7 @@ Aplicação interna para consultar produtos de vários fornecedores, montar orç
 │   └── web/                    ← interface React
 │       └── src/
 │           ├── app/            ← App e contexto (navegação entre abas)
-│           ├── features/       ← catalogo, carrinho, orcamentos, mockup, produtos-proprios, parametros, atualizacao
+│           ├── features/       ← catalogo, carrinho, orcamentos, pedidos, mockup, produtos-proprios, parametros, atualizacao
 │           ├── components/     ← barra lateral (menu), rodapé, lightbox, imagem de produto
 │           ├── state/          ← estado do carrinho
 │           ├── lib/            ← cliente da API
@@ -123,20 +123,27 @@ O menu fica na **barra lateral** (pode ser recolhido para mostrar só os ícones
 1. **Catálogo**: busque por nome ou código, filtre por fornecedor/estoque, alterne grade/lista e clique no produto para incluí-lo no carrinho. Mostra os produtos dos fornecedores e os produtos próprios.
 2. **Carrinho**: ajuste quantidades e, em *Ajustar custos e margem*, os custos de personalização e os custos fixos de cada item (começam com os valores da tela **Parâmetros**). Imposto de compra, imposto sobre venda e margem não aparecem no carrinho: são sempre os cadastrados em **Parâmetros**.
 3. **Orçamentos**: tela única com duas abas.
-   - **Todos os orçamentos**: lista paginada (20 por página) com filtros por número (`ORC-0005` ou `5`), produto (descrição ou código de qualquer item), período (de/até) e faixa de valor total. Clique em uma linha para ver os detalhes; **✎ Editar** carrega o orçamento de volta no carrinho (o carrinho precisa estar vazio).
-   - **Detalhes**: folha do orçamento selecionado, com **Editar** e **Imprimir / Salvar PDF**.
+   - **Todos os orçamentos**: lista paginada (20 por página) com filtros por número (`ORC-0005` ou `5`), produto (descrição ou código de qualquer item), período (de/até), faixa de valor total e pedido (com/sem). Clique em uma linha para ver os detalhes; **✎ Editar** carrega o orçamento de volta no carrinho (o carrinho precisa estar vazio).
+   - **Detalhes**: folha do orçamento selecionado, com **Editar**, **Gerar pedido** e **Imprimir / Salvar PDF**.
+   - Cada orçamento mostra uma tag: o código do pedido ativo (ex.: `PED-000001`, clique para abrir o pedido) ou **sem pedido**. Orçamento com pedido ativo **não pode ser editado**; sem pedido, mantém a edição normal e o botão **📦 Gerar pedido**.
 
    *Gerar Orçamento* no carrinho grava o orçamento (numeração `ORC-0001`…), esvazia o carrinho e abre a aba **Detalhes**. Ao salvar uma alteração, o orçamento mantém o mesmo número e recebe a data da alteração; não há limite de alterações.
-4. **Mockups**: aplique a logomarca sobre a foto dos produtos do carrinho e baixe o PNG.
+4. **Pedidos**: tela com duas abas, no mesmo modelo de Orçamentos.
+   - Todo pedido nasce de um orçamento (**+ Novo pedido** ou **Gerar pedido** na tela Orçamentos) e recebe o código `PED-000001`, `PED-000002`…; o pedido guarda a referência ao orçamento, que descreve o que será entregue.
+   - Fluxo: **Criado → Em Produção → Produzido → Faturado → Enviado → Encerrado**. O botão de ação (na lista ou nos detalhes) move o pedido para a etapa seguinte, e cada movimentação grava a data e a hora (base para controle de SLA).
+   - **Todos os pedidos**: lista paginada com tag da etapa e filtros por código, orçamento, situação (incluindo *Em andamento*) e período.
+   - **Detalhes**: etapas com data/hora, tempo total, histórico de movimentações com o tempo em cada etapa e os itens do orçamento.
+   - Pedidos não são editados: se estiver errado, **Cancelar pedido** (com motivo). O orçamento fica livre para ser alterado ou usado em outro pedido. Nunca há dois pedidos ativos (não cancelados) para o mesmo orçamento; pedidos encerrados não podem ser cancelados.
+5. **Mockups**: aplique a logomarca sobre a foto dos produtos do carrinho e baixe o PNG.
 
 **Cadastros**
 
-5. **Produtos Próprios**: inclua, busque, altere e exclua produtos da própria empresa. Cada um recebe um código sequencial `PDP-000001`, `PDP-000002`… (códigos excluídos não são reutilizados). A foto pode ser enviada do computador ou informada por URL; os arquivos ficam em `data/imagens/proprios/`.
-6. **Parâmetros**: valores da calculadora (material, mão de obra, imposto de compra, designer, logística, imposto sobre venda e margem), com simulação de preço. Material, mão de obra, designer e logística são o ponto de partida de cada item novo; imposto de compra, imposto sobre venda e margem valem sempre para todos os itens do carrinho.
+6. **Produtos Próprios**: inclua, busque, altere e exclua produtos da própria empresa. Cada um recebe um código sequencial `PDP-000001`, `PDP-000002`… (códigos excluídos não são reutilizados). A foto pode ser enviada do computador ou informada por URL; os arquivos ficam em `data/imagens/proprios/`.
+7. **Parâmetros**: valores da calculadora (material, mão de obra, imposto de compra, designer, logística, imposto sobre venda e margem), com simulação de preço. Material, mão de obra, designer e logística são o ponto de partida de cada item novo; imposto de compra, imposto sobre venda e margem valem sempre para todos os itens do carrinho.
 
 **Sistema**
 
-7. **Atualização**: atualiza a base dos fornecedores integrados e mostra o log.
+8. **Atualização**: atualiza a base dos fornecedores integrados e mostra o log.
 
 ### Calculadora de preço
 
@@ -155,6 +162,10 @@ Valores de fábrica (usados até a primeira gravação em **Parâmetros**): mate
 | `GET/POST /api/produtos-proprios` | Lista (`?q=` busca) / inclui produto próprio |
 | `GET/PUT/PATCH/DELETE /api/produtos-proprios/:codigo` | Consulta, substitui, altera campos ou exclui (`PDP-000001`) |
 | `GET/PUT /api/parametros` | Lê / grava os parâmetros da calculadora |
-| `GET /api/orcamentos` | Lista paginada (`numero`, `produto`, `de`, `ate`, `min`, `max`, `limit`, `offset`) → `{ total, orcamentos }` |
-| `POST /api/orcamentos` · `GET/PUT /api/orcamentos/:id` | Grava, consulta e altera (PUT mantém o número) |
+| `GET /api/orcamentos` | Lista paginada (`numero`, `produto`, `de`, `ate`, `min`, `max`, `pedido=com\|sem`, `limit`, `offset`) → `{ total, orcamentos }` (cada um com `pedido` ativo ou `null`) |
+| `POST /api/orcamentos` · `GET/PUT /api/orcamentos/:id` | Grava, consulta e altera (PUT mantém o número; 409 se houver pedido ativo) |
+| `GET /api/pedidos` | Lista paginada (`codigo`, `orcamento`, `status` ou `EM_ANDAMENTO`, `de`, `ate`, `limit`, `offset`) → `{ total, pedidos }` |
+| `POST /api/pedidos` | Cria pedido `{ orcamento_id, observacao? }` (409 se o orçamento já tem pedido ativo) |
+| `GET /api/pedidos/:codigo` | Pedido com movimentações e orçamento (`PED-000001`) |
+| `POST /api/pedidos/:codigo/avancar` · `POST /api/pedidos/:codigo/cancelar` | Avança para a próxima etapa (`{ status_atual }`) / cancela (`{ motivo }`) |
 | `POST /api/atualizar` · `GET /api/atualizar/status` | Atualização dos fornecedores |

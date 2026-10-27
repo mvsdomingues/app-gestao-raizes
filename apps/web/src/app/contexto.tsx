@@ -9,20 +9,29 @@ import {
   type ReactNode,
   type RefObject,
 } from 'react';
-import { CALC_DEFAULTS, type ItemOrcamento, type ParametrosCalculo, type StatusFornecedor } from '@raizes/shared';
+import {
+  CALC_DEFAULTS,
+  type ItemOrcamento,
+  type ParametrosCalculo,
+  type Pedido,
+  type PedidoDoOrcamento,
+  type StatusFornecedor,
+} from '@raizes/shared';
 import { api } from '../lib/api';
 
 export type Tela =
   | 'catalogo'
   | 'carrinho'
   | 'orcamentos'
+  | 'pedidos'
   | 'mockup'
   | 'produtos-proprios'
   | 'parametros'
   | 'status';
 
-/** Abas da tela Orçamentos */
+/** Abas das telas Orçamentos e Pedidos */
 export type AbaOrcamentos = 'lista' | 'detalhe';
+export type AbaPedidos = 'lista' | 'detalhe';
 
 export interface FolhaOrcamento {
   /** id do orçamento salvo (ausente se não foi possível gravar) */
@@ -33,6 +42,8 @@ export interface FolhaOrcamento {
   subtotal: number;
   frete: number;
   total: number;
+  /** Pedido ativo do orçamento (null = sem pedido) */
+  pedido?: PedidoDoOrcamento | null;
 }
 
 interface ContextoApp {
@@ -65,6 +76,18 @@ interface ContextoApp {
   mostrarOrcamento: (f: FolhaOrcamento) => void;
   abaOrcamentos: AbaOrcamentos;
   setAbaOrcamentos: (a: AbaOrcamentos) => void;
+  /** Atualiza a tag de pedido da folha aberta (após gerar/cancelar um pedido). */
+  definirPedidoDaFolha: (orcamentoId: number, pedido: PedidoDoOrcamento | null) => void;
+
+  /** Pedido aberto na aba "Detalhes" da tela Pedidos. */
+  pedidoAberto: Pedido | null;
+  mostrarPedido: (p: Pedido) => void;
+  /** Atualiza o pedido aberto nos detalhes (se for o mesmo), sem trocar de tela. */
+  atualizarPedidoAberto: (p: Pedido) => void;
+  /** Busca o pedido pelo código e abre os detalhes. */
+  abrirPedido: (codigo: string) => Promise<void>;
+  abaPedidos: AbaPedidos;
+  setAbaPedidos: (a: AbaPedidos) => void;
 
   /** Produto pedido pelo botão "🎨 Mockup" de um item do carrinho. */
   mockupSolicitado: RefObject<number | string | null>;
@@ -77,6 +100,7 @@ const VISITAS_INICIAIS: Record<Tela, number> = {
   catalogo: 0,
   carrinho: 0,
   orcamentos: 0,
+  pedidos: 0,
   mockup: 0,
   'produtos-proprios': 0,
   parametros: 0,
@@ -94,12 +118,14 @@ export function ProvedorApp({ children }: { children: ReactNode }) {
   const [versaoCatalogo, setVersaoCatalogo] = useState(0);
   const [folha, setFolha] = useState<FolhaOrcamento | null>(null);
   const [abaOrcamentos, setAbaOrcamentos] = useState<AbaOrcamentos>('lista');
+  const [pedidoAberto, setPedidoAberto] = useState<Pedido | null>(null);
+  const [abaPedidos, setAbaPedidos] = useState<AbaPedidos>('lista');
   const mockupSolicitado = useRef<number | string | null>(null);
 
   const irPara = useCallback((t: Tela) => {
     setTela(t);
     setVisitas((v) => ({ ...v, [t]: v[t] + 1 }));
-    if (t !== 'orcamentos' && t !== 'mockup') {
+    if (t !== 'orcamentos' && t !== 'pedidos' && t !== 'mockup') {
       window.scrollTo(0, 0);
       document.querySelector('.app-views')?.scrollTo(0, 0);
     }
@@ -170,13 +196,36 @@ export function ProvedorApp({ children }: { children: ReactNode }) {
       },
       abaOrcamentos,
       setAbaOrcamentos,
+      definirPedidoDaFolha: (orcamentoId, pedido) =>
+        setFolha((f) => (f && f.id === orcamentoId ? { ...f, pedido } : f)),
+      pedidoAberto,
+      mostrarPedido: (p) => {
+        setPedidoAberto(p);
+        setAbaPedidos('detalhe');
+        irPara('pedidos');
+        document.querySelector('.app-views')?.scrollTo(0, 0);
+      },
+      atualizarPedidoAberto: (p) => setPedidoAberto((a) => (a && a.codigo === p.codigo ? p : a)),
+      abrirPedido: async (codigo) => {
+        try {
+          const p = await api.pedido(codigo);
+          setPedidoAberto(p);
+          setAbaPedidos('detalhe');
+          irPara('pedidos');
+          document.querySelector('.app-views')?.scrollTo(0, 0);
+        } catch (e) {
+          alert('Não foi possível abrir o pedido: ' + (e instanceof Error ? e.message : e));
+        }
+      },
+      abaPedidos,
+      setAbaPedidos,
       mockupSolicitado,
       abrirMockupParaProduto: (id) => {
         mockupSolicitado.current = id;
         irPara('mockup');
       },
     }),
-    [tela, visitas, irPara, fornecedores, carregarFornecedores, status, carregarStatus, imagemAmpliada, parametros, parametrosAtualizado, carregarParametros, versaoCatalogo, folha, abaOrcamentos],
+    [tela, visitas, irPara, fornecedores, carregarFornecedores, status, carregarStatus, imagemAmpliada, parametros, parametrosAtualizado, carregarParametros, versaoCatalogo, folha, abaOrcamentos, pedidoAberto, abaPedidos],
   );
 
   return <Ctx.Provider value={valor}>{children}</Ctx.Provider>;

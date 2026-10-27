@@ -21,6 +21,7 @@ const GRUPOS: { titulo: string; itens: ItemMenu[] }[] = [
       { tela: 'catalogo', rotulo: 'Catálogo', icone: 'catalogo', id: 'tab-catalogo' },
       { tela: 'carrinho', rotulo: 'Carrinho', icone: 'carrinho', id: 'tab-carrinho' },
       { tela: 'orcamentos', rotulo: 'Orçamentos', icone: 'orcamento', id: 'tab-orcamentos' },
+      { tela: 'pedidos', rotulo: 'Pedidos', icone: 'pedidos', id: 'tab-pedidos' },
       { tela: 'mockup', rotulo: 'Mockups', icone: 'mockup', id: 'tab-mockup' },
     ],
   },
@@ -48,7 +49,7 @@ function lerRecolhida(): boolean {
 }
 
 export function BarraLateral() {
-  const { tela, irPara, setAbaOrcamentos } = useApp();
+  const { tela, irPara, setAbaOrcamentos, setAbaPedidos } = useApp();
   const { estado } = useCarrinho();
   const qtdItens = Object.keys(estado.itens).length;
   const [recolhida, setRecolhida] = useState(lerRecolhida);
@@ -81,8 +82,9 @@ export function BarraLateral() {
                 id={item.id}
                 className={`sidebar-item${tela === item.tela ? ' active' : ''}`}
                 onClick={() => {
-                  // Pelo menu, Orçamentos abre sempre na lista
+                  // Pelo menu, Orçamentos e Pedidos abrem sempre na lista
                   if (item.tela === 'orcamentos') setAbaOrcamentos('lista');
+                  if (item.tela === 'pedidos') setAbaPedidos('lista');
                   irPara(item.tela);
                 }}
                 title={item.rotulo}

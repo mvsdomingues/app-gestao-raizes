@@ -90,6 +90,13 @@ export function useEditarOrcamento() {
     setCarregando(id);
     try {
       const o = await api.orcamento(id);
+      if (o.pedido) {
+        alert(
+          `O ${o.numero} está atrelado ao pedido ${o.pedido.codigo} e não pode ser alterado.\n\n` +
+            'Para alterá-lo, cancele o pedido na tela Pedidos.',
+        );
+        return;
+      }
       const { itens, semAjustes } = await montarItensCarrinho(o, parametros);
       carregarOrcamento(itens, String(o.frete || 0), {
         id: o.id,
