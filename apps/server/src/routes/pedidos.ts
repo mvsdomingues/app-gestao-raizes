@@ -49,10 +49,11 @@ export function rotasPedidos(db: Banco): Router {
       status: q('status'),
       de: q('de'),
       ate: q('ate'),
+      meus: q('meus'),
     };
     const limit = Math.min(200, Math.max(1, Number.parseInt(q('limit') || '20', 10) || 20));
     const offset = Math.max(0, Number.parseInt(q('offset') || '0', 10) || 0);
-    const corpo: RespostaPedidos = listarPedidos(db, filtros, limit, offset);
+    const corpo: RespostaPedidos = listarPedidos(db, filtros, limit, offset, exigirUsuario(res).id);
     res.json(corpo);
   });
 
@@ -60,7 +61,8 @@ export function rotasPedidos(db: Banco): Router {
   r.get('/api/pedidos/quadro', (req, res) => {
     const bruto = typeof req.query.limite === 'string' ? req.query.limite : '20';
     const limite = Math.min(100, Math.max(1, Number.parseInt(bruto, 10) || 20));
-    const corpo: RespostaQuadroPedidos = { limite, colunas: quadroPedidos(db, limite) };
+    const meus = req.query.meus === '1' ? exigirUsuario(res).id : undefined;
+    const corpo: RespostaQuadroPedidos = { limite, colunas: quadroPedidos(db, limite, meus) };
     res.json(corpo);
   });
 

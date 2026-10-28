@@ -125,4 +125,6 @@ export interface FiltrosPedidos {
   status?: string;
   de?: string;
   ate?: string;
+  /** "1" = só os criados pelo usuário logado (filtro rápido) */
+  meus?: string;
 }

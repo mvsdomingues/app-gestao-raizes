@@ -56,9 +56,15 @@ export function listarPedidos(
   filtros: FiltrosPedidos,
   limit: number,
   offset: number,
+  /** Usuário logado (para o filtro "Somente os meus") */
+  usuarioId?: number,
 ): { total: number; pedidos: ResumoPedido[] } {
   const wheres: string[] = [];
   const params: unknown[] = [];
+  if (filtros.meus === '1' && usuarioId) {
+    wheres.push('p.usuario_id = ?');
+    params.push(usuarioId);
+  }
   const digitos = (v: string) => v.replace(/\D/g, '');
 
   if (filtros.codigo?.trim()) {
@@ -102,8 +108,10 @@ export function listarPedidos(
  * data/hora em que entraram na etapa. Nas etapas em andamento, os que estão há
  * mais tempo vêm primeiro (fila); em Encerrado, os encerrados mais recentes.
  */
-export function quadroPedidos(db: Banco, limite: number): ColunaQuadro[] {
-  const contar = db.prepare('SELECT COUNT(*) AS c FROM pedidos WHERE status = ?');
+export function quadroPedidos(db: Banco, limite: number, somenteDoUsuario?: number): ColunaQuadro[] {
+  const doUsuario = somenteDoUsuario ? ' AND usuario_id = ?' : '';
+  const extra = somenteDoUsuario ? [somenteDoUsuario] : [];
+  const contar = db.prepare(`SELECT COUNT(*) AS c FROM pedidos WHERE status = ?${doUsuario}`);
   return FLUXO_PEDIDO.map((status) => {
     const ordem = status === 'ENCERRADO' ? 'DESC' : 'ASC';
     const linhas = db
@@ -115,11 +123,11 @@ export function quadroPedidos(db: Banco, limite: number): ColunaQuadro[] {
               COALESCE((SELECT MAX(m.data_hora) FROM pedidos_movimentos m
                          WHERE m.pedido_id = p.id AND m.status_novo = p.status), p.atualizado) AS entrada`,
            )}
-           WHERE p.status = ?
+           WHERE p.status = ?${doUsuario ? ' AND p.usuario_id = ?' : ''}
          ) ORDER BY entrada ${ordem}, id ${ordem} LIMIT ?`,
       )
-      .all(status, limite) as (LinhaPedido & { entrada: string })[];
-    const { c } = contar.get(status) as { c: number };
+      .all(status, ...extra, limite) as (LinhaPedido & { entrada: string })[];
+    const { c } = contar.get(status, ...extra) as { c: number };
     return { status, total: c, pedidos: linhas.map((l): CartaoPedido => ({ ...resumo(l), entrada: l.entrada })) };
   });
 }

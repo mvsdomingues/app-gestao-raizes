@@ -85,6 +85,8 @@ export interface FiltrosOrcamentos {
   max?: string;
   /** "com" = com pedido ativo, "sem" = sem pedido, vazio = todos */
   pedido?: string;
+  /** "1" = só os criados pelo usuário logado (filtro rápido) */
+  meus?: string;
 }
 
 /** Orçamento completo (GET /api/orcamentos/:id). */

@@ -227,6 +227,21 @@ describe('usuário responsável', () => {
     expect(quadro.colunas[1].pedidos[0].responsavel.login).toBe('Maria2');
   });
 
+  it('filtro rápido "Somente os meus" em orçamentos, pedidos e quadro', async () => {
+    const maria = await entrar(base, 'maria2', 'volta789');
+    const meusAdmin = (await req('GET', '/api/orcamentos?meus=1')).json;
+    expect(meusAdmin.total).toBe(1);
+    expect(meusAdmin.orcamentos.every((o: { responsavel: { login: string } }) => o.responsavel?.login === 'admin')).toBe(true);
+    expect((await req('GET', '/api/orcamentos?meus=1', undefined, maria)).json.total).toBe(0);
+    // pedido criado pela Maria
+    expect((await req('GET', '/api/pedidos?meus=1', undefined, maria)).json.pedidos.map((p: { responsavel: { login: string } }) => p.responsavel.login)).toEqual(['Maria2']);
+    expect((await req('GET', '/api/pedidos?meus=1')).json.total).toBe(0);
+    const qMaria = (await req('GET', '/api/pedidos/quadro?meus=1', undefined, maria)).json;
+    expect(qMaria.colunas.reduce((n: number, c: { total: number }) => n + c.total, 0)).toBe(1);
+    const qAdmin = (await req('GET', '/api/pedidos/quadro?meus=1')).json;
+    expect(qAdmin.colunas.reduce((n: number, c: { total: number }) => n + c.total, 0)).toBe(0);
+  });
+
   it('o usuário inativado continua aparecendo como responsável', async () => {
     const maria = ((await req('GET', '/api/usuarios')).json as { id: number; login: string }[]).find((u) => u.login === 'Maria2')!;
     await req('POST', `/api/usuarios/${maria.id}/inativar`);

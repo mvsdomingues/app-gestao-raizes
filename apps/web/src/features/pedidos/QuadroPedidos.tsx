@@ -48,11 +48,15 @@ export function QuadroPedidos({ ativo, versao, aoAlterar }: Props) {
   const [movendo, setMovendo] = useState<string | null>(null);
   const [aviso, setAviso] = useState('');
   const seq = useRef(0);
+  // Filtro rápido "Somente os meus" (pedidos criados pelo usuário logado)
+  const [meus, setMeus] = useState(false);
+  const meusRef = useRef(meus);
+  meusRef.current = meus;
 
   const carregar = useCallback(async () => {
     const meu = ++seq.current;
     try {
-      const dados = await api.quadroPedidos(LIMITE);
+      const dados = await api.quadroPedidos(LIMITE, meusRef.current);
       if (meu === seq.current) setEstado({ tipo: 'ok', dados });
       return dados;
     } catch (e) {
@@ -131,6 +135,20 @@ export function QuadroPedidos({ ativo, versao, aoAlterar }: Props) {
           Arraste o cartão para a etapa anterior ou para a próxima. Cada coluna mostra até {LIMITE} pedidos, pela data
           em que entraram na etapa; pedidos cancelados não aparecem no quadro.
         </div>
+        <label className="filtro-meus" title="Mostra só os pedidos criados por você">
+          <input
+            type="checkbox"
+            id="filtro-meus-quadro"
+            checked={meus}
+            onChange={(e) => {
+              meusRef.current = e.target.checked;
+              setMeus(e.target.checked);
+              setAviso('');
+              void carregar();
+            }}
+          />
+          Somente os meus
+        </label>
         <button className="btn-back" onClick={() => void carregar()} id="btn-atualizar-quadro">
           ↻ Atualizar
         </button>

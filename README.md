@@ -124,7 +124,7 @@ O sistema exige login. Na primeira execução é criado o usuário **`admin`** c
   - Nenhum usuário é apagado: ele fica **ativo** ou **inativo**. O inativo não entra no sistema, mas continua no banco (e como responsável pelas ações que fez); ao ser reativado, volta com os mesmos acessos. Ninguém inativa o próprio usuário.
 - **Acessos** (menu Sistema): escolha as telas que cada usuário pode usar. O menu mostra só as telas liberadas e o servidor bloqueia as funções das demais. Sempre fica pelo menos um usuário com acesso à tela Acessos. Telas novas do sistema são liberadas automaticamente a quem tem acesso à tela Acessos.
 - **Meus dados**: cada usuário altera o próprio nome e a senha (pedindo a senha atual). Trocar a senha encerra as outras sessões abertas desse usuário.
-- Cada orçamento e pedido guarda o usuário responsável (quem criou; no orçamento, também quem fez a última alteração) e cada movimentação de pedido guarda quem a fez. Essas informações aparecem nas listas e nos detalhes. Todos os usuários veem todos os dados.
+- Cada orçamento e pedido guarda o usuário responsável (quem criou; no orçamento, também quem fez a última alteração) e cada movimentação de pedido guarda quem a fez. Essas informações aparecem nas listas e nos detalhes. Todos os usuários veem todos os dados; o filtro rápido **Somente os meus** (listas de Orçamentos e Pedidos e Quadro) mostra só os criados pelo usuário logado.
 - A sessão expira após 12 horas sem uso. Após 5 senhas erradas seguidas, o login fica bloqueado por 5 minutos.
 
 O menu fica na **barra lateral** (pode ser recolhido para mostrar só os ícones). Toda nova tela deve ser adicionada a esse menu, em `apps/web/src/components/BarraLateral.tsx`.
@@ -181,12 +181,12 @@ Todas as rotas exigem login, exceto as de `/api/auth`. Cada rota também exige a
 | `GET/POST /api/produtos-proprios` | Lista (`?q=` busca) / inclui produto próprio |
 | `GET/PUT/PATCH/DELETE /api/produtos-proprios/:codigo` | Consulta, substitui, altera campos ou exclui (`PDP-000001`) |
 | `GET/PUT /api/parametros` | Lê / grava os parâmetros da calculadora |
-| `GET /api/orcamentos` | Lista paginada (`numero`, `produto`, `de`, `ate`, `min`, `max`, `pedido=com\|sem`, `limit`, `offset`) → `{ total, orcamentos }` (cada um com `pedido` ativo ou `null`) |
+| `GET /api/orcamentos` | Lista paginada (`numero`, `produto`, `de`, `ate`, `min`, `max`, `pedido=com\|sem`, `meus=1`, `limit`, `offset`) → `{ total, orcamentos }` (cada um com `pedido` ativo ou `null`) |
 | `POST /api/orcamentos` · `GET/PUT /api/orcamentos/:id` | Grava, consulta e altera (PUT mantém o número; 409 se houver pedido ativo) |
-| `GET /api/pedidos` | Lista paginada (`codigo`, `orcamento`, `status` ou `EM_ANDAMENTO`, `de`, `ate`, `limit`, `offset`) → `{ total, pedidos }` |
+| `GET /api/pedidos` | Lista paginada (`codigo`, `orcamento`, `status` ou `EM_ANDAMENTO`, `de`, `ate`, `meus=1`, `limit`, `offset`) → `{ total, pedidos }` |
 | `POST /api/pedidos` | Cria pedido `{ orcamento_id, observacao? }` (409 se o orçamento já tem pedido ativo) |
 | `GET /api/pedidos/:codigo` | Pedido com movimentações e orçamento (`PED-000001`) |
-| `GET /api/pedidos/quadro` | Quadro por etapa (`limite`, padrão 20) → `{ limite, colunas: [{ status, total, pedidos }] }` |
+| `GET /api/pedidos/quadro` | Quadro por etapa (`limite`, padrão 20; `meus=1`) → `{ limite, colunas: [{ status, total, pedidos }] }` |
 | `POST /api/pedidos/:codigo/avancar` · `POST /api/pedidos/:codigo/retroceder` | Próxima / etapa anterior (`{ status_atual }`, 409 se o pedido já mudou) |
 | `POST /api/pedidos/:codigo/cancelar` | Cancela (`{ motivo }`) |
 | `POST /api/atualizar` · `GET /api/atualizar/status` | Atualização dos fornecedores |

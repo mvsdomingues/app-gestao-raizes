@@ -10,7 +10,7 @@ import { ModalNovoPedido } from '../pedidos/ModalNovoPedido';
 import { useEditarOrcamento } from './editar-orcamento';
 
 const POR_PAGINA = 20;
-const FILTROS_VAZIOS: FiltrosOrcamentos = { numero: '', produto: '', de: '', ate: '', min: '', max: '', pedido: '' };
+const FILTROS_VAZIOS: FiltrosOrcamentos = { numero: '', produto: '', de: '', ate: '', min: '', max: '', pedido: '', meus: '' };
 
 type Estado =
   | { tipo: 'carregando' }
@@ -66,6 +66,16 @@ export function ListaOrcamentos() {
     setAplicados(filtros);
     setPagina(1);
     void carregar(filtros, 1);
+  };
+
+  /** Filtro rápido "Somente os meus": aplica na hora, mantendo os demais filtros já aplicados. */
+  const alternarMeus = (marcado: boolean) => {
+    const meus = marcado ? '1' : '';
+    setFiltros((f) => ({ ...f, meus }));
+    const novos = { ...aplicados, meus };
+    setAplicados(novos);
+    setPagina(1);
+    void carregar(novos, 1);
   };
 
   const limparFiltros = () => {
@@ -145,6 +155,10 @@ export function ListaOrcamentos() {
             <option value="sem">Sem pedido</option>
           </select>
         </div>
+        <label className="filtro-meus" title="Mostra só os orçamentos criados por você">
+          <input type="checkbox" id="filtro-meus-orcamentos" checked={filtros.meus === '1'} onChange={(e) => alternarMeus(e.target.checked)} />
+          Somente os meus
+        </label>
         <div className="orc-filtro-acoes">
           <button type="submit" className="btn-novo" id="btn-filtrar">
             Filtrar

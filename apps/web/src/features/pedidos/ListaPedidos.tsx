@@ -16,7 +16,7 @@ import { formatarDataHora, TagStatusPedido, useAcoesPedido } from './comum';
 import { ModalNovoPedido } from './ModalNovoPedido';
 
 const POR_PAGINA = 20;
-const FILTROS_VAZIOS: FiltrosPedidos = { codigo: '', orcamento: '', status: '', de: '', ate: '' };
+const FILTROS_VAZIOS: FiltrosPedidos = { codigo: '', orcamento: '', status: '', de: '', ate: '', meus: '' };
 
 type Estado =
   | { tipo: 'carregando' }
@@ -67,6 +67,16 @@ export function ListaPedidos({ versao, aoAlterar }: Props) {
     setAplicados(filtros);
     setPagina(1);
     void carregar(filtros, 1);
+  };
+
+  /** Filtro rápido "Somente os meus": aplica na hora, mantendo os demais filtros já aplicados. */
+  const alternarMeus = (marcado: boolean) => {
+    const meus = marcado ? '1' : '';
+    setFiltros((f) => ({ ...f, meus }));
+    const novos = { ...aplicados, meus };
+    setAplicados(novos);
+    setPagina(1);
+    void carregar(novos, 1);
   };
 
   const limparFiltros = () => {
@@ -121,6 +131,10 @@ export function ListaPedidos({ versao, aoAlterar }: Props) {
           <label htmlFor="filtro-ped-ate">Até</label>
           <input id="filtro-ped-ate" className="custom-input" type="date" {...campo('ate')} />
         </div>
+        <label className="filtro-meus" title="Mostra só os pedidos criados por você">
+          <input type="checkbox" id="filtro-meus-pedidos" checked={filtros.meus === '1'} onChange={(e) => alternarMeus(e.target.checked)} />
+          Somente os meus
+        </label>
         <div className="orc-filtro-acoes">
           <button type="submit" className="btn-novo" id="btn-filtrar-pedidos">
             Filtrar

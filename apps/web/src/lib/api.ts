@@ -130,7 +130,8 @@ export const api = {
     for (const [k, v] of Object.entries(filtros)) if (v && String(v).trim()) qs.set(k, String(v).trim());
     return enviar<RespostaPedidos>('GET', `/api/pedidos?${qs}`);
   },
-  quadroPedidos: (limite = 20) => enviar<RespostaQuadroPedidos>('GET', `/api/pedidos/quadro?limite=${limite}`),
+  quadroPedidos: (limite = 20, meus = false) =>
+    enviar<RespostaQuadroPedidos>('GET', `/api/pedidos/quadro?limite=${limite}${meus ? '&meus=1' : ''}`),
   pedido: (codigo: string) => enviar<Pedido>('GET', `/api/pedidos/${encodeURIComponent(codigo)}`),
   criarPedido: (orcamentoId: number, observacao: string) =>
     enviar<Pedido>('POST', '/api/pedidos', { orcamento_id: orcamentoId, observacao }),

@@ -103,6 +103,11 @@ export function rotasOrcamentos(db: Banco): Router {
         params.push(v);
       }
     }
+    // Filtro rápido "Somente os meus": criados pelo usuário logado
+    if (q('meus') === '1') {
+      wheres.push('orcamentos.usuario_id = ?');
+      params.push(exigirUsuario(res).id);
+    }
     const pedido = q('pedido');
     if (pedido === 'com' || pedido === 'sem') {
       wheres.push(`${pedido === 'sem' ? 'NOT ' : ''}EXISTS (${SQL_PEDIDO_ATIVO.replace('{campo}', '1')})`);
