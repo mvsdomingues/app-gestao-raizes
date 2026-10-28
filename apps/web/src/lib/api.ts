@@ -1,4 +1,8 @@
 import type {
+  AcessoUsuario,
+  IdTela,
+  Usuario,
+  UsuarioSessao,
   DadosProdutoProprio,
   NovoOrcamento,
   ParametrosCalculo,
@@ -19,13 +23,25 @@ import type {
   StatusFornecedor,
 } from '@raizes/shared';
 
+/** Avisado quando a sessão expira (o app volta para a tela de login). */
+export const EVENTO_SESSAO_EXPIRADA = 'raizes:sessao-expirada';
+
+/** fetch da aplicação: resposta 401 fora das rotas de login = sessão expirada. */
+async function requisitar(url: string, init?: RequestInit): Promise<Response> {
+  const resp = await fetch(url, { credentials: 'same-origin', ...init });
+  if (resp.status === 401 && !url.startsWith('/api/auth/')) {
+    window.dispatchEvent(new Event(EVENTO_SESSAO_EXPIRADA));
+  }
+  return resp;
+}
+
 async function getJson<T>(url: string): Promise<T> {
-  const resp = await fetch(url);
+  const resp = await requisitar(url);
   return (await resp.json()) as T;
 }
 
 async function postJson(url: string, corpo: unknown): Promise<Response> {
-  return fetch(url, {
+  return requisitar(url, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify(corpo),
@@ -37,7 +53,7 @@ export class ErroApi extends Error {}
 
 /** Requisição JSON que lança ErroApi com a mensagem do servidor quando falha. */
 async function enviar<T>(metodo: string, url: string, corpo?: unknown): Promise<T> {
-  const resp = await fetch(url, {
+  const resp = await requisitar(url, {
     method: metodo,
     headers: corpo === undefined ? undefined : { 'Content-Type': 'application/json' },
     body: corpo === undefined ? undefined : JSON.stringify(corpo),
@@ -86,7 +102,7 @@ export const api = {
   },
 
   async orcamento(id: number): Promise<Orcamento> {
-    const resp = await fetch(`/api/orcamentos/${id}`);
+    const resp = await requisitar(`/api/orcamentos/${id}`);
     if (!resp.ok) throw new Error('Orçamento não encontrado');
     return (await resp.json()) as Orcamento;
   },
@@ -124,6 +140,21 @@ export const api = {
     enviar<Pedido>('POST', `/api/pedidos/${encodeURIComponent(codigo)}/retroceder`, { status_atual: statusAtual }),
   cancelarPedido: (codigo: string, motivo: string) =>
     enviar<Pedido>('POST', `/api/pedidos/${encodeURIComponent(codigo)}/cancelar`, { motivo }),
+
+  // ── Login e usuários ──
+  sessao: () => enviar<UsuarioSessao>('GET', '/api/auth/sessao'),
+  entrar: (login: string, senha: string) => enviar<UsuarioSessao>('POST', '/api/auth/login', { login, senha }),
+  sair: () => enviar<{ ok: boolean }>('POST', '/api/auth/logout', {}),
+  salvarMeusDados: (dados: { nome?: string; senha_atual?: string; senha_nova?: string }) =>
+    enviar<UsuarioSessao>('PUT', '/api/auth/meus-dados', dados),
+  usuarios: (q = '', excluidos = false) =>
+    enviar<Usuario[]>('GET', `/api/usuarios?q=${encodeURIComponent(q)}${excluidos ? '&excluidos=1' : ''}`),
+  criarUsuario: (dados: { nome: string; login: string; senha: string }) => enviar<Usuario>('POST', '/api/usuarios', dados),
+  alterarUsuario: (id: number, dados: { nome?: string; senha?: string }) =>
+    enviar<Usuario>('PUT', `/api/usuarios/${id}`, dados),
+  excluirUsuario: (id: number) => enviar<Usuario>('DELETE', `/api/usuarios/${id}`),
+  acessos: () => enviar<AcessoUsuario[]>('GET', '/api/acessos'),
+  salvarAcessos: (id: number, permissoes: IdTela[]) => enviar<AcessoUsuario>('PUT', `/api/acessos/${id}`, { permissoes }),
 
   // ── Parâmetros da calculadora ──
   parametros: () => enviar<RespostaParametros>('GET', '/api/parametros'),

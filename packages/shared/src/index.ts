@@ -3,3 +3,4 @@ export * from './formatacao';
 export * from './fornecedores';
 export * from './calculadora';
 export * from './pedidos';
+export * from './acesso';

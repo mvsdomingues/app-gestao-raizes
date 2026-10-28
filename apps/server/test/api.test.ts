@@ -4,19 +4,21 @@ import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 import { criarApp } from '../src/app';
 import { abrirBanco } from '../src/db/conexao';
 import { GerenciadorAtualizacao } from '../src/services/gerenciador-atualizacao';
+import { entrar } from './sessao-teste';
 
 const db = abrirBanco(':memory:');
 let servidor: Server;
 let base = '';
+let cookie = '';
 
 const get = async (url: string) => {
-  const r = await fetch(base + url);
+  const r = await fetch(base + url, { headers: { Cookie: cookie } });
   return { status: r.status, json: await r.json() };
 };
 const post = async (url: string, corpo: unknown) => {
   const r = await fetch(base + url, {
     method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
+    headers: { 'Content-Type': 'application/json', Cookie: cookie },
     body: typeof corpo === 'string' ? corpo : JSON.stringify(corpo),
   });
   return { status: r.status, json: await r.json() };
@@ -41,6 +43,7 @@ beforeAll(async () => {
   servidor = app.listen(0, '127.0.0.1');
   await new Promise((r) => servidor.once('listening', r));
   base = `http://127.0.0.1:${(servidor.address() as AddressInfo).port}`;
+  cookie = await entrar(base);
 });
 
 afterAll(() => servidor.close());
@@ -85,7 +88,7 @@ describe('API', () => {
     const put = async (url: string, corpo: unknown) => {
       const r = await fetch(base + url, {
         method: 'PUT',
-        headers: { 'Content-Type': 'application/json' },
+        headers: { 'Content-Type': 'application/json', Cookie: cookie },
         body: JSON.stringify(corpo),
       });
       return { status: r.status, json: await r.json() };

@@ -1,12 +1,14 @@
 import { useEffect, useState } from 'react';
 import { calcComParametros, formatBRL, montarItemOrcamento } from '@raizes/shared';
 import { useApp } from '../../app/contexto';
+import { useSessao } from '../../app/sessao';
 import { api } from '../../lib/api';
 import { subtotalCarrinho, useCarrinho } from '../../state/carrinho';
 import { ItemCarrinho } from './ItemCarrinho';
 
 export function Carrinho() {
   const { tela, visitas, irPara, mostrarOrcamento, parametros } = useApp();
+  const { pode } = useSessao();
   const { estado, limpar, redesenhar, definirFrete } = useCarrinho();
   const { frete, edicao } = estado;
   const [gerando, setGerando] = useState(false);
@@ -65,6 +67,11 @@ export function Carrinho() {
       );
     } finally {
       setGerando(false);
+    }
+    // Sem acesso à tela Orçamentos: só confirma que o orçamento foi gravado
+    if (!pode('orcamentos')) {
+      if (id !== undefined) alert(`Orçamento ${numero} gravado.`);
+      return;
     }
     mostrarOrcamento({ id, numero, dataHora, itens: snapshot, subtotal: sub, frete: valorFrete, total: tot });
   };

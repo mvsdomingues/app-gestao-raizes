@@ -11,6 +11,8 @@ import {
 } from 'react';
 import {
   CALC_DEFAULTS,
+  IDS_TELAS,
+  type IdTela,
   type ItemOrcamento,
   type ParametrosCalculo,
   type Pedido,
@@ -18,16 +20,10 @@ import {
   type StatusFornecedor,
 } from '@raizes/shared';
 import { api } from '../lib/api';
+import { useSessao } from './sessao';
 
-export type Tela =
-  | 'catalogo'
-  | 'carrinho'
-  | 'orcamentos'
-  | 'pedidos'
-  | 'mockup'
-  | 'produtos-proprios'
-  | 'parametros'
-  | 'status';
+/** Telas do sistema (cada uma também é uma permissão — ver TELAS_SISTEMA). */
+export type Tela = IdTela;
 
 /** Abas das telas Orçamentos e Pedidos */
 export type AbaOrcamentos = 'lista' | 'detalhe';
@@ -47,7 +43,8 @@ export interface FolhaOrcamento {
 }
 
 interface ContextoApp {
-  tela: Tela;
+  /** null = usuário sem nenhuma tela liberada */
+  tela: Tela | null;
   /** Quantas vezes cada tela foi aberta (as telas recarregam dados a cada abertura). */
   visitas: Record<Tela, number>;
   irPara: (t: Tela) => void;
@@ -79,6 +76,10 @@ interface ContextoApp {
   /** Atualiza a tag de pedido da folha aberta (após gerar/cancelar um pedido). */
   definirPedidoDaFolha: (orcamentoId: number, pedido: PedidoDoOrcamento | null) => void;
 
+  /** Usuário escolhido na tela Acessos (aberto a partir da tela Usuários). */
+  usuarioAcessos: number | null;
+  abrirAcessos: (usuarioId: number | null) => void;
+
   /** Pedido aberto na aba "Detalhes" da tela Pedidos. */
   pedidoAberto: Pedido | null;
   mostrarPedido: (p: Pedido) => void;
@@ -96,20 +97,18 @@ interface ContextoApp {
 
 const Ctx = createContext<ContextoApp | null>(null);
 
-const VISITAS_INICIAIS: Record<Tela, number> = {
-  catalogo: 0,
-  carrinho: 0,
-  orcamentos: 0,
-  pedidos: 0,
-  mockup: 0,
-  'produtos-proprios': 0,
-  parametros: 0,
-  status: 0,
-};
+const VISITAS_INICIAIS = Object.fromEntries(IDS_TELAS.map((t) => [t, 0])) as Record<Tela, number>;
 
 export function ProvedorApp({ children }: { children: ReactNode }) {
-  const [tela, setTela] = useState<Tela>('catalogo');
-  const [visitas, setVisitas] = useState(VISITAS_INICIAIS);
+  const { usuario } = useSessao();
+  const permitidas = usuario?.permissoes ?? [];
+  // Abre na primeira tela liberada para o usuário (na ordem do menu)
+  const [tela, setTela] = useState<Tela | null>(() => permitidas[0] ?? null);
+  const [visitas, setVisitas] = useState(() =>
+    permitidas[0] ? { ...VISITAS_INICIAIS, [permitidas[0]]: 1 } : VISITAS_INICIAIS,
+  );
+  const permitidasRef = useRef(permitidas);
+  permitidasRef.current = permitidas;
   const [fornecedores, setFornecedores] = useState<string[]>([]);
   const [status, setStatus] = useState<StatusFornecedor[] | null>(null);
   const [imagemAmpliada, setImagemAmpliada] = useState<string | null>(null);
@@ -120,9 +119,14 @@ export function ProvedorApp({ children }: { children: ReactNode }) {
   const [abaOrcamentos, setAbaOrcamentos] = useState<AbaOrcamentos>('lista');
   const [pedidoAberto, setPedidoAberto] = useState<Pedido | null>(null);
   const [abaPedidos, setAbaPedidos] = useState<AbaPedidos>('lista');
+  const [usuarioAcessos, setUsuarioAcessos] = useState<number | null>(null);
   const mockupSolicitado = useRef<number | string | null>(null);
 
   const irPara = useCallback((t: Tela) => {
+    if (!permitidasRef.current.includes(t)) {
+      alert('Você não tem acesso a esta tela. Peça a liberação a quem administra os acessos.');
+      return;
+    }
     setTela(t);
     setVisitas((v) => ({ ...v, [t]: v[t] + 1 }));
     if (t !== 'orcamentos' && t !== 'pedidos' && t !== 'mockup') {
@@ -198,6 +202,11 @@ export function ProvedorApp({ children }: { children: ReactNode }) {
       setAbaOrcamentos,
       definirPedidoDaFolha: (orcamentoId, pedido) =>
         setFolha((f) => (f && f.id === orcamentoId ? { ...f, pedido } : f)),
+      usuarioAcessos,
+      abrirAcessos: (id) => {
+        setUsuarioAcessos(id);
+        irPara('acessos');
+      },
       pedidoAberto,
       mostrarPedido: (p) => {
         setPedidoAberto(p);
@@ -225,7 +234,7 @@ export function ProvedorApp({ children }: { children: ReactNode }) {
         irPara('mockup');
       },
     }),
-    [tela, visitas, irPara, fornecedores, carregarFornecedores, status, carregarStatus, imagemAmpliada, parametros, parametrosAtualizado, carregarParametros, versaoCatalogo, folha, abaOrcamentos, pedidoAberto, abaPedidos],
+    [tela, visitas, irPara, fornecedores, carregarFornecedores, status, carregarStatus, imagemAmpliada, parametros, parametrosAtualizado, carregarParametros, versaoCatalogo, folha, abaOrcamentos, pedidoAberto, abaPedidos, usuarioAcessos],
   );
 
   return <Ctx.Provider value={valor}>{children}</Ctx.Provider>;

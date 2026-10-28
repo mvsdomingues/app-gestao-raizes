@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { useApp, type Tela } from '../app/contexto';
+import { useSessao } from '../app/sessao';
 import { useCarrinho } from '../state/carrinho';
 import { Icone, type NomeIcone } from './Icone';
 
@@ -34,7 +35,11 @@ const GRUPOS: { titulo: string; itens: ItemMenu[] }[] = [
   },
   {
     titulo: 'Sistema',
-    itens: [{ tela: 'status', rotulo: 'Atualização', icone: 'atualizacao', id: 'tab-status' }],
+    itens: [
+      { tela: 'usuarios', rotulo: 'Usuários', icone: 'usuarios', id: 'tab-usuarios' },
+      { tela: 'acessos', rotulo: 'Acessos', icone: 'acessos', id: 'tab-acessos' },
+      { tela: 'status', rotulo: 'Atualização', icone: 'atualizacao', id: 'tab-status' },
+    ],
   },
 ];
 
@@ -49,7 +54,10 @@ function lerRecolhida(): boolean {
 }
 
 export function BarraLateral() {
-  const { tela, irPara, setAbaOrcamentos, setAbaPedidos } = useApp();
+  const { tela, irPara, setAbaOrcamentos, setAbaPedidos, abrirAcessos } = useApp();
+  const { pode } = useSessao();
+  // Só aparecem as telas liberadas para o usuário (grupo vazio some)
+  const grupos = GRUPOS.map((g) => ({ ...g, itens: g.itens.filter((i) => pode(i.tela)) })).filter((g) => g.itens.length);
   const { estado } = useCarrinho();
   const qtdItens = Object.keys(estado.itens).length;
   const [recolhida, setRecolhida] = useState(lerRecolhida);
@@ -73,7 +81,7 @@ export function BarraLateral() {
       </div>
 
       <nav className="sidebar-nav" aria-label="Menu principal">
-        {GRUPOS.map((g) => (
+        {grupos.map((g) => (
           <div className="sidebar-group" key={g.titulo}>
             <div className="sidebar-group-title">{g.titulo}</div>
             {g.itens.map((item) => (
@@ -85,6 +93,7 @@ export function BarraLateral() {
                   // Pelo menu, Orçamentos e Pedidos abrem sempre na lista
                   if (item.tela === 'orcamentos') setAbaOrcamentos('lista');
                   if (item.tela === 'pedidos') setAbaPedidos('lista');
+                  if (item.tela === 'acessos') return abrirAcessos(null);
                   irPara(item.tela);
                 }}
                 title={item.rotulo}

@@ -87,6 +87,41 @@ export function garantirEsquema(db: Database.Database): void {
     );
     CREATE INDEX IF NOT EXISTS ix_pedidos_movimentos_pedido ON pedidos_movimentos(pedido_id);
 
+    -- ── Controle de acesso ──
+    -- Usuários nunca são apagados: a exclusão é lógica (excluido = 1) para manter
+    -- a referência nas ações futuras. O login é único para sempre (mesmo excluído).
+    CREATE TABLE IF NOT EXISTS usuarios (
+      id            INTEGER PRIMARY KEY AUTOINCREMENT,
+      nome          TEXT NOT NULL,
+      login         TEXT NOT NULL UNIQUE COLLATE NOCASE,
+      senha_hash    TEXT NOT NULL,
+      senha_inicial INTEGER NOT NULL DEFAULT 0,
+      excluido      INTEGER NOT NULL DEFAULT 0,
+      criado        TEXT NOT NULL,
+      atualizado    TEXT NOT NULL,
+      excluido_em   TEXT,
+      criado_por    INTEGER REFERENCES usuarios(id),
+      excluido_por  INTEGER REFERENCES usuarios(id)
+    );
+    -- Telas (funcionalidades) liberadas para cada usuário
+    CREATE TABLE IF NOT EXISTS usuarios_permissoes (
+      usuario_id INTEGER NOT NULL REFERENCES usuarios(id),
+      tela       TEXT NOT NULL,
+      PRIMARY KEY (usuario_id, tela)
+    );
+    -- Sessões de login (guarda só o hash do token do cookie)
+    CREATE TABLE IF NOT EXISTS sessoes (
+      token_hash TEXT PRIMARY KEY,
+      usuario_id INTEGER NOT NULL REFERENCES usuarios(id),
+      criado     TEXT NOT NULL,
+      expira     TEXT NOT NULL
+    );
+    CREATE INDEX IF NOT EXISTS ix_sessoes_usuario ON sessoes(usuario_id);
+    -- Telas que já existiam na última execução (para liberar telas novas a quem administra os acessos)
+    CREATE TABLE IF NOT EXISTS telas_conhecidas (
+      tela TEXT PRIMARY KEY
+    );
+
     -- Catálogo único: produtos dos fornecedores + produtos próprios.
     -- Os próprios recebem id negativo para nunca colidir com os dos fornecedores.
     DROP VIEW IF EXISTS catalogo;

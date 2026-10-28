@@ -1,11 +1,13 @@
 import { formatBRL, FLUXO_PEDIDO, podeCancelar, proximoStatus, ROTULOS_STATUS_PEDIDO } from '@raizes/shared';
 import { useApp } from '../../app/contexto';
+import { useSessao } from '../../app/sessao';
 import { FolhaOrcamento } from '../orcamentos/FolhaOrcamento';
 import { agoraLocal, duracao, formatarDataHora, TagStatusPedido, useAcoesPedido } from './comum';
 
 /** Aba "Detalhes": etapas do pedido, histórico de movimentações e o orçamento de origem. */
 export function DetalhePedido() {
   const { pedidoAberto: p, atualizarPedidoAberto, setAbaPedidos, mostrarOrcamento, irPara } = useApp();
+  const { pode } = useSessao();
   const { avancar, cancelar, processando } = useAcoesPedido(atualizarPedidoAberto);
 
   if (!p) {
@@ -20,9 +22,11 @@ export function DetalhePedido() {
           <button className="btn-back" onClick={() => setAbaPedidos('lista')}>
             Ver pedidos
           </button>
-          <button className="btn-back" onClick={() => irPara('orcamentos')}>
-            Ir aos orçamentos
-          </button>
+          {pode('orcamentos') && (
+            <button className="btn-back" onClick={() => irPara('orcamentos')}>
+              Ir aos orçamentos
+            </button>
+          )}
         </div>
       </div>
     );
@@ -59,9 +63,11 @@ export function DetalhePedido() {
           ← Todos os pedidos
         </button>
         <div className="orc-toolbar-actions">
-          <button className="btn-back" onClick={verOrcamento} id="btn-ver-orcamento-pedido">
-            Ver orçamento {p.orcamento_numero}
-          </button>
+          {pode('orcamentos') && (
+            <button className="btn-back" onClick={verOrcamento} id="btn-ver-orcamento-pedido">
+              Ver orçamento {p.orcamento_numero}
+            </button>
+          )}
           {podeCancelar(p.status) && (
             <button
               className="btn-back btn-cancelar-pedido"

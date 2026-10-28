@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useRef, useState, type FormEvent } from 'react';
 import { formatBRL, type FiltrosOrcamentos, type ResumoOrcamento } from '@raizes/shared';
 import { useApp } from '../../app/contexto';
+import { useSessao } from '../../app/sessao';
 import { Carregando } from '../../components/Carregando';
 import { api } from '../../lib/api';
 import { Paginacao } from '../catalogo/Paginacao';
@@ -28,6 +29,7 @@ function formatarData(dataHora: string): string {
 /** Aba "Todos os orçamentos": filtros, tabela paginada, abrir e editar. */
 export function ListaOrcamentos() {
   const { visitas, mostrarOrcamento, abrirPedido, pedidoAberto } = useApp();
+  const { pode } = useSessao();
   const { editar, carregando } = useEditarOrcamento();
   const [filtros, setFiltros] = useState<FiltrosOrcamentos>(FILTROS_VAZIOS);
   const [aplicados, setAplicados] = useState<FiltrosOrcamentos>(FILTROS_VAZIOS);
@@ -203,7 +205,7 @@ export function ListaOrcamentos() {
                     {formatBRL(r.total)}
                   </td>
                   <td>
-                    {r.pedido ? (
+                    {r.pedido && pode('pedidos') ? (
                       <button
                         className="tag-orc-pedido"
                         title={`Ver o pedido ${r.pedido.codigo}`}
@@ -214,12 +216,14 @@ export function ListaOrcamentos() {
                       >
                         📦 {r.pedido.codigo}
                       </button>
+                    ) : r.pedido ? (
+                      <span className="tag-orc-pedido sem-link">📦 {r.pedido.codigo}</span>
                     ) : (
                       <span className="tag-sem-pedido">sem pedido</span>
                     )}
                   </td>
                   <td className="hist-acoes">
-                    {!r.pedido && (
+                    {!r.pedido && pode('pedidos') && (
                       <button
                         className="btn-editar-orc btn-gerar-pedido"
                         title={`Gerar um pedido a partir do ${r.numero}`}
@@ -231,6 +235,7 @@ export function ListaOrcamentos() {
                         📦 Gerar pedido
                       </button>
                     )}
+                    {pode('carrinho') && (
                     <button
                       className="btn-editar-orc"
                       title={
@@ -246,6 +251,7 @@ export function ListaOrcamentos() {
                     >
                       {carregando === r.id ? 'Abrindo…' : '✎ Editar'}
                     </button>
+                    )}
                   </td>
                 </tr>
               ))}

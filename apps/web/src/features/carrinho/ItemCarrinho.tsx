@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState, type FocusEvent, type FormEvent } from 'react';
 import { calcComParametros, calcPreco, formatBRL, getFaixa, type CampoNumerico } from '@raizes/shared';
 import { useApp } from '../../app/contexto';
+import { useSessao } from '../../app/sessao';
 import { classeFornecedor } from '../../lib/fornecedor';
 import { ImagemProduto } from '../../components/ImagemProduto';
 import { useCarrinho, type ItemCarrinho as Item } from '../../state/carrinho';
@@ -12,6 +13,7 @@ import { useCarrinho, type ItemCarrinho as Item } from '../../state/carrinho';
  */
 export function ItemCarrinho({ item }: { item: Item }) {
   const { abrirMockupParaProduto, parametros } = useApp();
+  const { pode } = useSessao();
   const { remover, definirQtd, definirCalc } = useCarrinho();
   const { produto: p, qty, calc: c } = item;
   const id = p.id;
@@ -57,9 +59,11 @@ export function ItemCarrinho({ item }: { item: Item }) {
           <span className={`sup-badge ${classeFornecedor(p.fornecedor, p.origem)}`}>{p.fornecedor}</span>
           {' \u00a0Custo fornecedor: '}
           {formatBRL(p.preco)}/un{' '}
+          {pode('mockup') && (
           <button className="btn-item-mockup" onClick={() => abrirMockupParaProduto(id)} title="Gerar Mockup deste produto">
             🎨 Mockup
           </button>
+          )}
         </div>
         <div className="qty-control">
           <button className="qty-btn" onClick={() => definirQtd(id, Math.max(1, qty - 1), true)}>

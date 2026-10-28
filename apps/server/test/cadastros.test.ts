@@ -8,16 +8,18 @@ import { CALC_DEFAULTS } from '@raizes/shared';
 import { criarApp } from '../src/app';
 import { abrirBanco } from '../src/db/conexao';
 import { GerenciadorAtualizacao } from '../src/services/gerenciador-atualizacao';
+import { entrar } from './sessao-teste';
 
 const db = abrirBanco(':memory:');
 const imagensDir = mkdtempSync(join(tmpdir(), 'raizes-img-'));
 let servidor: Server;
 let base = '';
+let cookie = '';
 
 async function req(metodo: string, url: string, corpo?: unknown) {
   const r = await fetch(base + url, {
     method: metodo,
-    headers: { 'Content-Type': 'application/json' },
+    headers: { 'Content-Type': 'application/json', Cookie: cookie },
     body: corpo === undefined ? undefined : JSON.stringify(corpo),
   });
   return { status: r.status, json: await r.json() };
@@ -39,6 +41,7 @@ beforeAll(async () => {
   servidor = app.listen(0, '127.0.0.1');
   await new Promise((r) => servidor.once('listening', r));
   base = `http://127.0.0.1:${(servidor.address() as AddressInfo).port}`;
+  cookie = await entrar(base);
 });
 
 afterAll(() => servidor.close());
@@ -85,7 +88,7 @@ describe('produtos próprios', () => {
     const c = await req('PATCH', '/api/produtos-proprios/PDP-000001', { imagem_upload: PNG });
     const url1: string = c.json.imagem_url;
     expect(url1).toMatch(/^\/static\/imagens\/proprios\/PDP-000001-\d+\.png$/);
-    expect((await fetch(base + url1)).status).toBe(200);
+    expect((await fetch(base + url1, { headers: { Cookie: cookie } })).status).toBe(200);
 
     const c2 = await req('PATCH', '/api/produtos-proprios/PDP-000001', { imagem_upload: PNG });
     expect(existsSync(join(imagensDir, 'proprios', url1.split('/').pop()!))).toBe(false);
