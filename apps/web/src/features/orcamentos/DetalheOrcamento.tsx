@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { useApp } from '../../app/contexto';
+import { NomeUsuario } from '../../components/NomeUsuario';
 import { useSessao } from '../../app/sessao';
 import { ModalNovoPedido } from '../pedidos/ModalNovoPedido';
 import { useEditarOrcamento } from './editar-orcamento';
@@ -73,6 +74,20 @@ export function DetalheOrcamento() {
           </div>
         )}
       </div>
+      {folha && (folha.responsavel !== undefined || folha.alteradoPor) && (
+        <div className="orc-responsaveis" id="orc-responsaveis">
+          {folha.responsavel !== undefined && (
+            <span>
+              Criado por <b><NomeUsuario usuario={folha.responsavel} /></b>
+            </span>
+          )}
+          {folha.alteradoPor && (
+            <span>
+              Última alteração por <b><NomeUsuario usuario={folha.alteradoPor} /></b>
+            </span>
+          )}
+        </div>
+      )}
       <div className="orcamento-sheet-full" id="orcamento-sheet">
         {folha ? (
           <FolhaOrcamento folha={folha} />

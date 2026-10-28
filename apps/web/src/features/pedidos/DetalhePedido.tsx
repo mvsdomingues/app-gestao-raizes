@@ -1,5 +1,6 @@
 import { formatBRL, FLUXO_PEDIDO, podeCancelar, proximoStatus, ROTULOS_STATUS_PEDIDO } from '@raizes/shared';
 import { useApp } from '../../app/contexto';
+import { NomeUsuario } from '../../components/NomeUsuario';
 import { useSessao } from '../../app/sessao';
 import { FolhaOrcamento } from '../orcamentos/FolhaOrcamento';
 import { agoraLocal, duracao, formatarDataHora, TagStatusPedido, useAcoesPedido } from './comum';
@@ -54,6 +55,8 @@ export function DetalhePedido() {
       frete: p.orcamento.frete,
       total: p.orcamento.total,
       pedido: p.orcamento.pedido ?? null,
+      responsavel: p.orcamento.responsavel ?? null,
+      alteradoPor: p.orcamento.alterado_por ?? null,
     });
 
   return (
@@ -96,7 +99,7 @@ export function DetalhePedido() {
           <div>
             <div className="pedido-codigo">{p.codigo}</div>
             <div className="pedido-sub">
-              Criado em {formatarDataHora(p.criado)} · orçamento <b>{p.orcamento_numero}</b> · {p.qtd_itens}{' '}
+              Criado em {formatarDataHora(p.criado)} por <NomeUsuario usuario={p.responsavel} /> · orçamento <b>{p.orcamento_numero}</b> · {p.qtd_itens}{' '}
               {p.qtd_itens === 1 ? 'item' : 'itens'}
             </div>
           </div>
@@ -145,6 +148,7 @@ export function DetalhePedido() {
             <th style={{ width: 160 }}>Data e hora</th>
             <th>Movimentação</th>
             <th style={{ width: 150 }}>Tempo na etapa anterior</th>
+            <th style={{ width: 150 }}>Usuário</th>
             <th>Observação</th>
           </tr>
         </thead>
@@ -161,6 +165,9 @@ export function DetalhePedido() {
                 <TagStatusPedido status={m.status_novo} />
               </td>
               <td>{i > 0 ? duracao(p.movimentos[i - 1]!.data_hora, m.data_hora) : '—'}</td>
+              <td>
+                <NomeUsuario usuario={m.usuario} />
+              </td>
               <td className="pedido-mov-obs">{m.observacao ?? ''}</td>
             </tr>
           ))}

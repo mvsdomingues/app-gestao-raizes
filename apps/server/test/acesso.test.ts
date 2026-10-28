@@ -91,7 +91,7 @@ describe('cadastro de usuários', () => {
   it('inclui com a senha guardada só como hash', async () => {
     const r = await req('POST', '/api/usuarios', { nome: 'Maria Silva', login: 'Maria2', senha: 'segredo1' });
     expect(r.status).toBe(201);
-    expect(r.json).toMatchObject({ nome: 'Maria Silva', login: 'Maria2', excluido: false });
+    expect(r.json).toMatchObject({ nome: 'Maria Silva', login: 'Maria2', ativo: true });
     expect(r.json.senha_hash).toBeUndefined();
     const linha = db.prepare("SELECT senha_hash FROM usuarios WHERE login = 'Maria2'").get() as { senha_hash: string };
     expect(linha.senha_hash).toMatch(/^scrypt\$/);
@@ -146,20 +146,35 @@ describe('cadastro de usuários', () => {
     admin = await entrar(base, 'admin', 'admin123');
   });
 
-  it('exclusão lógica: não entra mais, continua listado como excluído e o login fica reservado', async () => {
+  it('inativar: não entra mais, continua listado como inativo e o login fica reservado', async () => {
     const lista = (await req('GET', '/api/usuarios')).json as { id: number; login: string }[];
     const maria = lista.find((u) => u.login === 'Maria2')!;
     const eu = lista.find((u) => u.login === 'admin')!;
-    expect((await req('DELETE', `/api/usuarios/${eu.id}`)).status).toBe(409); // a si mesmo
-    const d = await req('DELETE', `/api/usuarios/${maria.id}`);
-    expect(d.json).toMatchObject({ excluido: true });
-    expect(d.json.excluido_em).toBeTruthy();
+    expect((await req('POST', `/api/usuarios/${eu.id}/inativar`)).status).toBe(409); // a si mesmo
+    expect((await req('DELETE', `/api/usuarios/${maria.id}`)).status).toBe(404); // não existe exclusão física
+    const d = await req('POST', `/api/usuarios/${maria.id}/inativar`);
+    expect(d.json).toMatchObject({ ativo: false });
+    expect(d.json.inativado_em).toBeTruthy();
+    expect((await req('POST', `/api/usuarios/${maria.id}/inativar`)).status).toBe(409);
     expect((await req('POST', '/api/auth/login', { login: 'maria2', senha: 'outra456' }, '')).status).toBe(401);
     expect((await req('GET', '/api/usuarios')).json.map((u: { login: string }) => u.login)).toEqual(['admin']);
-    expect((await req('GET', '/api/usuarios?excluidos=1')).json).toHaveLength(2);
+    expect((await req('GET', '/api/usuarios?inativos=1')).json).toHaveLength(2);
     expect((await req('POST', '/api/usuarios', { nome: 'Nova', login: 'MARIA2', senha: 'abc123' })).status).toBe(409);
-    expect((await req('PUT', `/api/usuarios/${maria.id}`, { nome: 'x' })).status).toBe(409);
     expect((await req('GET', '/api/acessos')).json.map((u: { login: string }) => u.login)).toEqual(['admin']);
+    expect((await req('PUT', `/api/acessos/${maria.id}`, { permissoes: ['catalogo'] })).status).toBe(409);
+    // inativo pode ter a senha redefinida
+    expect((await req('PUT', `/api/usuarios/${maria.id}`, { senha: 'volta789' })).status).toBe(200);
+  });
+
+  it('reativar: volta a entrar com os mesmos acessos', async () => {
+    const maria = ((await req('GET', '/api/usuarios?inativos=1')).json as { id: number; login: string }[]).find(
+      (u) => u.login === 'Maria2',
+    )!;
+    const r = await req('POST', `/api/usuarios/${maria.id}/reativar`);
+    expect(r.json).toMatchObject({ ativo: true, inativado_em: null });
+    expect((await req('POST', `/api/usuarios/${maria.id}/reativar`)).status).toBe(409);
+    const c = await entrar(base, 'maria2', 'volta789');
+    expect((await req('GET', '/api/auth/sessao', undefined, c)).json.permissoes).toEqual(['orcamentos', 'pedidos']);
   });
 
   it('sempre resta alguém com acesso à tela Acessos', async () => {
@@ -174,5 +189,72 @@ describe('cadastro de usuários', () => {
     garantirAcessoInicial(db);
     const telas = db.prepare("SELECT tela FROM usuarios_permissoes WHERE usuario_id = 1 AND tela = 'pedidos'").all();
     expect(telas).toHaveLength(1);
+  });
+});
+
+describe('usuário responsável', () => {
+  const item = { nome: 'Caneca', codigo: 'C1', fornecedor: 'XBZ', imagem_url: '', qty: 10, preco: 20, composicao: 'c' };
+
+  it('grava quem criou e quem alterou o orçamento', async () => {
+    const criado = await req('POST', '/api/orcamentos', { itens: [item], subtotal: 200, frete: 0, total: 200 });
+    const id = criado.json.id;
+    const o = (await req('GET', `/api/orcamentos/${id}`)).json;
+    expect(o.responsavel).toMatchObject({ login: 'admin', nome: 'Administrador' });
+    expect(o.alterado_por).toBeNull();
+
+    // outra pessoa altera
+    for (const tela of ['carrinho', 'pedidos']) {
+      db.prepare("INSERT OR IGNORE INTO usuarios_permissoes (usuario_id, tela) SELECT id, ? FROM usuarios WHERE login = 'Maria2'").run(tela);
+    }
+    const maria = await entrar(base, 'maria2', 'volta789');
+    expect((await req('PUT', `/api/orcamentos/${id}`, { itens: [item], total: 5 }, maria)).status).toBe(200);
+    const lista = (await req('GET', '/api/orcamentos')).json.orcamentos[0];
+    expect(lista.responsavel.login).toBe('admin');
+    expect(lista.alterado_por.login).toBe('Maria2');
+    // filtro por número continua funcionando com o JOIN de usuários
+    expect((await req('GET', `/api/orcamentos?numero=${id}`)).json.total).toBe(1);
+  });
+
+  it('grava quem criou o pedido e quem fez cada movimentação', async () => {
+    const maria = await entrar(base, 'maria2', 'volta789');
+    const p = (await req('POST', '/api/pedidos', { orcamento_id: 1 }, maria)).json;
+    expect(p.responsavel.login).toBe('Maria2');
+    const av = (await req('POST', `/api/pedidos/${p.codigo}/avancar`, { status_atual: 'CRIADO' })).json;
+    expect(av.movimentos.map((m: { usuario: { login: string } }) => m.usuario.login)).toEqual(['Maria2', 'admin']);
+    const lista = (await req('GET', '/api/pedidos')).json.pedidos[0];
+    expect(lista.responsavel).toMatchObject({ login: 'Maria2', nome: 'Maria S.' });
+    const quadro = (await req('GET', '/api/pedidos/quadro')).json;
+    expect(quadro.colunas[1].pedidos[0].responsavel.login).toBe('Maria2');
+  });
+
+  it('o usuário inativado continua aparecendo como responsável', async () => {
+    const maria = ((await req('GET', '/api/usuarios')).json as { id: number; login: string }[]).find((u) => u.login === 'Maria2')!;
+    await req('POST', `/api/usuarios/${maria.id}/inativar`);
+    const lista = (await req('GET', '/api/pedidos')).json.pedidos[0];
+    expect(lista.responsavel.login).toBe('Maria2');
+  });
+});
+
+describe('migração do banco da versão anterior', () => {
+  it('renomeia excluido → inativo e acrescenta as colunas de responsável', async () => {
+    const { default: Database } = await import('better-sqlite3');
+    const { garantirEsquema } = await import('../src/db/esquema');
+    const antigo = new Database(':memory:');
+    antigo.exec(`
+      CREATE TABLE orcamentos (id INTEGER PRIMARY KEY AUTOINCREMENT, data_hora TEXT NOT NULL, subtotal REAL NOT NULL DEFAULT 0,
+        frete REAL NOT NULL DEFAULT 0, total REAL NOT NULL DEFAULT 0, qtd_itens INTEGER NOT NULL DEFAULT 0, itens_json TEXT NOT NULL);
+      INSERT INTO orcamentos (data_hora, itens_json) VALUES ('2026-10-01T10:00:00', '[]');
+      CREATE TABLE usuarios (id INTEGER PRIMARY KEY AUTOINCREMENT, nome TEXT NOT NULL, login TEXT NOT NULL UNIQUE COLLATE NOCASE,
+        senha_hash TEXT NOT NULL, senha_inicial INTEGER NOT NULL DEFAULT 0, excluido INTEGER NOT NULL DEFAULT 0,
+        criado TEXT NOT NULL, atualizado TEXT NOT NULL, excluido_em TEXT, criado_por INTEGER, excluido_por INTEGER);
+      INSERT INTO usuarios (nome, login, senha_hash, excluido, criado, atualizado, excluido_em)
+        VALUES ('Ex', 'ex', 'x', 1, 'a', 'a', '2026-10-28T10:00:00');
+    `);
+    garantirEsquema(antigo);
+    const u = antigo.prepare('SELECT inativo, inativado_em FROM usuarios').get();
+    expect(u).toEqual({ inativo: 1, inativado_em: '2026-10-28T10:00:00' });
+    const o = antigo.prepare('SELECT usuario_id, alterado_por FROM orcamentos').get();
+    expect(o).toEqual({ usuario_id: null, alterado_por: null });
+    garantirEsquema(antigo); // rodar de novo não quebra
   });
 });

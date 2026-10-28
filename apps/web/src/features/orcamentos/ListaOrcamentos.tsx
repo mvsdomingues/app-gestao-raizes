@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useRef, useState, type FormEvent } from 'react';
 import { formatBRL, type FiltrosOrcamentos, type ResumoOrcamento } from '@raizes/shared';
 import { useApp } from '../../app/contexto';
+import { NomeUsuario } from '../../components/NomeUsuario';
 import { useSessao } from '../../app/sessao';
 import { Carregando } from '../../components/Carregando';
 import { api } from '../../lib/api';
@@ -92,6 +93,8 @@ export function ListaOrcamentos() {
         frete: o.frete,
         total: o.total,
         pedido: o.pedido ?? null,
+        responsavel: o.responsavel ?? null,
+        alteradoPor: o.alterado_por ?? null,
       });
     } catch (e) {
       console.error(e);
@@ -183,6 +186,7 @@ export function ListaOrcamentos() {
               <tr>
                 <th style={{ width: 120 }}>Número</th>
                 <th>Data</th>
+                <th style={{ width: 160 }}>Responsável</th>
                 <th className="num" style={{ width: 80 }}>
                   Itens
                 </th>
@@ -200,6 +204,9 @@ export function ListaOrcamentos() {
                     <span className="orc-num-badge">{r.numero}</span>
                   </td>
                   <td>{formatarData(r.data_hora)}</td>
+                  <td>
+                    <NomeUsuario usuario={r.responsavel} />
+                  </td>
                   <td className="num">{r.qtd_itens}</td>
                   <td className="num" style={{ fontWeight: 600 }}>
                     {formatBRL(r.total)}

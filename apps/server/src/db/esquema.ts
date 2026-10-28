@@ -88,20 +88,20 @@ export function garantirEsquema(db: Database.Database): void {
     CREATE INDEX IF NOT EXISTS ix_pedidos_movimentos_pedido ON pedidos_movimentos(pedido_id);
 
     -- ── Controle de acesso ──
-    -- Usuários nunca são apagados: a exclusão é lógica (excluido = 1) para manter
-    -- a referência nas ações futuras. O login é único para sempre (mesmo excluído).
+    -- Usuários nunca são apagados: ficam ativos ou inativos (inativo = 1) para manter
+    -- a referência nas ações. O login é único para sempre (mesmo inativo).
     CREATE TABLE IF NOT EXISTS usuarios (
       id            INTEGER PRIMARY KEY AUTOINCREMENT,
       nome          TEXT NOT NULL,
       login         TEXT NOT NULL UNIQUE COLLATE NOCASE,
       senha_hash    TEXT NOT NULL,
       senha_inicial INTEGER NOT NULL DEFAULT 0,
-      excluido      INTEGER NOT NULL DEFAULT 0,
+      inativo       INTEGER NOT NULL DEFAULT 0,
       criado        TEXT NOT NULL,
       atualizado    TEXT NOT NULL,
-      excluido_em   TEXT,
+      inativado_em  TEXT,
       criado_por    INTEGER REFERENCES usuarios(id),
-      excluido_por  INTEGER REFERENCES usuarios(id)
+      inativado_por INTEGER REFERENCES usuarios(id)
     );
     -- Telas (funcionalidades) liberadas para cada usuário
     CREATE TABLE IF NOT EXISTS usuarios_permissoes (
@@ -134,4 +134,35 @@ export function garantirEsquema(db: Database.Database): void {
              'proprio' AS origem
         FROM produtos_proprios;
   `);
+
+  migrarColunas(db);
+}
+
+function colunas(db: Database.Database, tabela: string): string[] {
+  return (db.prepare(`PRAGMA table_info(${tabela})`).all() as { name: string }[]).map((c) => c.name);
+}
+
+/** Ajustes em bancos já existentes (colunas novas / renomeadas), sem perder dados. */
+function migrarColunas(db: Database.Database): void {
+  // Exclusão de usuário virou "inativo" (versão anterior: excluido / excluido_em / excluido_por)
+  const u = colunas(db, 'usuarios');
+  if (u.includes('excluido')) {
+    db.exec(`
+      ALTER TABLE usuarios RENAME COLUMN excluido TO inativo;
+      ALTER TABLE usuarios RENAME COLUMN excluido_em TO inativado_em;
+      ALTER TABLE usuarios RENAME COLUMN excluido_por TO inativado_por;
+    `);
+  }
+  // Usuário responsável por orçamentos, pedidos e movimentações
+  const novas: [string, string][] = [
+    ['orcamentos', 'usuario_id'],
+    ['orcamentos', 'alterado_por'],
+    ['pedidos', 'usuario_id'],
+    ['pedidos_movimentos', 'usuario_id'],
+  ];
+  for (const [tabela, coluna] of novas) {
+    if (!colunas(db, tabela).includes(coluna)) {
+      db.exec(`ALTER TABLE ${tabela} ADD COLUMN ${coluna} INTEGER REFERENCES usuarios(id)`);
+    }
+  }
 }

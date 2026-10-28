@@ -143,7 +143,7 @@
 .custom-input.invalido { border-color: var(--danger); }
 
 /* ── Tela Usuários ── */
-.usuarios-excluidos { display: flex; align-items: center; gap: 6px; font-size: .82rem; color: var(--muted); white-space: nowrap; cursor: pointer; }
+.usuarios-inativos { display: flex; align-items: center; gap: 6px; font-size: .82rem; color: var(--muted); white-space: nowrap; cursor: pointer; }
 .usuario-login { font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; font-size: .82rem; color: var(--berinjela); }
 .tag-usuario {
   display: inline-block;
@@ -155,7 +155,7 @@
   text-transform: uppercase;
 }
 .tag-usuario.ativo { background: #EAF5E8; color: var(--success); border: 1px solid #C3E3BE; }
-.tag-usuario.excluido { background: #FDECEA; color: var(--danger); border: 1px solid #F5C3BC; }
+.tag-usuario.inativo { background: #FDECEA; color: var(--danger); border: 1px solid #F5C3BC; }
 .tag-voce {
   margin-left: 8px;
   padding: 1px 7px;
@@ -166,9 +166,16 @@
   font-weight: 600;
   vertical-align: middle;
 }
-.usuario-excluido td { color: var(--muted); }
-.usuario-excluido .cadastro-nome { text-decoration: line-through; }
+.usuario-inativo td { color: var(--muted); }
+.cadastro-acao.btn-reativar:hover { border-color: var(--success); background: var(--success); color: #fff; }
 .cadastro-acao:disabled { opacity: .3; cursor: not-allowed; }
+
+/* Usuário responsável (orçamentos e pedidos) */
+.nome-usuario { white-space: nowrap; }
+.nome-usuario.vazio { color: var(--border2); }
+.orc-responsaveis { display: flex; flex-wrap: wrap; gap: 4px 18px; margin: -6px 0 14px; font-size: .8rem; color: var(--muted); }
+.orc-responsaveis b { font-weight: 600; color: var(--grafite); }
+.kanban-responsavel { margin-top: 3px; font-size: .72rem; color: var(--muted); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 
 /* ── Tela Acessos ── */
 .acessos-layout { display: grid; grid-template-columns: 280px 1fr; gap: 18px; align-items: start; }
@@ -256,5 +263,5 @@
   .menu-usuario-rotulo { display: none; }
 }
 @media print {
-  .app-topo { display: none !important; }
+  .app-topo, .orc-responsaveis { display: none !important; }
 }

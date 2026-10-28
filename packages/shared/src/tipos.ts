@@ -61,6 +61,10 @@ export interface ResumoOrcamento {
   qtd_itens: number;
   /** Pedido ativo gerado a partir do orçamento (null = sem pedido; o orçamento pode ser alterado). */
   pedido?: import('./pedidos').PedidoDoOrcamento | null;
+  /** Usuário que criou o orçamento (null nos orçamentos anteriores ao controle de acesso). */
+  responsavel?: import('./acesso').UsuarioResumo | null;
+  /** Usuário da última alteração (null se nunca foi alterado). */
+  alterado_por?: import('./acesso').UsuarioResumo | null;
 }
 
 /** Resposta paginada de GET /api/orcamentos */

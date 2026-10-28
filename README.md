@@ -118,12 +118,13 @@ npm run imagens:spot -- --force   # reprocessa todos
 
 O sistema exige login. Na primeira execução é criado o usuário **`admin`** com senha **`admin`**, com acesso a todas as telas. **Troque essa senha no primeiro acesso** (ícone do usuário no canto superior direito → *Meus dados*); até a troca, o sistema mostra um aviso.
 
-- **Usuários** (menu Sistema): inclusão (nome, login e senha), alteração de nome/senha e exclusão.
-  - Login: só letras e números (3 a 30), sem diferenciar maiúsculas. É a chave do usuário: não pode ser alterado nem reaproveitado, mesmo depois de excluído.
+- **Usuários** (menu Sistema): inclusão (nome, login e senha), alteração de nome/senha, inativação e reativação.
+  - Login: só letras e números (3 a 30), sem diferenciar maiúsculas. É a chave do usuário: não pode ser alterado nem reaproveitado, mesmo com o usuário inativo.
   - Senha: mínimo de 6 caracteres, com letras e números. É guardada apenas como hash (scrypt); ninguém consegue vê-la.
-  - Exclusão é lógica: o usuário não entra mais, mas continua no banco (marcado como excluído) para manter a referência nas ações. Ninguém exclui o próprio usuário.
+  - Nenhum usuário é apagado: ele fica **ativo** ou **inativo**. O inativo não entra no sistema, mas continua no banco (e como responsável pelas ações que fez); ao ser reativado, volta com os mesmos acessos. Ninguém inativa o próprio usuário.
 - **Acessos** (menu Sistema): escolha as telas que cada usuário pode usar. O menu mostra só as telas liberadas e o servidor bloqueia as funções das demais. Sempre fica pelo menos um usuário com acesso à tela Acessos. Telas novas do sistema são liberadas automaticamente a quem tem acesso à tela Acessos.
 - **Meus dados**: cada usuário altera o próprio nome e a senha (pedindo a senha atual). Trocar a senha encerra as outras sessões abertas desse usuário.
+- Cada orçamento e pedido guarda o usuário responsável (quem criou; no orçamento, também quem fez a última alteração) e cada movimentação de pedido guarda quem a fez. Essas informações aparecem nas listas e nos detalhes. Todos os usuários veem todos os dados.
 - A sessão expira após 12 horas sem uso. Após 5 senhas erradas seguidas, o login fica bloqueado por 5 minutos.
 
 O menu fica na **barra lateral** (pode ser recolhido para mostrar só os ícones). Toda nova tela deve ser adicionada a esse menu, em `apps/web/src/components/BarraLateral.tsx`.
@@ -173,7 +174,8 @@ Todas as rotas exigem login, exceto as de `/api/auth`. Cada rota também exige a
 |---|---|
 | `POST /api/auth/login` · `POST /api/auth/logout` · `GET /api/auth/sessao` | Login (cookie de sessão HttpOnly), saída e usuário logado |
 | `PUT /api/auth/meus-dados` | Nome e senha do próprio usuário (`senha_atual`, `senha_nova`) |
-| `GET/POST /api/usuarios` · `PUT/DELETE /api/usuarios/:id` | Usuários (`?excluidos=1` inclui os excluídos; DELETE = exclusão lógica) |
+| `GET/POST /api/usuarios` · `PUT /api/usuarios/:id` | Usuários (`?inativos=1` inclui os inativos) |
+| `POST /api/usuarios/:id/inativar` · `POST /api/usuarios/:id/reativar` | Inativa / reativa (nenhum usuário é apagado) |
 | `GET /api/acessos` · `PUT /api/acessos/:id` | Telas liberadas por usuário (`{ permissoes: [...] }`) |
 | `GET /api/produtos` · `GET /api/produto/:id` | Catálogo (fornecedores + próprios; próprios têm id negativo) |
 | `GET/POST /api/produtos-proprios` | Lista (`?q=` busca) / inclui produto próprio |

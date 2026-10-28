@@ -9,13 +9,22 @@ import {
 } from '@raizes/shared';
 import type { Banco } from '../db/conexao';
 import { pedidoAtivoDoOrcamento } from '../db/repositorio-pedidos';
+import { colunasResponsavel, extrairResponsavel } from '../db/repositorio-usuarios';
 import { falsyPython, floatPython } from '../lib/conversao';
 import { isoLocal } from '../lib/datas';
 import { corpoJson, ErroHttp } from '../lib/http';
+import { exigirUsuario } from '../lib/sessao';
 
-interface LinhaOrcamento extends Omit<ResumoOrcamento, 'numero'> {
+interface LinhaOrcamento extends Omit<ResumoOrcamento, 'numero' | 'responsavel' | 'alterado_por'> {
   itens_json: string;
+  usuario_id?: number | null;
+  alterado_por?: number | null;
 }
+
+/** JOIN com os usuários que criaram (ur) e alteraram (ua) o orçamento. */
+const JOIN_RESPONSAVEIS = `
+  LEFT JOIN usuarios ur ON ur.id = orcamentos.usuario_id
+  LEFT JOIN usuarios ua ON ua.id = orcamentos.alterado_por`;
 
 /** Subconsulta do pedido ativo (não cancelado) de cada orçamento. */
 const SQL_PEDIDO_ATIVO =
@@ -28,11 +37,22 @@ interface ColunasPedido {
 
 /** Orçamento completo (itens + pedido ativo, se houver). */
 export function lerOrcamento(db: Banco, id: number): Orcamento | undefined {
-  const row = db.prepare('SELECT * FROM orcamentos WHERE id = ?').get(id) as LinhaOrcamento | undefined;
+  const row = db
+    .prepare(
+      `SELECT orcamentos.id, orcamentos.data_hora, orcamentos.subtotal, orcamentos.frete, orcamentos.total,
+              orcamentos.qtd_itens, orcamentos.itens_json,
+              ${colunasResponsavel('ur', 'resp')}, ${colunasResponsavel('ua', 'alt')}
+         FROM orcamentos ${JOIN_RESPONSAVEIS} WHERE orcamentos.id = ?`,
+    )
+    .get(id) as (LinhaOrcamento & Record<string, unknown>) | undefined;
   if (!row) return undefined;
+  const responsavel = extrairResponsavel(row, 'resp');
+  const alteradoPor = extrairResponsavel(row, 'alt');
   const { itens_json, ...resto } = row;
   return {
     ...resto,
+    responsavel,
+    alterado_por: alteradoPor,
     numero: numeroOrcamento(row.id),
     itens: JSON.parse(itens_json),
     pedido: pedidoAtivoDoOrcamento(db, row.id),
@@ -58,7 +78,7 @@ export function rotasOrcamentos(db: Banco): Router {
     const numero = q('numero');
     if (numero) {
       const digitos = numero.replace(/\D/g, '');
-      wheres.push('id = ?');
+      wheres.push('orcamentos.id = ?');
       params.push(digitos ? Number(digitos) : -1);
     }
     const produto = q('produto');
@@ -96,20 +116,31 @@ export function rotasOrcamentos(db: Banco): Router {
     };
     const rows = db
       .prepare(
-        `SELECT id, data_hora, subtotal, frete, total, qtd_itens,
+        `SELECT orcamentos.id, orcamentos.data_hora, orcamentos.subtotal, orcamentos.frete, orcamentos.total,
+                orcamentos.qtd_itens,
                 (${SQL_PEDIDO_ATIVO.replace('{campo}', 'codigo')}) AS pedido_codigo,
-                (${SQL_PEDIDO_ATIVO.replace('{campo}', 'status')}) AS pedido_status
-           FROM orcamentos ${whereSql}
-          ORDER BY id DESC LIMIT ? OFFSET ?`,
+                (${SQL_PEDIDO_ATIVO.replace('{campo}', 'status')}) AS pedido_status,
+                ${colunasResponsavel('ur', 'resp')}, ${colunasResponsavel('ua', 'alt')}
+           FROM orcamentos ${JOIN_RESPONSAVEIS} ${whereSql}
+          ORDER BY orcamentos.id DESC LIMIT ? OFFSET ?`,
       )
-      .all(...params, limit, offset) as (Omit<ResumoOrcamento, 'numero' | 'pedido'> & ColunasPedido)[];
+      .all(...params, limit, offset) as (Omit<ResumoOrcamento, 'numero' | 'pedido' | 'responsavel' | 'alterado_por'> &
+      ColunasPedido &
+      Record<string, unknown>)[];
     const corpo: RespostaOrcamentos = {
       total,
-      orcamentos: rows.map(({ pedido_codigo, pedido_status, ...row }) => ({
-        ...row,
-        numero: numeroOrcamento(row.id),
-        pedido: pedido_codigo ? { codigo: pedido_codigo, status: pedido_status! } : null,
-      })),
+      orcamentos: rows.map((linha) => {
+        const responsavel = extrairResponsavel(linha, 'resp');
+        const alteradoPor = extrairResponsavel(linha, 'alt');
+        const { pedido_codigo, pedido_status, ...row } = linha;
+        return {
+          ...row,
+          numero: numeroOrcamento(row.id),
+          pedido: pedido_codigo ? { codigo: pedido_codigo, status: pedido_status! } : null,
+          responsavel,
+          alterado_por: alteradoPor,
+        };
+      }),
     };
     res.json(corpo);
   });
@@ -128,13 +159,15 @@ export function rotasOrcamentos(db: Banco): Router {
   }
 
   r.post('/api/orcamentos', (req, res) => {
+    const eu = exigirUsuario(res);
     const { itens, subtotal, frete, total } = lerCorpo(req);
     const dataHora = isoLocal();
     const info = db
       .prepare(
-        'INSERT INTO orcamentos (data_hora, subtotal, frete, total, qtd_itens, itens_json) VALUES (?, ?, ?, ?, ?, ?)',
+        `INSERT INTO orcamentos (data_hora, subtotal, frete, total, qtd_itens, itens_json, usuario_id)
+         VALUES (?, ?, ?, ?, ?, ?, ?)`,
       )
-      .run(dataHora, subtotal, frete, total, itens.length, JSON.stringify(itens));
+      .run(dataHora, subtotal, frete, total, itens.length, JSON.stringify(itens), eu.id);
     const id = Number(info.lastInsertRowid);
     const corpo: OrcamentoCriado = { id, numero: numeroOrcamento(id), data_hora: dataHora };
     res.json(corpo);
@@ -150,12 +183,14 @@ export function rotasOrcamentos(db: Banco): Router {
     if (pedido) {
       throw new ErroHttp(409, `O ${numeroOrcamento(id)} está no pedido ${pedido.codigo} e não pode ser alterado`);
     }
+    const eu = exigirUsuario(res);
     const dataHora = isoLocal();
     const info = db
       .prepare(
-        'UPDATE orcamentos SET data_hora = ?, subtotal = ?, frete = ?, total = ?, qtd_itens = ?, itens_json = ? WHERE id = ?',
+        `UPDATE orcamentos SET data_hora = ?, subtotal = ?, frete = ?, total = ?, qtd_itens = ?, itens_json = ?,
+                alterado_por = ? WHERE id = ?`,
       )
-      .run(dataHora, subtotal, frete, total, itens.length, JSON.stringify(itens), id);
+      .run(dataHora, subtotal, frete, total, itens.length, JSON.stringify(itens), eu.id, id);
     if (!info.changes) throw new ErroHttp(404, 'não encontrado');
     const corpo: OrcamentoCriado = { id, numero: numeroOrcamento(id), data_hora: dataHora };
     res.json(corpo);

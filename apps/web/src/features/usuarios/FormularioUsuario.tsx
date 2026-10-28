@@ -107,7 +107,7 @@ export function FormularioUsuario({ modo, fechar, salvo }: Props) {
         </div>
         <p className="custom-modal-sub">
           {novo
-            ? 'O login é a identificação única do usuário e não poderá ser alterado nem reaproveitado.'
+            ? 'O login é a identificação única do usuário e não poderá ser alterado nem reaproveitado, mesmo se ele for inativado.'
             : 'O login não pode ser alterado. Deixe a senha em branco para mantê-la.'}
         </p>
 

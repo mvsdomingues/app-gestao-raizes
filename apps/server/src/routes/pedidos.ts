@@ -17,6 +17,7 @@ import {
   retrocederPedido,
 } from '../db/repositorio-pedidos';
 import { corpoJson, ErroHttp } from '../lib/http';
+import { exigirUsuario } from '../lib/sessao';
 import { lerOrcamento } from './orcamentos';
 
 function textoOpcional(v: unknown, max = 500): string | null {
@@ -73,25 +74,25 @@ export function rotasPedidos(db: Banco): Router {
     if (!Number.isInteger(orcamentoId) || orcamentoId <= 0) {
       throw new ErroHttp(400, 'Informe o orçamento do pedido');
     }
-    const codigo = criarPedido(db, orcamentoId, textoOpcional(corpo.observacao));
+    const codigo = criarPedido(db, orcamentoId, textoOpcional(corpo.observacao), exigirUsuario(res).id);
     res.status(201).json(detalhe(codigo));
   });
 
   r.post('/api/pedidos/:codigo/avancar', (req, res) => {
     const corpo = corpoJson(req);
-    avancarPedido(db, req.params.codigo, typeof corpo.status_atual === 'string' ? corpo.status_atual : undefined);
+    avancarPedido(db, req.params.codigo, exigirUsuario(res).id, typeof corpo.status_atual === 'string' ? corpo.status_atual : undefined);
     res.json(detalhe(req.params.codigo));
   });
 
   r.post('/api/pedidos/:codigo/retroceder', (req, res) => {
     const corpo = corpoJson(req);
-    retrocederPedido(db, req.params.codigo, typeof corpo.status_atual === 'string' ? corpo.status_atual : undefined);
+    retrocederPedido(db, req.params.codigo, exigirUsuario(res).id, typeof corpo.status_atual === 'string' ? corpo.status_atual : undefined);
     res.json(detalhe(req.params.codigo));
   });
 
   r.post('/api/pedidos/:codigo/cancelar', (req, res) => {
     const corpo = corpoJson(req);
-    cancelarPedido(db, req.params.codigo, textoOpcional(corpo.motivo));
+    cancelarPedido(db, req.params.codigo, textoOpcional(corpo.motivo), exigirUsuario(res).id);
     res.json(detalhe(req.params.codigo));
   });
 

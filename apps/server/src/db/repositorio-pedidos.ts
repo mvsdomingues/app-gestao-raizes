@@ -14,6 +14,7 @@ import {
   type StatusPedido,
 } from '@raizes/shared';
 import { ErroHttp } from '../lib/http';
+import { colunasResponsavel, extrairResponsavel } from './repositorio-usuarios';
 import { isoLocal } from '../lib/datas';
 import type { Banco } from './conexao';
 
@@ -31,12 +32,15 @@ interface LinhaPedido {
 
 const SELECT_PEDIDO = `
   SELECT p.id, p.codigo, p.status, p.orcamento_id, p.observacao, p.criado, p.atualizado,
-         o.total, o.qtd_itens
+         o.total, o.qtd_itens, ${colunasResponsavel('ur', 'resp')}
     FROM pedidos p
-    JOIN orcamentos o ON o.id = p.orcamento_id`;
+    JOIN orcamentos o ON o.id = p.orcamento_id
+    LEFT JOIN usuarios ur ON ur.id = p.usuario_id`;
 
 function resumo(l: LinhaPedido): ResumoPedido & { observacao: string | null } {
-  return { ...l, orcamento_numero: numeroOrcamento(l.orcamento_id) };
+  const linha = { ...l } as LinhaPedido & Record<string, unknown>;
+  const responsavel = extrairResponsavel(linha, 'resp');
+  return { ...linha, orcamento_numero: numeroOrcamento(l.orcamento_id), responsavel };
 }
 
 /** Pedido ativo (não cancelado) de um orçamento, se existir. */
@@ -123,12 +127,18 @@ export function quadroPedidos(db: Banco, limite: number): ColunaQuadro[] {
 export function buscarPedido(db: Banco, codigo: string) {
   const l = db.prepare(`${SELECT_PEDIDO} WHERE p.codigo = ? COLLATE NOCASE`).get(codigo) as LinhaPedido | undefined;
   if (!l) return undefined;
-  const movimentos = db
-    .prepare(
-      `SELECT status_anterior, status_novo, data_hora, observacao
-         FROM pedidos_movimentos WHERE pedido_id = ? ORDER BY id`,
-    )
-    .all(l.id) as MovimentoPedido[];
+  const movimentos = (
+    db
+      .prepare(
+        `SELECT m.status_anterior, m.status_novo, m.data_hora, m.observacao, ${colunasResponsavel('u', 'usr')}
+           FROM pedidos_movimentos m LEFT JOIN usuarios u ON u.id = m.usuario_id
+          WHERE m.pedido_id = ? ORDER BY m.id`,
+      )
+      .all(l.id) as Record<string, unknown>[]
+  ).map((m) => {
+    const usuario = extrairResponsavel(m, 'usr');
+    return { ...m, usuario } as MovimentoPedido;
+  });
   return { ...resumo(l), movimentos };
 }
 
@@ -139,15 +149,16 @@ function registrarMovimento(
   para: StatusPedido,
   quando: string,
   observacao: string | null,
+  usuarioId: number | null,
 ) {
   db.prepare(
-    `INSERT INTO pedidos_movimentos (pedido_id, status_anterior, status_novo, data_hora, observacao)
-     VALUES (?, ?, ?, ?, ?)`,
-  ).run(pedidoId, de, para, quando, observacao);
+    `INSERT INTO pedidos_movimentos (pedido_id, status_anterior, status_novo, data_hora, observacao, usuario_id)
+     VALUES (?, ?, ?, ?, ?, ?)`,
+  ).run(pedidoId, de, para, quando, observacao, usuarioId);
 }
 
 /** Cria o pedido (status Criado) a partir de um orçamento sem pedido ativo. */
-export function criarPedido(db: Banco, orcamentoId: number, observacao: string | null): string {
+export function criarPedido(db: Banco, orcamentoId: number, observacao: string | null, usuarioId: number): string {
   return db.transaction(() => {
     const existe = db.prepare('SELECT id FROM orcamentos WHERE id = ?').get(orcamentoId);
     if (!existe) throw new ErroHttp(404, `Orçamento ${numeroOrcamento(orcamentoId)} não encontrado`);
@@ -163,10 +174,10 @@ export function criarPedido(db: Banco, orcamentoId: number, observacao: string |
     const codigo = codigoPedido(id);
     const agora = isoLocal();
     db.prepare(
-      `INSERT INTO pedidos (id, codigo, orcamento_id, status, observacao, criado, atualizado)
-       VALUES (?, ?, ?, 'CRIADO', ?, ?, ?)`,
-    ).run(id, codigo, orcamentoId, observacao, agora, agora);
-    registrarMovimento(db, id, null, 'CRIADO', agora, observacao);
+      `INSERT INTO pedidos (id, codigo, orcamento_id, status, observacao, criado, atualizado, usuario_id)
+       VALUES (?, ?, ?, 'CRIADO', ?, ?, ?, ?)`,
+    ).run(id, codigo, orcamentoId, observacao, agora, agora, usuarioId);
+    registrarMovimento(db, id, null, 'CRIADO', agora, observacao, usuarioId);
     return codigo;
   })();
 }
@@ -176,7 +187,7 @@ export function criarPedido(db: Banco, orcamentoId: number, observacao: string |
  * `esperado` (status que a tela estava mostrando) evita avançar duas vezes
  * com cliques repetidos ou duas pessoas ao mesmo tempo.
  */
-export function avancarPedido(db: Banco, codigo: string, esperado?: string): void {
+export function avancarPedido(db: Banco, codigo: string, usuarioId: number, esperado?: string): void {
   db.transaction(() => {
     const p = db.prepare('SELECT id, status FROM pedidos WHERE codigo = ? COLLATE NOCASE').get(codigo) as
       | { id: number; status: StatusPedido }
@@ -189,12 +200,12 @@ export function avancarPedido(db: Banco, codigo: string, esperado?: string): voi
     if (!prox) throw new ErroHttp(409, 'Este pedido não pode mais ser movimentado');
     const agora = isoLocal();
     db.prepare('UPDATE pedidos SET status = ?, atualizado = ? WHERE id = ?').run(prox, agora, p.id);
-    registrarMovimento(db, p.id, p.status, prox, agora, null);
+    registrarMovimento(db, p.id, p.status, prox, agora, null, usuarioId);
   })();
 }
 
 /** Devolve o pedido para a etapa anterior do fluxo (correção de movimentação). */
-export function retrocederPedido(db: Banco, codigo: string, esperado?: string): void {
+export function retrocederPedido(db: Banco, codigo: string, usuarioId: number, esperado?: string): void {
   db.transaction(() => {
     const p = db.prepare('SELECT id, status FROM pedidos WHERE codigo = ? COLLATE NOCASE').get(codigo) as
       | { id: number; status: StatusPedido }
@@ -209,12 +220,12 @@ export function retrocederPedido(db: Banco, codigo: string, esperado?: string): 
     }
     const agora = isoLocal();
     db.prepare('UPDATE pedidos SET status = ?, atualizado = ? WHERE id = ?').run(ant, agora, p.id);
-    registrarMovimento(db, p.id, p.status, ant, agora, null);
+    registrarMovimento(db, p.id, p.status, ant, agora, null, usuarioId);
   })();
 }
 
 /** Cancela o pedido (libera o orçamento para um novo pedido). */
-export function cancelarPedido(db: Banco, codigo: string, motivo: string | null): void {
+export function cancelarPedido(db: Banco, codigo: string, motivo: string | null, usuarioId: number): void {
   db.transaction(() => {
     const p = db.prepare('SELECT id, status FROM pedidos WHERE codigo = ? COLLATE NOCASE').get(codigo) as
       | { id: number; status: StatusPedido }
@@ -225,6 +236,6 @@ export function cancelarPedido(db: Banco, codigo: string, motivo: string | null)
     }
     const agora = isoLocal();
     db.prepare(`UPDATE pedidos SET status = 'CANCELADO', atualizado = ? WHERE id = ?`).run(agora, p.id);
-    registrarMovimento(db, p.id, p.status, 'CANCELADO', agora, motivo);
+    registrarMovimento(db, p.id, p.status, 'CANCELADO', agora, motivo, usuarioId);
   })();
 }

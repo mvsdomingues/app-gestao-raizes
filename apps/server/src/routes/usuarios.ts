@@ -6,10 +6,11 @@ import {
   criarUsuario,
   definirPermissoes,
   encerrarSessoesDoUsuario,
-  excluirUsuario,
+  inativarUsuario,
   listarAcessos,
   listarUsuarios,
   obterUsuario,
+  reativarUsuario,
 } from '../db/repositorio-usuarios';
 import { corpoJson, ErroHttp } from '../lib/http';
 import { gerarHashSenha } from '../lib/senha';
@@ -34,8 +35,8 @@ export function rotasUsuarios(db: Banco): Router {
   const r = Router();
 
   r.get('/api/usuarios', (req, res) => {
-    const excluidos = req.query.excluidos === '1' || req.query.excluidos === 'true';
-    res.json(listarUsuarios(db, excluidos, typeof req.query.q === 'string' ? req.query.q : ''));
+    const inativos = req.query.inativos === '1' || req.query.inativos === 'true';
+    res.json(listarUsuarios(db, inativos, typeof req.query.q === 'string' ? req.query.q : ''));
   });
 
   r.post('/api/usuarios', async (req, res) => {
@@ -76,9 +77,14 @@ export function rotasUsuarios(db: Banco): Router {
     res.json(u);
   });
 
-  r.delete('/api/usuarios/:id', (req, res) => {
+  // Usuários nunca são apagados: ficam ativos ou inativos
+  r.post('/api/usuarios/:id/inativar', (req, res) => {
     const eu = exigirUsuario(res);
-    res.json(excluirUsuario(db, idDaRota(req.params.id), eu.id));
+    res.json(inativarUsuario(db, idDaRota(req.params.id), eu.id));
+  });
+
+  r.post('/api/usuarios/:id/reativar', (req, res) => {
+    res.json(reativarUsuario(db, idDaRota(req.params.id)));
   });
 
   r.get('/api/acessos', (_req, res) => {

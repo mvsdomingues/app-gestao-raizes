@@ -14,23 +14,23 @@ function formatarData(v: string | null): string {
   return m ? `${m[3]}/${m[2]}/${m[1]} ${m[4]}:${m[5]}` : (v ?? '');
 }
 
-/** Tela "Usuários": inclusão, alteração de nome/senha e exclusão lógica. */
+/** Tela "Usuários": inclusão, alteração de nome/senha, inativação e reativação (nunca exclui). */
 export function Usuarios() {
   const { tela, visitas, abrirAcessos } = useApp();
   const { usuario: eu, pode, atualizar } = useSessao();
   const [busca, setBusca] = useState('');
-  const [excluidos, setExcluidos] = useState(false);
+  const [inativos, setInativos] = useState(false);
   const [estado, setEstado] = useState<Estado>({ tipo: 'carregando' });
   const [modo, setModo] = useState<ModoFormulario | null>(null);
   const [aviso, setAviso] = useState('');
-  const filtros = useRef({ busca, excluidos });
-  filtros.current = { busca, excluidos };
+  const filtros = useRef({ busca, inativos });
+  filtros.current = { busca, inativos };
   const debounce = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const carregar = useCallback(async () => {
     try {
-      const { busca: q, excluidos: ex } = filtros.current;
-      setEstado({ tipo: 'ok', linhas: await api.usuarios(q.trim(), ex) });
+      const { busca: q, inativos: ina } = filtros.current;
+      setEstado({ tipo: 'ok', linhas: await api.usuarios(q.trim(), ina) });
     } catch (e) {
       setEstado({ tipo: 'erro', msg: e instanceof Error ? e.message : String(e) });
     }
@@ -40,22 +40,33 @@ export function Usuarios() {
     if (visitas.usuarios > 0) void carregar();
   }, [visitas.usuarios, carregar]);
 
-  const excluir = async (u: Usuario) => {
+  const inativar = async (u: Usuario) => {
     if (
       !confirm(
-        `Excluir o usuário ${u.nome} (${u.login})?\n\n` +
-          'Ele não poderá mais entrar no sistema. O registro é mantido para histórico e o login ' +
-          `"${u.login}" não poderá ser usado por outro usuário.`,
+        `Inativar o usuário ${u.nome} (${u.login})?\n\n` +
+          'Ele não poderá mais entrar no sistema até ser reativado. O cadastro, os acessos e o histórico ' +
+          'das ações dele são mantidos.',
       )
     ) {
       return;
     }
     try {
-      await api.excluirUsuario(u.id);
-      setAviso(`✓ Usuário ${u.login} excluído.`);
+      await api.inativarUsuario(u.id);
+      setAviso(`✓ Usuário ${u.login} inativado.`);
       void carregar();
     } catch (e) {
-      alert('Não foi possível excluir: ' + (e instanceof Error ? e.message : e));
+      alert('Não foi possível inativar: ' + (e instanceof Error ? e.message : e));
+    }
+  };
+
+  const reativar = async (u: Usuario) => {
+    if (!confirm(`Reativar o usuário ${u.nome} (${u.login})?\n\nEle volta a entrar com os mesmos acessos de antes.`)) return;
+    try {
+      await api.reativarUsuario(u.id);
+      setAviso(`✓ Usuário ${u.login} reativado.`);
+      void carregar();
+    } catch (e) {
+      alert('Não foi possível reativar: ' + (e instanceof Error ? e.message : e));
     }
   };
 
@@ -93,18 +104,18 @@ export function Usuarios() {
               }}
             />
           </div>
-          <label className="usuarios-excluidos">
+          <label className="usuarios-inativos">
             <input
               type="checkbox"
-              id="mostrar-excluidos"
-              checked={excluidos}
+              id="mostrar-inativos"
+              checked={inativos}
               onChange={(e) => {
-                setExcluidos(e.target.checked);
-                filtros.current.excluidos = e.target.checked;
+                setInativos(e.target.checked);
+                filtros.current.inativos = e.target.checked;
                 void carregar();
               }}
             />
-            Mostrar excluídos
+            Mostrar inativos
           </label>
           <span className="result-info">
             {estado.tipo === 'ok' && `${linhas.length} usuário${linhas.length !== 1 ? 's' : ''}`}
@@ -145,9 +156,9 @@ export function Usuarios() {
               {linhas.map((u) => (
                 <tr
                   key={u.id}
-                  className={`cadastro-row${u.excluido ? ' usuario-excluido' : ''}`}
+                  className={`cadastro-row${u.ativo ? '' : ' usuario-inativo'}`}
                   data-login={u.login}
-                  onDoubleClick={() => !u.excluido && setModo({ tipo: 'editar', usuario: u })}
+                  onDoubleClick={() => setModo({ tipo: 'editar', usuario: u })}
                 >
                   <td className="cadastro-nome">
                     {u.nome}
@@ -157,39 +168,41 @@ export function Usuarios() {
                     <span className="usuario-login">{u.login}</span>
                   </td>
                   <td>
-                    {u.excluido ? (
-                      <span className="tag-usuario excluido" title={`Excluído em ${formatarData(u.excluido_em)}`}>
-                        Excluído
-                      </span>
-                    ) : (
+                    {u.ativo ? (
                       <span className="tag-usuario ativo">Ativo</span>
+                    ) : (
+                      <span className="tag-usuario inativo" title={`Inativado em ${formatarData(u.inativado_em)}`}>
+                        Inativo
+                      </span>
                     )}
                   </td>
                   <td className="cadastro-data">{formatarData(u.criado)}</td>
                   <td className="cadastro-acoes">
-                    {!u.excluido && (
-                      <>
-                        {pode('acessos') && (
-                          <button className="cadastro-acao" title="Telas que pode acessar" onClick={() => abrirAcessos(u.id)}>
-                            🔑
-                          </button>
-                        )}
-                        <button
-                          className="cadastro-acao"
-                          title="Alterar nome ou senha"
-                          onClick={() => setModo({ tipo: 'editar', usuario: u })}
-                        >
-                          ✎
-                        </button>
-                        <button
-                          className="cadastro-acao perigo"
-                          title={u.id === eu?.id ? 'Você não pode excluir o seu próprio usuário' : 'Excluir'}
-                          disabled={u.id === eu?.id}
-                          onClick={() => void excluir(u)}
-                        >
-                          ✕
-                        </button>
-                      </>
+                    {u.ativo && pode('acessos') && (
+                      <button className="cadastro-acao" title="Telas que pode acessar" onClick={() => abrirAcessos(u.id)}>
+                        🔑
+                      </button>
+                    )}
+                    <button
+                      className="cadastro-acao"
+                      title="Alterar nome ou senha"
+                      onClick={() => setModo({ tipo: 'editar', usuario: u })}
+                    >
+                      ✎
+                    </button>
+                    {u.ativo ? (
+                      <button
+                        className="cadastro-acao perigo btn-inativar"
+                        title={u.id === eu?.id ? 'Você não pode inativar o seu próprio usuário' : 'Inativar'}
+                        disabled={u.id === eu?.id}
+                        onClick={() => void inativar(u)}
+                      >
+                        ⏻
+                      </button>
+                    ) : (
+                      <button className="cadastro-acao btn-reativar" title="Reativar" onClick={() => void reativar(u)}>
+                        ↺
+                      </button>
                     )}
                   </td>
                 </tr>

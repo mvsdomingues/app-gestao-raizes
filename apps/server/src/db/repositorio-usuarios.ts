@@ -5,6 +5,7 @@ import {
   type AcessoUsuario,
   type IdTela,
   type Usuario,
+  type UsuarioResumo,
   type UsuarioSessao,
 } from '@raizes/shared';
 import { isoLocal } from '../lib/datas';
@@ -18,10 +19,10 @@ interface LinhaUsuario {
   login: string;
   senha_hash: string;
   senha_inicial: number;
-  excluido: number;
+  inativo: number;
   criado: string;
   atualizado: string;
-  excluido_em: string | null;
+  inativado_em: string | null;
 }
 
 /** Tela que dá acesso à administração dos acessos (nunca pode ficar sem ninguém). */
@@ -32,11 +33,27 @@ function paraUsuario(l: LinhaUsuario): Usuario {
     id: l.id,
     nome: l.nome,
     login: l.login,
-    excluido: !!l.excluido,
+    ativo: !l.inativo,
     criado: l.criado,
     atualizado: l.atualizado,
-    excluido_em: l.excluido_em,
+    inativado_em: l.inativado_em,
   };
+}
+
+/** Colunas (SQL) com o usuário responsável: `prefixo` = alias da tabela usuarios no JOIN. */
+export function colunasResponsavel(alias: string, prefixo: string): string {
+  return `${alias}.id AS ${prefixo}_id, ${alias}.nome AS ${prefixo}_nome, ${alias}.login AS ${prefixo}_login`;
+}
+
+/** Monta o UsuarioResumo a partir das colunas de `colunasResponsavel` e as remove da linha. */
+export function extrairResponsavel(linha: Record<string, unknown>, prefixo: string): UsuarioResumo | null {
+  const id = linha[`${prefixo}_id`] as number | null;
+  const nome = linha[`${prefixo}_nome`] as string | null;
+  const login = linha[`${prefixo}_login`] as string | null;
+  delete linha[`${prefixo}_id`];
+  delete linha[`${prefixo}_nome`];
+  delete linha[`${prefixo}_login`];
+  return id ? { id, nome: nome ?? '', login: login ?? '' } : null;
 }
 
 /**
@@ -67,7 +84,7 @@ export function garantirAcessoInicial(db: Banco): void {
       const admins = db
         .prepare(
           `SELECT u.id FROM usuarios u JOIN usuarios_permissoes p ON p.usuario_id = u.id
-            WHERE p.tela = ? AND u.excluido = 0`,
+            WHERE p.tela = ? AND u.inativo = 0`,
         )
         .all(TELA_ACESSOS) as { id: number }[];
       const ins = db.prepare('INSERT OR IGNORE INTO usuarios_permissoes (usuario_id, tela) VALUES (?, ?)');
@@ -102,19 +119,19 @@ export function permissoesDoUsuario(db: Banco, id: number): IdTela[] {
 }
 
 export function usuarioDaSessao(db: Banco, id: number): UsuarioSessao | null {
-  const l = db.prepare('SELECT * FROM usuarios WHERE id = ? AND excluido = 0').get(id) as LinhaUsuario | undefined;
+  const l = db.prepare('SELECT * FROM usuarios WHERE id = ? AND inativo = 0').get(id) as LinhaUsuario | undefined;
   if (!l) return null;
   return { id: l.id, nome: l.nome, login: l.login, permissoes: permissoesDoUsuario(db, l.id), senha_inicial: !!l.senha_inicial };
 }
 
-export function listarUsuarios(db: Banco, incluirExcluidos: boolean, busca: string): Usuario[] {
+export function listarUsuarios(db: Banco, incluirInativos: boolean, busca: string): Usuario[] {
   const params: unknown[] = [];
-  let where = incluirExcluidos ? '1=1' : 'excluido = 0';
+  let where = incluirInativos ? '1=1' : 'inativo = 0';
   if (busca.trim()) {
     where += ' AND (nome LIKE ? OR login LIKE ?)';
     params.push(`%${busca.trim()}%`, `%${busca.trim()}%`);
   }
-  return (db.prepare(`SELECT * FROM usuarios WHERE ${where} ORDER BY excluido, nome COLLATE NOCASE`).all(...params) as LinhaUsuario[]).map(
+  return (db.prepare(`SELECT * FROM usuarios WHERE ${where} ORDER BY inativo, nome COLLATE NOCASE`).all(...params) as LinhaUsuario[]).map(
     paraUsuario,
   );
 }
@@ -127,7 +144,7 @@ export function obterUsuario(db: Banco, id: number): Usuario {
 
 export function criarUsuario(db: Banco, dados: { nome: string; login: string; senhaHash: string }, porId: number): Usuario {
   if (buscarUsuarioPorLogin(db, dados.login)) {
-    throw new ErroHttp(409, `O login "${dados.login}" já existe ou já foi usado por um usuário excluído e não pode ser reaproveitado`);
+    throw new ErroHttp(409, `O login "${dados.login}" já existe (ativo ou inativo) e não pode ser reaproveitado`);
   }
   const agora = isoLocal();
   const r = db
@@ -141,8 +158,7 @@ export function criarUsuario(db: Banco, dados: { nome: string; login: string; se
 
 /** Altera nome e/ou senha. O login nunca muda (é a chave do usuário). */
 export function alterarUsuario(db: Banco, id: number, dados: { nome?: string; senhaHash?: string }): Usuario {
-  const l = linhaPorId(db, id);
-  if (l.excluido) throw new ErroHttp(409, 'Usuário excluído não pode ser alterado');
+  linhaPorId(db, id); // 404 se não existir (inativo também pode ter nome/senha alterados)
   const agora = isoLocal();
   db.transaction(() => {
     if (dados.nome !== undefined) db.prepare('UPDATE usuarios SET nome = ?, atualizado = ? WHERE id = ?').run(dados.nome, agora, id);
@@ -157,24 +173,24 @@ function adminsAtivosRestantes(db: Banco, semId: number): number {
   const { c } = db
     .prepare(
       `SELECT COUNT(*) AS c FROM usuarios u JOIN usuarios_permissoes p ON p.usuario_id = u.id
-        WHERE p.tela = ? AND u.excluido = 0 AND u.id <> ?`,
+        WHERE p.tela = ? AND u.inativo = 0 AND u.id <> ?`,
     )
     .get(TELA_ACESSOS, semId) as { c: number };
   return c;
 }
 
-/** Exclusão lógica: o usuário deixa de entrar, mas continua no banco (login reservado). */
-export function excluirUsuario(db: Banco, id: number, porId: number): Usuario {
+/** Inativa o usuário: deixa de entrar no sistema, mas continua no banco (login reservado). */
+export function inativarUsuario(db: Banco, id: number, porId: number): Usuario {
   const l = linhaPorId(db, id);
-  if (l.excluido) throw new ErroHttp(409, 'Usuário já está excluído');
-  if (id === porId) throw new ErroHttp(409, 'Você não pode excluir o seu próprio usuário');
+  if (l.inativo) throw new ErroHttp(409, 'Usuário já está inativo');
+  if (id === porId) throw new ErroHttp(409, 'Você não pode inativar o seu próprio usuário');
   const ehAdmin = permissoesDoUsuario(db, id).includes(TELA_ACESSOS);
   if (ehAdmin && adminsAtivosRestantes(db, id) === 0) {
-    throw new ErroHttp(409, 'Este é o único usuário com acesso à tela Acessos e não pode ser excluído');
+    throw new ErroHttp(409, 'Este é o único usuário ativo com acesso à tela Acessos e não pode ser inativado');
   }
   const agora = isoLocal();
   db.transaction(() => {
-    db.prepare('UPDATE usuarios SET excluido = 1, excluido_em = ?, excluido_por = ?, atualizado = ? WHERE id = ?').run(
+    db.prepare('UPDATE usuarios SET inativo = 1, inativado_em = ?, inativado_por = ?, atualizado = ? WHERE id = ?').run(
       agora,
       porId,
       agora,
@@ -185,10 +201,21 @@ export function excluirUsuario(db: Banco, id: number, porId: number): Usuario {
   return obterUsuario(db, id);
 }
 
+/** Reativa o usuário (volta a entrar, com os mesmos acessos que tinha). */
+export function reativarUsuario(db: Banco, id: number): Usuario {
+  const l = linhaPorId(db, id);
+  if (!l.inativo) throw new ErroHttp(409, 'Usuário já está ativo');
+  db.prepare('UPDATE usuarios SET inativo = 0, inativado_em = NULL, inativado_por = NULL, atualizado = ? WHERE id = ?').run(
+    isoLocal(),
+    id,
+  );
+  return obterUsuario(db, id);
+}
+
 // ── Acessos ──────────────────────────────────────────────────────────────────
 
 export function listarAcessos(db: Banco): AcessoUsuario[] {
-  return (db.prepare('SELECT * FROM usuarios WHERE excluido = 0 ORDER BY nome COLLATE NOCASE').all() as LinhaUsuario[]).map((l) => ({
+  return (db.prepare('SELECT * FROM usuarios WHERE inativo = 0 ORDER BY nome COLLATE NOCASE').all() as LinhaUsuario[]).map((l) => ({
     id: l.id,
     nome: l.nome,
     login: l.login,
@@ -198,9 +225,9 @@ export function listarAcessos(db: Banco): AcessoUsuario[] {
 
 export function definirPermissoes(db: Banco, id: number, telas: IdTela[]): AcessoUsuario {
   const l = linhaPorId(db, id);
-  if (l.excluido) throw new ErroHttp(409, 'Usuário excluído não pode receber acessos');
+  if (l.inativo) throw new ErroHttp(409, 'Usuário inativo não pode receber acessos. Reative-o primeiro');
   if (!telas.includes(TELA_ACESSOS) && adminsAtivosRestantes(db, id) === 0) {
-    throw new ErroHttp(409, 'Pelo menos um usuário precisa manter o acesso à tela Acessos');
+    throw new ErroHttp(409, 'Pelo menos um usuário ativo precisa manter o acesso à tela Acessos');
   }
   db.transaction(() => {
     db.prepare('DELETE FROM usuarios_permissoes WHERE usuario_id = ?').run(id);

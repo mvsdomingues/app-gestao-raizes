@@ -1,6 +1,7 @@
 // ══════════════════════════════════════════════════════════
 // PEDIDOS — sempre gerados a partir de um orçamento (1 orçamento → 1 pedido ativo)
 // ══════════════════════════════════════════════════════════
+import type { UsuarioResumo } from './acesso';
 import type { Orcamento } from './tipos';
 
 /** Etapas do fluxo, na ordem. */
@@ -70,6 +71,8 @@ export interface ResumoPedido {
   qtd_itens: number;
   criado: string;
   atualizado: string;
+  /** Usuário que criou o pedido (null nos pedidos anteriores ao controle de acesso). */
+  responsavel: UsuarioResumo | null;
 }
 
 /** Movimentação do fluxo (base para o controle de SLA). */
@@ -78,6 +81,8 @@ export interface MovimentoPedido {
   status_novo: StatusPedido;
   data_hora: string;
   observacao: string | null;
+  /** Quem fez a movimentação */
+  usuario: UsuarioResumo | null;
 }
 
 /** Pedido completo, com o histórico de movimentações e o orçamento de referência. */

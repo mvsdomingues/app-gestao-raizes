@@ -147,12 +147,13 @@ export const api = {
   sair: () => enviar<{ ok: boolean }>('POST', '/api/auth/logout', {}),
   salvarMeusDados: (dados: { nome?: string; senha_atual?: string; senha_nova?: string }) =>
     enviar<UsuarioSessao>('PUT', '/api/auth/meus-dados', dados),
-  usuarios: (q = '', excluidos = false) =>
-    enviar<Usuario[]>('GET', `/api/usuarios?q=${encodeURIComponent(q)}${excluidos ? '&excluidos=1' : ''}`),
+  usuarios: (q = '', inativos = false) =>
+    enviar<Usuario[]>('GET', `/api/usuarios?q=${encodeURIComponent(q)}${inativos ? '&inativos=1' : ''}`),
   criarUsuario: (dados: { nome: string; login: string; senha: string }) => enviar<Usuario>('POST', '/api/usuarios', dados),
   alterarUsuario: (id: number, dados: { nome?: string; senha?: string }) =>
     enviar<Usuario>('PUT', `/api/usuarios/${id}`, dados),
-  excluirUsuario: (id: number) => enviar<Usuario>('DELETE', `/api/usuarios/${id}`),
+  inativarUsuario: (id: number) => enviar<Usuario>('POST', `/api/usuarios/${id}/inativar`, {}),
+  reativarUsuario: (id: number) => enviar<Usuario>('POST', `/api/usuarios/${id}/reativar`, {}),
   acessos: () => enviar<AcessoUsuario[]>('GET', '/api/acessos'),
   salvarAcessos: (id: number, permissoes: IdTela[]) => enviar<AcessoUsuario>('PUT', `/api/acessos/${id}`, { permissoes }),
 

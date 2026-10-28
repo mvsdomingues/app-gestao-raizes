@@ -8,6 +8,7 @@ import {
   type ResumoPedido,
 } from '@raizes/shared';
 import { useApp } from '../../app/contexto';
+import { NomeUsuario } from '../../components/NomeUsuario';
 import { Carregando } from '../../components/Carregando';
 import { api } from '../../lib/api';
 import { Paginacao } from '../catalogo/Paginacao';
@@ -171,6 +172,7 @@ export function ListaPedidos({ versao, aoAlterar }: Props) {
               <th style={{ width: 130 }}>Pedido</th>
               <th style={{ width: 110 }}>Orçamento</th>
               <th>Criado em</th>
+              <th style={{ width: 150 }}>Responsável</th>
               <th className="num" style={{ width: 70 }}>
                 Itens
               </th>
@@ -191,6 +193,9 @@ export function ListaPedidos({ versao, aoAlterar }: Props) {
                   </td>
                   <td className="pedido-ref-orc">{p.orcamento_numero}</td>
                   <td>{formatarDataHora(p.criado)}</td>
+                  <td>
+                    <NomeUsuario usuario={p.responsavel} />
+                  </td>
                   <td className="num">{p.qtd_itens}</td>
                   <td className="num" style={{ fontWeight: 600 }}>
                     {formatBRL(p.total)}

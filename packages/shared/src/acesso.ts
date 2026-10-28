@@ -56,10 +56,18 @@ export interface Usuario {
   id: number;
   nome: string;
   login: string;
-  excluido: boolean;
+  /** Inativo não entra no sistema; nenhum usuário é apagado (mantém a referência nas ações). */
+  ativo: boolean;
   criado: string;
   atualizado: string;
-  excluido_em: string | null;
+  inativado_em: string | null;
+}
+
+/** Referência ao usuário responsável por uma ação (orçamento, pedido, movimentação). */
+export interface UsuarioResumo {
+  id: number;
+  nome: string;
+  login: string;
 }
 
 /** Usuário logado (GET /api/auth/sessao). */

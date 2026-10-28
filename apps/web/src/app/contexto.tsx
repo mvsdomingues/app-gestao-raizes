@@ -18,6 +18,7 @@ import {
   type Pedido,
   type PedidoDoOrcamento,
   type StatusFornecedor,
+  type UsuarioResumo,
 } from '@raizes/shared';
 import { api } from '../lib/api';
 import { useSessao } from './sessao';
@@ -40,6 +41,9 @@ export interface FolhaOrcamento {
   total: number;
   /** Pedido ativo do orçamento (null = sem pedido) */
   pedido?: PedidoDoOrcamento | null;
+  /** Quem criou / alterou por último (null = registro anterior ao controle de acesso) */
+  responsavel?: UsuarioResumo | null;
+  alteradoPor?: UsuarioResumo | null;
 }
 
 interface ContextoApp {

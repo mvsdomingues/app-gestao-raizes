@@ -8,7 +8,7 @@ import { ItemCarrinho } from './ItemCarrinho';
 
 export function Carrinho() {
   const { tela, visitas, irPara, mostrarOrcamento, parametros } = useApp();
-  const { pode } = useSessao();
+  const { pode, usuario } = useSessao();
   const { estado, limpar, redesenhar, definirFrete } = useCarrinho();
   const { frete, edicao } = estado;
   const [gerando, setGerando] = useState(false);
@@ -73,7 +73,18 @@ export function Carrinho() {
       if (id !== undefined) alert(`Orçamento ${numero} gravado.`);
       return;
     }
-    mostrarOrcamento({ id, numero, dataHora, itens: snapshot, subtotal: sub, frete: valorFrete, total: tot });
+    const eu = usuario ? { id: usuario.id, nome: usuario.nome, login: usuario.login } : null;
+    mostrarOrcamento({
+      id,
+      numero,
+      dataHora,
+      itens: snapshot,
+      subtotal: sub,
+      frete: valorFrete,
+      total: tot,
+      // Alteração: o criador original aparece ao reabrir o orçamento pela lista
+      ...(edicao ? { alteradoPor: eu } : { responsavel: eu, alteradoPor: null }),
+    });
   };
 
   return (

@@ -38,7 +38,7 @@ export function rotasAuth(db: Banco): Router {
 
     const u = buscarUsuarioPorLogin(db, login);
     const ok = await verificarSenha(senha, u?.senha_hash ?? HASH_FALSO);
-    if (!u || !ok || u.excluido) {
+    if (!u || !ok || u.inativo) {
       registrarFalhaLogin(chave);
       throw new ErroHttp(401, 'Login ou senha inválidos');
     }
