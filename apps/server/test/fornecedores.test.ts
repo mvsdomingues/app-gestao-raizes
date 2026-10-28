@@ -87,3 +87,14 @@ describe('mapeamento de colunas SM', () => {
     });
   });
 });
+
+describe('foto da SPOT', () => {
+  it('monta a URL a partir da coluna Image ou do Sku', async () => {
+    const { urlFotoSpot } = await import('../src/fornecedores/spot');
+    const base = 'https://www.spotgifts.com.br/fotos/produtos/';
+    expect(urlFotoSpot('11112-104', '11112_104.jpg')).toBe(`${base}11112_104-c_1.jpg`);
+    expect(urlFotoSpot('11112-104', '')).toBe(`${base}11112_104-c_1.jpg`);
+    expect(urlFotoSpot('11112-104-GG', undefined)).toBe(`${base}11112_104-c_1.jpg`);
+    expect(urlFotoSpot('SEM-CODIGO', null)).toBeNull();
+  });
+});

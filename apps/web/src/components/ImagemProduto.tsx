@@ -24,5 +24,6 @@ export function ImagemProduto({ url, classeVazia, vaziaDiv, icone = '✦', ...im
   if (!url || falhou) {
     return vaziaDiv ? <div className={classeVazia}>{icone}</div> : <span className={classeVazia}>{icone}</span>;
   }
-  return <img src={url} {...img} alt={img.alt ?? ''} onError={() => setFalhou(true)} />;
+  // no-referrer: fornecedores com bloqueio de "hotlink" costumam liberar pedidos sem Referer
+  return <img src={url} referrerPolicy="no-referrer" {...img} alt={img.alt ?? ''} onError={() => setFalhou(true)} />;
 }

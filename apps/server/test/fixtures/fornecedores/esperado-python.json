@@ -1,211 +1,211 @@
 {
- "produtos": [
-  {
-   "fornecedor": "ASIA",
-   "codigo": "MC511-CZ",
-   "nome": "Bolsa Multifuncional - Cinza",
-   "preco": 89.0,
-   "qtd_estoque": 533.0,
-   "imagem_url": "https://media.asiaimport.com.br/var1.jpg"
-  },
-  {
-   "fornecedor": "ASIA",
-   "codigo": "MC511-PT",
-   "nome": "Bolsa Multifuncional - Preto",
-   "preco": 89.0,
-   "qtd_estoque": 0.0,
-   "imagem_url": "https://media.asiaimport.com.br/pai1.jpg"
-  },
-  {
-   "fornecedor": "ASIA",
-   "codigo": "MC511-X",
-   "nome": "Bolsa Sem Cor",
-   "preco": 79.5,
-   "qtd_estoque": null,
-   "imagem_url": "https://media.asiaimport.com.br/pai1.jpg"
-  },
-  {
-   "fornecedor": "ASIA",
-   "codigo": "CA01-AZ",
-   "nome": "Caneca -  - Azul",
-   "preco": 15.9,
-   "qtd_estoque": 5603.0,
-   "imagem_url": "https://media.asiaimport.com.br/var2.jpg"
-  },
-  {
-   "fornecedor": "ASIA",
-   "codigo": "",
-   "nome": "None - None",
-   "preco": 0.0,
-   "qtd_estoque": 12.0,
-   "imagem_url": "https://media.asiaimport.com.br/pai2.png"
-  },
-  {
-   "fornecedor": "ASIA",
-   "codigo": "GA4600-BR",
-   "nome": "Garrafa Aço Inox - Branco",
-   "preco": 17.85,
-   "qtd_estoque": 3.0,
-   "imagem_url": "http://media.asiaimport.com.br/var3.jpg"
-  },
-  {
-   "fornecedor": "SM",
-   "codigo": "AS-00610",
-   "nome": "Garrafa em alumínio branco.\nCapacidade: 600ml",
-   "preco": 18.15,
-   "qtd_estoque": 330.0,
-   "imagem_url": "https://cdn.exemplo.com/a.webp"
-  },
-  {
-   "fornecedor": "SM",
-   "codigo": "AS-00611",
-   "nome": "Garrafa preta",
-   "preco": 18.15,
-   "qtd_estoque": null,
-   "imagem_url": null
-  },
-  {
-   "fornecedor": "SM",
-   "codigo": "AS-00612",
-   "nome": "Sem saldo",
-   "preco": 0.0,
-   "qtd_estoque": null,
-   "imagem_url": "https://cdn.exemplo.com/c.jpg"
-  },
-  {
-   "fornecedor": "SM",
-   "codigo": "AS-00613",
-   "nome": "",
-   "preco": 7.0,
-   "qtd_estoque": 0.0,
-   "imagem_url": null
-  },
-  {
-   "fornecedor": "SPOT",
-   "codigo": "11103-103",
-   "nome": "Borracha branca em TPR. 55 x 22 x 12 mm",
-   "preco": 0.342,
-   "qtd_estoque": 229762.0,
-   "imagem_url": null
-  },
-  {
-   "fornecedor": "SPOT",
-   "codigo": "11110-105",
-   "nome": "Caneta esferográfica; escrita azul",
-   "preco": 1.99,
-   "qtd_estoque": 718.0,
-   "imagem_url": null
-  },
-  {
-   "fornecedor": "SPOT",
-   "codigo": "92352-103",
-   "nome": "nan",
-   "preco": null,
-   "qtd_estoque": 0.0,
-   "imagem_url": null
-  },
-  {
-   "fornecedor": "SPOT",
-   "codigo": "99999-001",
-   "nome": "Produto sem estoque",
-   "preco": 10.0,
-   "qtd_estoque": null,
-   "imagem_url": null
-  },
-  {
-   "fornecedor": "SPOT",
-   "codigo": "11112-104",
-   "nome": "Duplicado no estoque",
-   "preco": 3.5,
-   "qtd_estoque": 10.0,
-   "imagem_url": null
-  },
-  {
-   "fornecedor": "SPOT",
-   "codigo": "11112-104",
-   "nome": "Duplicado no estoque",
-   "preco": 3.5,
-   "qtd_estoque": 20.0,
-   "imagem_url": null
-  },
-  {
-   "fornecedor": "XBZ",
-   "codigo": "06520",
-   "nome": "CANECA ACRÍLICA 400 ML COM TAMPA AZUL",
-   "preco": 13.08,
-   "qtd_estoque": 5356.0,
-   "imagem_url": "https://cdn.xbzbrindes.com.br/img/6520.jpg"
-  },
-  {
-   "fornecedor": "XBZ",
-   "codigo": "10250",
-   "nome": "ESPELHO PLÁSTICO PRATA",
-   "preco": 2.16,
-   "qtd_estoque": 92593.0,
-   "imagem_url": null
-  },
-  {
-   "fornecedor": "XBZ",
-   "codigo": "10251",
-   "nome": "nan",
-   "preco": 5.0,
-   "qtd_estoque": 0.0,
-   "imagem_url": null
-  },
-  {
-   "fornecedor": "XBZ",
-   "codigo": "10252",
-   "nome": "NAN TESTE VERDE",
-   "preco": null,
-   "qtd_estoque": 7.0,
-   "imagem_url": null
+  "produtos": [
+    {
+      "fornecedor": "ASIA",
+      "codigo": "MC511-CZ",
+      "nome": "Bolsa Multifuncional - Cinza",
+      "preco": 89.0,
+      "qtd_estoque": 533.0,
+      "imagem_url": "https://media.asiaimport.com.br/var1.jpg"
+    },
+    {
+      "fornecedor": "ASIA",
+      "codigo": "MC511-PT",
+      "nome": "Bolsa Multifuncional - Preto",
+      "preco": 89.0,
+      "qtd_estoque": 0.0,
+      "imagem_url": "https://media.asiaimport.com.br/pai1.jpg"
+    },
+    {
+      "fornecedor": "ASIA",
+      "codigo": "MC511-X",
+      "nome": "Bolsa Sem Cor",
+      "preco": 79.5,
+      "qtd_estoque": null,
+      "imagem_url": "https://media.asiaimport.com.br/pai1.jpg"
+    },
+    {
+      "fornecedor": "ASIA",
+      "codigo": "CA01-AZ",
+      "nome": "Caneca -  - Azul",
+      "preco": 15.9,
+      "qtd_estoque": 5603.0,
+      "imagem_url": "https://media.asiaimport.com.br/var2.jpg"
+    },
+    {
+      "fornecedor": "ASIA",
+      "codigo": "",
+      "nome": "None - None",
+      "preco": 0.0,
+      "qtd_estoque": 12.0,
+      "imagem_url": "https://media.asiaimport.com.br/pai2.png"
+    },
+    {
+      "fornecedor": "ASIA",
+      "codigo": "GA4600-BR",
+      "nome": "Garrafa Aço Inox - Branco",
+      "preco": 17.85,
+      "qtd_estoque": 3.0,
+      "imagem_url": "http://media.asiaimport.com.br/var3.jpg"
+    },
+    {
+      "fornecedor": "SM",
+      "codigo": "AS-00610",
+      "nome": "Garrafa em alumínio branco.\nCapacidade: 600ml",
+      "preco": 18.15,
+      "qtd_estoque": 330.0,
+      "imagem_url": "https://cdn.exemplo.com/a.webp"
+    },
+    {
+      "fornecedor": "SM",
+      "codigo": "AS-00611",
+      "nome": "Garrafa preta",
+      "preco": 18.15,
+      "qtd_estoque": null,
+      "imagem_url": null
+    },
+    {
+      "fornecedor": "SM",
+      "codigo": "AS-00612",
+      "nome": "Sem saldo",
+      "preco": 0.0,
+      "qtd_estoque": null,
+      "imagem_url": "https://cdn.exemplo.com/c.jpg"
+    },
+    {
+      "fornecedor": "SM",
+      "codigo": "AS-00613",
+      "nome": "",
+      "preco": 7.0,
+      "qtd_estoque": 0.0,
+      "imagem_url": null
+    },
+    {
+      "fornecedor": "SPOT",
+      "codigo": "11103-103",
+      "nome": "Borracha branca em TPR. 55 x 22 x 12 mm",
+      "preco": 0.342,
+      "qtd_estoque": 229762.0,
+      "imagem_url": "https://www.spotgifts.com.br/fotos/produtos/11103_103-c_1.jpg"
+    },
+    {
+      "fornecedor": "SPOT",
+      "codigo": "11110-105",
+      "nome": "Caneta esferográfica; escrita azul",
+      "preco": 1.99,
+      "qtd_estoque": 718.0,
+      "imagem_url": "https://www.spotgifts.com.br/fotos/produtos/11110_105-c_1.jpg"
+    },
+    {
+      "fornecedor": "SPOT",
+      "codigo": "92352-103",
+      "nome": "nan",
+      "preco": null,
+      "qtd_estoque": 0.0,
+      "imagem_url": "https://www.spotgifts.com.br/fotos/produtos/92352_103-c_1.jpg"
+    },
+    {
+      "fornecedor": "SPOT",
+      "codigo": "99999-001",
+      "nome": "Produto sem estoque",
+      "preco": 10.0,
+      "qtd_estoque": null,
+      "imagem_url": "https://www.spotgifts.com.br/fotos/produtos/99999_001-c_1.jpg"
+    },
+    {
+      "fornecedor": "SPOT",
+      "codigo": "11112-104",
+      "nome": "Duplicado no estoque",
+      "preco": 3.5,
+      "qtd_estoque": 10.0,
+      "imagem_url": "https://www.spotgifts.com.br/fotos/produtos/11112_104-c_1.jpg"
+    },
+    {
+      "fornecedor": "SPOT",
+      "codigo": "11112-104",
+      "nome": "Duplicado no estoque",
+      "preco": 3.5,
+      "qtd_estoque": 20.0,
+      "imagem_url": "https://www.spotgifts.com.br/fotos/produtos/11112_104-c_1.jpg"
+    },
+    {
+      "fornecedor": "XBZ",
+      "codigo": "06520",
+      "nome": "CANECA ACRÍLICA 400 ML COM TAMPA AZUL",
+      "preco": 13.08,
+      "qtd_estoque": 5356.0,
+      "imagem_url": "https://cdn.xbzbrindes.com.br/img/6520.jpg"
+    },
+    {
+      "fornecedor": "XBZ",
+      "codigo": "10250",
+      "nome": "ESPELHO PLÁSTICO PRATA",
+      "preco": 2.16,
+      "qtd_estoque": 92593.0,
+      "imagem_url": null
+    },
+    {
+      "fornecedor": "XBZ",
+      "codigo": "10251",
+      "nome": "nan",
+      "preco": 5.0,
+      "qtd_estoque": 0.0,
+      "imagem_url": null
+    },
+    {
+      "fornecedor": "XBZ",
+      "codigo": "10252",
+      "nome": "NAN TESTE VERDE",
+      "preco": null,
+      "qtd_estoque": 7.0,
+      "imagem_url": null
+    }
+  ],
+  "atualizacoes": [
+    {
+      "fornecedor": "ASIA",
+      "status": "OK",
+      "total": 6
+    },
+    {
+      "fornecedor": "SM",
+      "status": "OK",
+      "total": 4
+    },
+    {
+      "fornecedor": "SPOT",
+      "status": "OK",
+      "total": 6
+    },
+    {
+      "fornecedor": "XBZ",
+      "status": "OK",
+      "total": 4
+    }
+  ],
+  "logs": {
+    "ASIA": [
+      "  ✔ ASIA: 6 produtos salvos (6 com imagem)."
+    ],
+    "SM": [
+      "    [SM] Colunas recebidas: ['Sku', 'Descricao', 'PrecoVenda', 'Saldo', 'Fotos', 'Categoria']",
+      "  ✔ SM: 4 produtos salvos (2 com imagem)."
+    ],
+    "SPOT": [
+      "    [SPOT] ℹ Imagens apontadas para spotgifts.com.br/fotos/produtos/.",
+      "  ✔ SPOT: 6 produtos salvos (6 com imagem)."
+    ],
+    "XBZ": [
+      "    [XBZ] Todas as colunas recebidas:",
+      "         'CodigoAmigavel'                         ex: '06520'",
+      "         'Nome'                                   ex: 'CANECA ACRÍLICA 400 ML COM TAMPA'",
+      "         'CorWebPrincipal'                        ex: 'AZUL'",
+      "         'PrecoVenda'                             ex: '13.08'",
+      "         'QuantidadeDisponivel'                   ex: '5356'",
+      "         'ImagemUrl'                              ex: 'https://cdn.xbzbrindes.com.br/img/6520.jpg' ← 🖼 IMAGEM?",
+      "         'Peso'                                   ex: '0.2'",
+      "    [XBZ] Coluna de imagem: 'ImagemUrl' (ex: 'https://cdn.xbzbrindes.com.br/img/6520.jpg')",
+      "  ✔ XBZ: 4 produtos salvos (1 com imagem)."
+    ]
   }
- ],
- "atualizacoes": [
-  {
-   "fornecedor": "ASIA",
-   "status": "OK",
-   "total": 6
-  },
-  {
-   "fornecedor": "SM",
-   "status": "OK",
-   "total": 4
-  },
-  {
-   "fornecedor": "SPOT",
-   "status": "OK",
-   "total": 6
-  },
-  {
-   "fornecedor": "XBZ",
-   "status": "OK",
-   "total": 4
-  }
- ],
- "logs": {
-  "ASIA": [
-   "  ✔ ASIA: 6 produtos salvos (6 com imagem)."
-  ],
-  "SM": [
-   "    [SM] Colunas recebidas: ['Sku', 'Descricao', 'PrecoVenda', 'Saldo', 'Fotos', 'Categoria']",
-   "  ✔ SM: 4 produtos salvos (2 com imagem)."
-  ],
-  "SPOT": [
-   "    [SPOT] ℹ Imagens não disponíveis publicamente — será exibido placeholder.",
-   "  ✔ SPOT: 6 produtos salvos (0 com imagem)."
-  ],
-  "XBZ": [
-   "    [XBZ] Todas as colunas recebidas:",
-   "         'CodigoAmigavel'                         ex: '06520'",
-   "         'Nome'                                   ex: 'CANECA ACRÍLICA 400 ML COM TAMPA'",
-   "         'CorWebPrincipal'                        ex: 'AZUL'",
-   "         'PrecoVenda'                             ex: '13.08'",
-   "         'QuantidadeDisponivel'                   ex: '5356'",
-   "         'ImagemUrl'                              ex: 'https://cdn.xbzbrindes.com.br/img/6520.jpg' ← 🖼 IMAGEM?",
-   "         'Peso'                                   ex: '0.2'",
-   "    [XBZ] Coluna de imagem: 'ImagemUrl' (ex: 'https://cdn.xbzbrindes.com.br/img/6520.jpg')",
-   "  ✔ XBZ: 4 produtos salvos (1 com imagem)."
-  ]
- }
 }

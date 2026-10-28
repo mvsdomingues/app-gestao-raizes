@@ -4,6 +4,23 @@ import { lerCsv, type Registro } from './tabela';
 import type { Coletor, LinhaFornecedor } from './tipos';
 
 const BASE = 'https://ws.spotgifts.com.br/downloads/v1SSL/file';
+/** Fotos publicadas no site da SPOT: /fotos/produtos/11112_104-c_1.jpg */
+export const BASE_FOTOS_SPOT = 'https://www.spotgifts.com.br/fotos/produtos/';
+
+/**
+ * URL da foto principal do produto. Usa o nome do arquivo da coluna "Image"
+ * do CSV (11112_104.jpg) e, sem ele, o Sku (11112-104, 11112-104-GG → 11112_104).
+ */
+export function urlFotoSpot(sku: unknown, imagem: unknown): string | null {
+  const arquivo = typeof imagem === 'string' ? imagem.trim() : '';
+  const m = /^([\w-]+?)\.(jpe?g|png|webp)$/i.exec(arquivo);
+  let base = m ? m[1]! : '';
+  if (!base) {
+    const s = /^(\d+)-(\d+)/.exec(String(sku ?? '').trim());
+    if (s) base = `${s[1]}_${s[2]}`;
+  }
+  return base ? `${BASE_FOTOS_SPOT}${encodeURIComponent(base)}-c_1.jpg` : null;
+}
 
 function exigirColunas(linhas: Registro[], colunas: string[]): void {
   if (!linhas.length) return;
@@ -30,11 +47,9 @@ export const spot: Coletor = {
     const dfProd = await baixar(urlProd);
     const dfEst = await baixar(urlEst);
 
-    // O SPOT retorna nomes de arquivo no CSV (ex: '11103_103.jpg') mas NÃO
-    // disponibiliza essas imagens em nenhuma URL pública acessível — o site
-    // é uma SPA que renderiza via JavaScript. Imagem fica vazia; a interface
-    // exibe placeholder (ou a imagem baixada por `npm run imagens:spot`).
-    log('    [SPOT] ℹ Imagens não disponíveis publicamente — será exibido placeholder.');
+    // As fotos vêm direto do site da SPOT (sem navegador automatizado).
+    // Produto sem foto nesse endereço mostra o placeholder na interface.
+    log('    [SPOT] ℹ Imagens apontadas para spotgifts.com.br/fotos/produtos/.');
 
     exigirColunas(dfEst, ['Sku', 'Quantity']);
     exigirColunas(dfProd, ['Sku', 'Description', 'Price1']);
@@ -57,7 +72,7 @@ export const spot: Coletor = {
           nome: p.Description,
           preco: p.Price1,
           qtd_estoque: q,
-          imagem_url: null,
+          imagem_url: urlFotoSpot(p.Sku, p.Image),
         });
       }
     }

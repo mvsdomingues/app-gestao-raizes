@@ -91,16 +91,14 @@ Fornecedores disponíveis: `asia`, `sm`, `spot`, `xbz`.
 
 ### Imagens da SPOT
 
-A SPOT não publica URLs de imagem. O comando abaixo abre o site com um navegador automatizado e baixa as fotos para `data/imagens/spot/`:
+A SPOT envia no CSV só o nome do arquivo da foto. Na atualização, cada produto passa a apontar para a foto publicada no site: `https://www.spotgifts.com.br/fotos/produtos/11112_104-c_1.jpg` (montada pela coluna `Image` ou pelo Sku; códigos com tamanho, como `11112-104-GG`, usam a foto do produto base). Não é preciso navegador automatizado nem baixar arquivos; produto sem foto nesse endereço mostra o placeholder.
+
+O comando antigo de download com Playwright continua disponível, mas só é necessário em casos pontuais:
 
 ```bash
 npm run setup:playwright          # uma única vez (instala o Chromium)
-npm run imagens:spot              # produtos sem imagem
-npm run imagens:spot -- --limit 50
 npm run imagens:spot -- --force   # reprocessa todos
 ```
-
-> Atenção: atualizar a SPOT recria os produtos e apaga o vínculo com as imagens baixadas (comportamento herdado da versão anterior).
 
 ---
 
