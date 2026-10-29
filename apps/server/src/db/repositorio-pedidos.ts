@@ -237,6 +237,15 @@ export function retrocederPedido(db: Banco, codigo: string, usuarioId: number, e
   })();
 }
 
+/**
+ * Altera a observação do pedido (permitido em qualquer situação, inclusive
+ * encerrado ou cancelado). Não muda a etapa nem a data de atualização do fluxo.
+ */
+export function alterarObservacaoPedido(db: Banco, codigo: string, observacao: string | null): void {
+  const r = db.prepare('UPDATE pedidos SET observacao = ? WHERE codigo = ? COLLATE NOCASE').run(observacao, codigo);
+  if (!r.changes) throw new ErroHttp(404, 'Pedido não encontrado');
+}
+
 /** Cancela o pedido (libera o orçamento para um novo pedido). */
 export function cancelarPedido(db: Banco, codigo: string, motivo: string | null, usuarioId: number): void {
   db.transaction(() => {

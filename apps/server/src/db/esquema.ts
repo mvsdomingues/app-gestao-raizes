@@ -181,4 +181,8 @@ function migrarColunas(db: Database.Database): void {
   if (!colunas(db, 'orcamentos').includes('status')) {
     db.exec(`ALTER TABLE orcamentos ADD COLUMN status TEXT NOT NULL DEFAULT 'ABERTO'`);
   }
+  // Observações livres do orçamento (digitadas no carrinho)
+  if (!colunas(db, 'orcamentos').includes('observacao')) {
+    db.exec(`ALTER TABLE orcamentos ADD COLUMN observacao TEXT`);
+  }
 }

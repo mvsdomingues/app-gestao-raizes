@@ -54,6 +54,11 @@ export function ItemCarrinho({ item }: { item: Item }) {
       <div className="cart-item-info" style={{ minWidth: 0, flex: 1 }}>
         <div className="cart-item-name">
           {p.nome}
+          {p.codigo && (
+            <span className="cart-item-codigo" title="Código do produto">
+              {p.codigo}
+            </span>
+          )}
         </div>
         <div className="cart-item-price">
           <span className={`sup-badge ${classeFornecedor(p.fornecedor, p.origem)}`}>{p.fornecedor}</span>

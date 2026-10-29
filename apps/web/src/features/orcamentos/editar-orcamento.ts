@@ -114,13 +114,18 @@ export function useEditarOrcamento() {
         return;
       }
       const { itens, semAjustes } = await montarItensCarrinho(o, parametros);
-      carregarOrcamento(itens, String(o.frete || 0), {
-        id: o.id,
-        numero: o.numero,
-        aviso: semAjustes
-          ? 'Orçamento gravado antes desta versão: os custos de personalização e fixos foram preenchidos com os Parâmetros atuais — confira os valores.'
-          : undefined,
-      });
+      carregarOrcamento(
+        itens,
+        String(o.frete || 0),
+        {
+          id: o.id,
+          numero: o.numero,
+          aviso: semAjustes
+            ? 'Orçamento gravado antes desta versão: os custos de personalização e fixos foram preenchidos com os Parâmetros atuais — confira os valores.'
+            : undefined,
+        },
+        o.observacao ?? '',
+      );
       irPara('carrinho');
     } catch (e) {
       console.error(e);

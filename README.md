@@ -132,7 +132,7 @@ O menu fica na **barra lateral** (pode ser recolhido para mostrar só os ícones
 **Vendas**
 
 1. **Catálogo**: busque por nome ou código, filtre por fornecedor/estoque, alterne grade/lista e clique no produto para incluí-lo no carrinho. Mostra os produtos dos fornecedores e os produtos próprios.
-2. **Carrinho**: ajuste quantidades e, em *Ajustar custos e margem*, os custos de personalização e os custos fixos de cada item (começam com os valores da tela **Parâmetros**). Imposto de compra, imposto sobre venda e margem não aparecem no carrinho: são sempre os cadastrados em **Parâmetros**.
+2. **Carrinho**: cada item mostra o nome e o código do produto. Ajuste quantidades e, em *Ajustar custos e margem*, os custos de personalização e os custos fixos de cada item (começam com os valores da tela **Parâmetros**). Imposto de compra, imposto sobre venda e margem não aparecem no carrinho: são sempre os cadastrados em **Parâmetros**. O campo **Observações** (texto livre) é gravado com o orçamento, aparece na folha impressa e volta ao carrinho quando o orçamento é alterado.
 3. **Orçamentos**: tela única com duas abas.
    - **Todos os orçamentos**: lista paginada (20 por página) com filtros por número (`ORC-0005` ou `5`), produto (descrição ou código de qualquer item), período (de/até), faixa de valor total e situação. Clique em uma linha para ver os detalhes; **✎ Editar** carrega o orçamento de volta no carrinho (o carrinho precisa estar vazio).
    - **Detalhes**: folha do orçamento selecionado, com **Editar**, **Gerar pedido** e **Imprimir / Salvar PDF**.
@@ -146,6 +146,7 @@ O menu fica na **barra lateral** (pode ser recolhido para mostrar só os ícones
    - Fluxo: **Criado → Em Produção → Produzido → Faturado → Enviado → Encerrado**. O botão de ação (na lista ou nos detalhes) move o pedido para a etapa seguinte, e cada movimentação grava a data e a hora (base para controle de SLA).
    - **Todos os pedidos**: lista paginada com tag da etapa e filtros por código, orçamento, situação (incluindo *Em andamento*) e período.
    - **Quadro**: kanban com uma coluna por etapa, nas mesmas cores das tags. Cada coluna mostra até 20 pedidos pela data/hora em que entraram na etapa (os que estão há mais tempo primeiro; em *Encerrado*, os mais recentes) e o total da etapa. O cartão pode ser arrastado, ou movido pelos botões ‹ ›, **apenas para a etapa anterior ou a próxima**; voltar uma etapa também fica registrado nas movimentações. Pedidos cancelados não aparecem no quadro.
+   - **Observação** do pedido: editável a qualquer momento, em qualquer situação (inclusive encerrado ou cancelado), sem alterar o fluxo.
    - **Detalhes**: etapas com data/hora, tempo total, histórico de movimentações com o tempo em cada etapa e os itens do orçamento.
    - Pedidos não são editados: se estiver errado, **Cancelar pedido** (com motivo). O orçamento fica livre para ser alterado ou usado em outro pedido. Nunca há dois pedidos ativos (não cancelados) para o mesmo orçamento; pedidos encerrados não podem ser cancelados.
 5. **Mockups**: aplique a logomarca sobre a foto dos produtos do carrinho e baixe o PNG.
@@ -192,4 +193,5 @@ Todas as rotas exigem login, exceto as de `/api/auth`. Cada rota também exige a
 | `GET /api/pedidos/quadro` | Quadro por etapa (`limite`, padrão 20; `meus=1`) → `{ limite, colunas: [{ status, total, pedidos }] }` |
 | `POST /api/pedidos/:codigo/avancar` · `POST /api/pedidos/:codigo/retroceder` | Próxima / etapa anterior (`{ status_atual }`, 409 se o pedido já mudou) |
 | `POST /api/pedidos/:codigo/cancelar` | Cancela (`{ motivo }`) |
+| `PUT /api/pedidos/:codigo/observacao` | Altera a observação (`{ observacao }`), em qualquer situação |
 | `POST /api/atualizar` · `GET /api/atualizar/status` | Atualização dos fornecedores |

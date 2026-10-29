@@ -122,6 +122,13 @@ export function FolhaOrcamento({ folha }: { folha: DadosFolha }) {
         </tfoot>
       </table>
 
+      {folha.observacao && (
+        <div className="orc-observacoes" id="orc-observacoes">
+          <div className="orc-observacoes-titulo">Observações</div>
+          <div className="orc-observacoes-texto">{folha.observacao}</div>
+        </div>
+      )}
+
       <div className="orc-footer">
         <div className="orc-footer-brand">Raízes Personalizados</div>
         <span>Válido por 7 dias · sujeito à disponibilidade de estoque</span>

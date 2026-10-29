@@ -10,8 +10,8 @@ import { avisar, confirmar, erro } from '../../lib/dialogo';
 export function Carrinho() {
   const { tela, visitas, irPara, mostrarOrcamento, parametros } = useApp();
   const { pode, usuario } = useSessao();
-  const { estado, limpar, redesenhar, definirFrete } = useCarrinho();
-  const { frete, edicao } = estado;
+  const { estado, limpar, redesenhar, definirFrete, definirObservacao } = useCarrinho();
+  const { frete, edicao, observacao } = estado;
   const [gerando, setGerando] = useState(false);
 
   // Abrir a aba redesenha a lista (reinicia campos e fecha os painéis)
@@ -51,7 +51,7 @@ export function Carrinho() {
     let numero = '—';
     let id: number | undefined;
     let dataHora = new Date().toISOString();
-    const dados = { itens: snapshot, subtotal: sub, frete: valorFrete, total: tot };
+    const dados = { itens: snapshot, subtotal: sub, frete: valorFrete, total: tot, observacao: observacao.trim() };
     try {
       // Alteração de orçamento salvo: mesmo número, data atualizada
       const salvo = edicao ? await api.atualizarOrcamento(edicao.id, dados) : await api.criarOrcamento(dados);
@@ -89,6 +89,7 @@ export function Carrinho() {
       subtotal: sub,
       frete: valorFrete,
       total: tot,
+      observacao: observacao.trim() || null,
       // Alteração: o criador original aparece ao reabrir o orçamento pela lista
       ...(edicao ? { alteradoPor: eu } : { responsavel: eu, alteradoPor: null }),
     });
@@ -174,6 +175,20 @@ export function Carrinho() {
                       onChange={(e) => definirFrete(e.target.value)}
                     />
                   </div>
+                </div>
+                <div className="cart-observacao">
+                  <label className="cart-field-label" htmlFor="campo-observacao">
+                    Observações
+                  </label>
+                  <textarea
+                    id="campo-observacao"
+                    className="custom-input cart-observacao-input"
+                    rows={3}
+                    maxLength={2000}
+                    placeholder="Prazo de entrega, condições de pagamento, detalhes da personalização…"
+                    value={observacao}
+                    onChange={(e) => definirObservacao(e.target.value)}
+                  />
                 </div>
               </div>
 

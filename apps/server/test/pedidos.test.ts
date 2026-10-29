@@ -169,4 +169,17 @@ describe('pedidos', () => {
     expect(criado.total).toBe(2);
     expect(criado.pedidos.map((p: { codigo: string }) => p.codigo)).toEqual(['PED-000003']); // mais antigo na etapa primeiro
   });
+
+  it('observação do pedido editável em qualquer situação', async () => {
+    // PED-000001 está encerrado e PED-000002 cancelado
+    const enc = await req('PUT', '/api/pedidos/PED-000001/observacao', { observacao: 'Entregue na portaria' });
+    expect(enc.status).toBe(200);
+    expect(enc.json).toMatchObject({ status: 'ENCERRADO', observacao: 'Entregue na portaria' });
+    const atualizadoAntes = enc.json.atualizado;
+    const canc = await req('PUT', '/api/pedidos/PED-000002/observacao', { observacao: 'Refeito no PED-000003' });
+    expect(canc.json).toMatchObject({ status: 'CANCELADO', observacao: 'Refeito no PED-000003' });
+    expect((await req('PUT', '/api/pedidos/PED-000001/observacao', { observacao: '  ' })).json.observacao).toBeNull();
+    expect((await req('GET', '/api/pedidos/PED-000001')).json.atualizado).toBe(atualizadoAntes); // não mexe no fluxo
+    expect((await req('PUT', '/api/pedidos/PED-999999/observacao', { observacao: 'x' })).status).toBe(404);
+  });
 });

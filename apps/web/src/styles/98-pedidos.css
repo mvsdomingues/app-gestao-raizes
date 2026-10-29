@@ -320,3 +320,12 @@
   #view-pedidos .orc-toolbar, #view-pedidos .subabas { display: none !important; }
 }
 #view-orcamento .orc-toolbar-actions { align-items: center; }
+
+/* Observação do pedido (editável em qualquer situação) */
+.pedido-obs { display: flex; align-items: baseline; flex-wrap: wrap; gap: 4px 6px; }
+.pedido-obs-texto { white-space: pre-wrap; }
+.pedido-obs-vazia { color: var(--muted); }
+.pedido-obs-editar { margin-left: 8px; font-size: .78rem; }
+.pedido-obs.editando { display: block; }
+.pedido-obs.editando textarea { width: 100%; margin-top: 5px; resize: vertical; font-family: var(--font-body); }
+.pedido-obs-acoes { display: flex; justify-content: flex-end; gap: 8px; margin-top: 8px; }

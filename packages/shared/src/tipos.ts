@@ -96,6 +96,8 @@ export interface FiltrosOrcamentos {
 /** Orçamento completo (GET /api/orcamentos/:id). */
 export interface Orcamento extends ResumoOrcamento {
   itens: ItemOrcamento[];
+  /** Observações livres digitadas no carrinho */
+  observacao?: string | null;
   /** Histórico de situações (mais antigo primeiro) */
   movimentos?: import('./orcamentos').MovimentoOrcamento[];
 }
@@ -106,6 +108,8 @@ export interface NovoOrcamento {
   subtotal: number;
   frete: number;
   total: number;
+  /** Observações livres (texto) */
+  observacao?: string;
 }
 
 /** Resposta de POST /api/orcamentos */

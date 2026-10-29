@@ -50,7 +50,7 @@ export function lerOrcamento(db: Banco, id: number): Orcamento | undefined {
   const row = db
     .prepare(
       `SELECT orcamentos.id, orcamentos.data_hora, orcamentos.subtotal, orcamentos.frete, orcamentos.total,
-              orcamentos.qtd_itens, orcamentos.itens_json, ${SQL_STATUS_ORCAMENTO} AS status,
+              orcamentos.qtd_itens, orcamentos.itens_json, orcamentos.observacao, ${SQL_STATUS_ORCAMENTO} AS status,
               ${colunasResponsavel('ur', 'resp')}, ${colunasResponsavel('ua', 'alt')}
          FROM orcamentos ${JOIN_RESPONSAVEIS} WHERE orcamentos.id = ?`,
     )
@@ -168,13 +168,20 @@ export function rotasOrcamentos(db: Banco): Router {
   });
 
   /** Valida o corpo (mesmas regras na inclusão e na alteração). */
-  function lerCorpo(req: Request): { itens: unknown[]; subtotal: number; frete: number; total: number } {
+  function lerCorpo(req: Request): {
+    itens: unknown[];
+    subtotal: number;
+    frete: number;
+    total: number;
+    observacao: string | null;
+  } {
     const data = corpoJson(req);
     const itens = data.itens ?? [];
     if (!Array.isArray(itens) || itens.length === 0) throw new ErroHttp(400, 'itens vazio');
     try {
       const num = (v: unknown) => (falsyPython(v) ? 0 : floatPython(v));
-      return { itens, subtotal: num(data.subtotal), frete: num(data.frete), total: num(data.total) };
+      const obs = typeof data.observacao === 'string' ? data.observacao.trim().slice(0, 2000) : '';
+      return { itens, subtotal: num(data.subtotal), frete: num(data.frete), total: num(data.total), observacao: obs || null };
     } catch {
       throw new ErroHttp(400, 'valores inválidos');
     }
@@ -182,14 +189,14 @@ export function rotasOrcamentos(db: Banco): Router {
 
   r.post('/api/orcamentos', (req, res) => {
     const eu = exigirUsuario(res);
-    const { itens, subtotal, frete, total } = lerCorpo(req);
+    const { itens, subtotal, frete, total, observacao } = lerCorpo(req);
     const dataHora = isoLocal();
     const info = db
       .prepare(
-        `INSERT INTO orcamentos (data_hora, subtotal, frete, total, qtd_itens, itens_json, usuario_id)
-         VALUES (?, ?, ?, ?, ?, ?, ?)`,
+        `INSERT INTO orcamentos (data_hora, subtotal, frete, total, qtd_itens, itens_json, usuario_id, observacao)
+         VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
       )
-      .run(dataHora, subtotal, frete, total, itens.length, JSON.stringify(itens), eu.id);
+      .run(dataHora, subtotal, frete, total, itens.length, JSON.stringify(itens), eu.id, observacao);
     const id = Number(info.lastInsertRowid);
     registrarMovimentoOrcamento(db, id, null, 'ABERTO', eu.id, null, dataHora);
     const corpo: OrcamentoCriado = { id, numero: numeroOrcamento(id), data_hora: dataHora };
@@ -200,7 +207,7 @@ export function rotasOrcamentos(db: Banco): Router {
   r.put('/api/orcamentos/:oid', (req, res, next) => {
     if (!/^\d+$/.test(req.params.oid)) return next();
     const id = Number(req.params.oid);
-    const { itens, subtotal, frete, total } = lerCorpo(req);
+    const { itens, subtotal, frete, total, observacao } = lerCorpo(req);
     // Só orçamento "Aberto" pode ser alterado (enviado: voltar para Aberto antes; com pedido: nunca)
     if (!db.prepare('SELECT 1 FROM orcamentos WHERE id = ?').get(id)) throw new ErroHttp(404, 'não encontrado');
     const situacao = statusDoOrcamento(db, id);
@@ -211,9 +218,9 @@ export function rotasOrcamentos(db: Banco): Router {
     const info = db
       .prepare(
         `UPDATE orcamentos SET data_hora = ?, subtotal = ?, frete = ?, total = ?, qtd_itens = ?, itens_json = ?,
-                alterado_por = ? WHERE id = ?`,
+                alterado_por = ?, observacao = ? WHERE id = ?`,
       )
-      .run(dataHora, subtotal, frete, total, itens.length, JSON.stringify(itens), eu.id, id);
+      .run(dataHora, subtotal, frete, total, itens.length, JSON.stringify(itens), eu.id, observacao, id);
     if (!info.changes) throw new ErroHttp(404, 'não encontrado');
     const corpo: OrcamentoCriado = { id, numero: numeroOrcamento(id), data_hora: dataHora };
     res.json(corpo);

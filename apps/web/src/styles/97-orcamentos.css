@@ -184,3 +184,32 @@
 @media print {
   .orc-situacao-painel { display: none !important; }
 }
+
+/* Código do produto ao lado do nome (carrinho) */
+.cart-item-codigo {
+  display: inline-block;
+  margin-left: 8px;
+  padding: 1px 7px;
+  border-radius: 6px;
+  background: var(--creme);
+  border: 1px solid var(--border);
+  font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  font-size: .72rem;
+  font-weight: 500;
+  color: var(--muted);
+  vertical-align: middle;
+  white-space: nowrap;
+}
+
+/* Observações do orçamento: campo no carrinho e bloco na folha */
+.cart-observacao { margin-top: 12px; display: flex; flex-direction: column; gap: 6px; }
+.cart-observacao-input { width: 100%; resize: vertical; min-height: 72px; font-family: var(--font-body); font-size: .84rem; }
+.orc-observacoes {
+  margin: 18px 0 6px;
+  padding: 12px 16px;
+  border-left: 3px solid var(--uva);
+  background: var(--creme);
+  border-radius: 0 var(--radius) var(--radius) 0;
+}
+.orc-observacoes-titulo { font-size: .66rem; font-weight: 600; letter-spacing: 1px; text-transform: uppercase; color: var(--muted); margin-bottom: 4px; }
+.orc-observacoes-texto { font-size: .86rem; line-height: 1.5; white-space: pre-wrap; color: var(--grafite); }

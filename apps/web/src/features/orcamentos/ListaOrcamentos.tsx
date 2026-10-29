@@ -108,6 +108,7 @@ export function ListaOrcamentos() {
         total: o.total,
         pedido: o.pedido ?? null,
         status: o.status,
+        observacao: o.observacao ?? null,
         responsavel: o.responsavel ?? null,
         alteradoPor: o.alterado_por ?? null,
       });

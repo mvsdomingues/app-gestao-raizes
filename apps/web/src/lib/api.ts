@@ -145,6 +145,9 @@ export const api = {
     enviar<Pedido>('POST', `/api/pedidos/${encodeURIComponent(codigo)}/avancar`, { status_atual: statusAtual }),
   retrocederPedido: (codigo: string, statusAtual: string) =>
     enviar<Pedido>('POST', `/api/pedidos/${encodeURIComponent(codigo)}/retroceder`, { status_atual: statusAtual }),
+  /** Observação do pedido (editável em qualquer situação). */
+  alterarObservacaoPedido: (codigo: string, observacao: string) =>
+    enviar<Pedido>('PUT', `/api/pedidos/${encodeURIComponent(codigo)}/observacao`, { observacao }),
   cancelarPedido: (codigo: string, motivo: string) =>
     enviar<Pedido>('POST', `/api/pedidos/${encodeURIComponent(codigo)}/cancelar`, { motivo }),
 

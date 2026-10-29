@@ -114,4 +114,15 @@ describe('situação do orçamento', () => {
     const r = await req('POST', '/api/orcamentos/2/status', { status: 'ENVIADO' }, c);
     expect(r.json.movimentos.at(-1).usuario.login).toBe('vend');
   });
+
+  it('observações do orçamento são gravadas, alteradas e lidas', async () => {
+    const novo = (
+      await req('POST', '/api/orcamentos', { itens: [item], subtotal: 1, frete: 0, total: 1, observacao: '  Entrega em 15 dias  ' })
+    ).json;
+    expect((await req('GET', `/api/orcamentos/${novo.id}`)).json.observacao).toBe('Entrega em 15 dias');
+    await req('PUT', `/api/orcamentos/${novo.id}`, { itens: [item], total: 1, observacao: 'Prazo 20 dias' });
+    expect((await req('GET', `/api/orcamentos/${novo.id}`)).json.observacao).toBe('Prazo 20 dias');
+    await req('PUT', `/api/orcamentos/${novo.id}`, { itens: [item], total: 1 });
+    expect((await req('GET', `/api/orcamentos/${novo.id}`)).json.observacao).toBeNull();
+  });
 });

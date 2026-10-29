@@ -46,6 +46,8 @@ export interface EstadoCarrinho {
   versao: number;
   /** Valor digitado no campo Frete (R$). */
   frete: string;
+  /** Observações livres do orçamento (gravadas junto com ele). */
+  observacao: string;
   /** Orçamento salvo que está sendo alterado (null = orçamento novo). */
   edicao: EdicaoOrcamento | null;
 }
@@ -67,7 +69,8 @@ type Acao =
   | { tipo: 'mockup'; id: string; imagem: string }
   | { tipo: 'redesenhar' }
   | { tipo: 'frete'; valor: string }
-  | { tipo: 'carregarOrcamento'; itens: Itens; frete: string; edicao: EdicaoOrcamento }
+  | { tipo: 'observacao'; valor: string }
+  | { tipo: 'carregarOrcamento'; itens: Itens; frete: string; observacao: string; edicao: EdicaoOrcamento }
   | { tipo: 'edicao'; edicao: EdicaoOrcamento | null };
 
 function semItem(itens: Itens, id: string): Itens {
@@ -91,7 +94,7 @@ function redutor(estado: EstadoCarrinho, acao: Acao): EstadoCarrinho {
       return { ...estado, ...redesenho, itens: semItem(itens, acao.id) };
     case 'limpar':
       // Esvaziar o carrinho também encerra a alteração de um orçamento salvo
-      return { ...estado, ...redesenho, itens: {}, edicao: null };
+      return { ...estado, ...redesenho, itens: {}, edicao: null, observacao: '' };
     case 'qtd': {
       const item = itens[acao.id];
       if (!item) return estado;
@@ -116,8 +119,10 @@ function redutor(estado: EstadoCarrinho, acao: Acao): EstadoCarrinho {
       return { ...estado, ...redesenho };
     case 'frete':
       return { ...estado, frete: acao.valor };
+    case 'observacao':
+      return { ...estado, observacao: acao.valor };
     case 'carregarOrcamento':
-      return { ...redesenho, itens: acao.itens, frete: acao.frete, edicao: acao.edicao };
+      return { ...redesenho, itens: acao.itens, frete: acao.frete, observacao: acao.observacao, edicao: acao.edicao };
     case 'edicao':
       return { ...estado, edicao: acao.edicao };
   }
@@ -133,15 +138,16 @@ interface ContextoCarrinho {
   vincularMockup: (id: number | string, imagem: string) => void;
   redesenhar: () => void;
   definirFrete: (valor: string) => void;
+  definirObservacao: (valor: string) => void;
   /** Substitui o carrinho pelos itens de um orçamento salvo (modo de alteração). */
-  carregarOrcamento: (itens: Itens, frete: string, edicao: EdicaoOrcamento) => void;
+  carregarOrcamento: (itens: Itens, frete: string, edicao: EdicaoOrcamento, observacao?: string) => void;
   definirEdicao: (edicao: EdicaoOrcamento | null) => void;
 }
 
 const Ctx = createContext<ContextoCarrinho | null>(null);
 
 export function ProvedorCarrinho({ children }: { children: ReactNode }) {
-  const [estado, despachar] = useReducer(redutor, { itens: {}, versao: 0, frete: '0', edicao: null });
+  const [estado, despachar] = useReducer(redutor, { itens: {}, versao: 0, frete: '0', observacao: '', edicao: null });
   const valor = useMemo<ContextoCarrinho>(
     () => ({
       estado,
@@ -153,7 +159,9 @@ export function ProvedorCarrinho({ children }: { children: ReactNode }) {
       vincularMockup: (id, imagem) => despachar({ tipo: 'mockup', id: String(id), imagem }),
       redesenhar: () => despachar({ tipo: 'redesenhar' }),
       definirFrete: (valor) => despachar({ tipo: 'frete', valor }),
-      carregarOrcamento: (itens, frete, edicao) => despachar({ tipo: 'carregarOrcamento', itens, frete, edicao }),
+      definirObservacao: (valor) => despachar({ tipo: 'observacao', valor }),
+      carregarOrcamento: (itens, frete, edicao, observacao = '') =>
+        despachar({ tipo: 'carregarOrcamento', itens, frete, observacao, edicao }),
       definirEdicao: (edicao) => despachar({ tipo: 'edicao', edicao }),
     }),
     [estado],

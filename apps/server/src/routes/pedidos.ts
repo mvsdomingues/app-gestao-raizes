@@ -8,6 +8,7 @@ import {
 } from '@raizes/shared';
 import type { Banco } from '../db/conexao';
 import {
+  alterarObservacaoPedido,
   avancarPedido,
   buscarPedido,
   cancelarPedido,
@@ -89,6 +90,12 @@ export function rotasPedidos(db: Banco): Router {
   r.post('/api/pedidos/:codigo/retroceder', (req, res) => {
     const corpo = corpoJson(req);
     retrocederPedido(db, req.params.codigo, exigirUsuario(res).id, typeof corpo.status_atual === 'string' ? corpo.status_atual : undefined);
+    res.json(detalhe(req.params.codigo));
+  });
+
+  /** Observação do pedido: editável em qualquer situação */
+  r.put('/api/pedidos/:codigo/observacao', (req, res) => {
+    alterarObservacaoPedido(db, req.params.codigo, textoOpcional(corpoJson(req).observacao, 2000));
     res.json(detalhe(req.params.codigo));
   });
 

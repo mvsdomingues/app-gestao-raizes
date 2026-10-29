@@ -45,6 +45,8 @@ export interface FolhaOrcamento {
   pedido?: PedidoDoOrcamento | null;
   /** Situação (Aberto, Enviado, Pedido gerado) */
   status?: StatusOrcamento;
+  /** Observações livres do orçamento */
+  observacao?: string | null;
   /** Quem criou / alterou por último (null = registro anterior ao controle de acesso) */
   responsavel?: UsuarioResumo | null;
   alteradoPor?: UsuarioResumo | null;
