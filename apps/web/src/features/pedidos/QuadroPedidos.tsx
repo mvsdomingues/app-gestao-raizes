@@ -12,6 +12,7 @@ import { useApp } from '../../app/contexto';
 import { Carregando } from '../../components/Carregando';
 import { api } from '../../lib/api';
 import { agoraLocal, duracao, formatarDataHora } from './comum';
+import { erroDe } from '../../lib/dialogo';
 
 const LIMITE = 20;
 
@@ -84,7 +85,7 @@ export function QuadroPedidos({ ativo, versao, aoAlterar }: Props) {
       aoAlterar();
       movido = true;
     } catch (e) {
-      alert('Não foi possível movimentar o pedido: ' + (e instanceof Error ? e.message : e));
+      void erroDe('Não foi possível movimentar o pedido.', e);
     } finally {
       setMovendo(null);
       const dados = await carregar();

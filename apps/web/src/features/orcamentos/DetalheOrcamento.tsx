@@ -56,7 +56,7 @@ export function DetalheOrcamento() {
                 disabled={processando !== null}
                 onClick={() => void alterar(folha.id!, folha.numero, status, 'ENVIADO')}
               >
-                ✉ Marcar como enviado
+                ✉ Enviar para o Cliente
               </button>
             )}
             {folha.id !== undefined && status === 'ENVIADO' && (

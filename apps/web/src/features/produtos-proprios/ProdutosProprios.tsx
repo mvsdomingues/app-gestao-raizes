@@ -5,6 +5,7 @@ import { Carregando } from '../../components/Carregando';
 import { ImagemProduto } from '../../components/ImagemProduto';
 import { api } from '../../lib/api';
 import { FormularioProdutoProprio } from './FormularioProdutoProprio';
+import { confirmar, erroDe } from '../../lib/dialogo';
 
 type Estado = { tipo: 'carregando' } | { tipo: 'erro'; msg: string } | { tipo: 'ok'; linhas: ProdutoProprio[] };
 
@@ -56,12 +57,19 @@ export function ProdutosProprios() {
   };
 
   const excluir = async (p: ProdutoProprio) => {
-    if (!confirm(`Excluir o produto ${p.codigo} – ${p.nome}?\n\nEsta ação não pode ser desfeita.`)) return;
+    if (
+      !(await confirmar(`Excluir o produto ${p.codigo} – ${p.nome}?\n\nEsta ação não pode ser desfeita.`, {
+        titulo: 'Excluir produto',
+        ok: 'Excluir',
+        perigo: true,
+      }))
+    )
+      return;
     try {
       await api.excluirProdutoProprio(p.codigo);
       aposAlterar(`✓ Produto ${p.codigo} excluído.`);
     } catch (e) {
-      alert('Não foi possível excluir: ' + (e instanceof Error ? e.message : e));
+      void erroDe('Não foi possível excluir o produto.', e);
     }
   };
 

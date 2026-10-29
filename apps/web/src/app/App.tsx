@@ -18,6 +18,7 @@ import { Usuarios } from '../features/usuarios/Usuarios';
 import { ProvedorCarrinho } from '../state/carrinho';
 import { ProvedorApp, useApp } from './contexto';
 import { ProvedorSessao, useSessao } from './sessao';
+import { Dialogos } from '../components/Dialogos';
 
 /**
  * Aplicação de página única: login → menu lateral + área de telas + rodapé de status.
@@ -29,6 +30,7 @@ export function App() {
   return (
     <ProvedorSessao>
       <Portao />
+      <Dialogos />
     </ProvedorSessao>
   );
 }

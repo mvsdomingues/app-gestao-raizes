@@ -1,0 +1,71 @@
+/* ══════════════════════════════════
+   POP-UPS DO SITE (avisar / confirmar / perguntar)
+   ══════════════════════════════════ */
+.dialogo-fundo {
+  position: fixed;
+  inset: 0;
+  z-index: 2000;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 20px;
+  background: rgba(31,35,41,.55);
+  backdrop-filter: blur(2px);
+  animation: dialogo-fundo .15s ease-out;
+}
+.dialogo {
+  --dl-cor: var(--uva);
+  --dl-fundo: #F0EAF6;
+  width: 100%;
+  max-width: 440px;
+  max-height: 90vh;
+  overflow-y: auto;
+  background: var(--surface);
+  border-radius: var(--radius-lg);
+  border-top: 4px solid var(--dl-cor);
+  box-shadow: var(--shadow-lg);
+  padding: 22px 24px 18px;
+  animation: dialogo-entrada .18s ease-out;
+}
+.dialogo-sucesso { --dl-cor: var(--success); --dl-fundo: #EAF5E8; }
+.dialogo-aviso   { --dl-cor: #B7791F;        --dl-fundo: #FFF3DC; }
+.dialogo-erro, .dialogo-perigo { --dl-cor: var(--danger); --dl-fundo: #FDECEA; }
+
+.dialogo-cabecalho { display: flex; align-items: center; gap: 12px; margin-bottom: 12px; }
+.dialogo-icone {
+  flex-shrink: 0;
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--dl-fundo);
+  color: var(--dl-cor);
+  font-family: var(--font-display);
+  font-size: 1.2rem;
+  font-weight: 700;
+}
+.dialogo-titulo { font-family: var(--font-display); font-size: 1.45rem; font-weight: 700; color: var(--berinjela); line-height: 1.15; }
+.dialogo-mensagem { font-size: .9rem; line-height: 1.5; color: var(--grafite); padding-left: 48px; }
+.dialogo-mensagem p + p { margin-top: 8px; }
+.dialogo-campo { margin-top: 14px; padding-left: 48px; }
+.dialogo-campo textarea { width: 100%; resize: vertical; min-height: 70px; font-family: var(--font-body); }
+.dialogo-acoes {
+  display: flex;
+  justify-content: flex-end;
+  gap: 10px;
+  margin-top: 20px;
+  padding-top: 14px;
+  border-top: 1px solid var(--border);
+}
+.dialogo-acoes .btn-primary, .dialogo-acoes .btn-secondary { width: auto; min-width: 96px; padding: 9px 18px; }
+.dialogo-acoes .btn-primary.perigo { background: var(--danger); border-color: var(--danger); }
+.dialogo-acoes .btn-primary.perigo:hover { filter: brightness(.92); }
+
+@keyframes dialogo-fundo { from { opacity: 0; } }
+@keyframes dialogo-entrada { from { opacity: 0; transform: translateY(8px) scale(.98); } }
+
+@media (max-width: 520px) {
+  .dialogo-mensagem, .dialogo-campo { padding-left: 0; }
+}

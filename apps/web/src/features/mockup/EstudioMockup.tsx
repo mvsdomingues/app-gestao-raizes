@@ -14,6 +14,7 @@ import {
   type Mesclagem,
   type Tinta,
 } from './motor';
+import { avisar } from '../../lib/dialogo';
 
 const TINTAS: { valor: Tinta; rotulo: string }[] = [
   { valor: 'original', rotulo: 'Original' },
@@ -105,7 +106,7 @@ export function EstudioMockup() {
 
   const carregarArquivoLogo = (file: File) => {
     if (!file.type.startsWith('image/')) {
-      alert('Por favor, selecione um arquivo de imagem válido (PNG, SVG ou JPG).');
+      void avisar('Selecione um arquivo de imagem válido (PNG, SVG ou JPG).', { tipo: 'aviso', titulo: 'Arquivo inválido' });
       return;
     }
     const reader = new FileReader();
@@ -168,9 +169,12 @@ export function EstudioMockup() {
     const id = st.selectedProductId;
     if (id !== null && itensRef.current[id]) {
       vincularMockup(id, canvas.toDataURL('image/jpeg', 0.92));
-      alert('✓ Mockup salvo e vinculado com sucesso a este produto no orçamento!');
+      void avisar('O mockup foi salvo e vinculado a este produto no orçamento.', { tipo: 'sucesso', titulo: 'Mockup salvo' });
     } else {
-      alert('Adicione este produto ao orçamento no Catálogo para poder vincular o mockup a ele.');
+      void avisar('Adicione este produto ao orçamento no Catálogo para poder vincular o mockup a ele.', {
+        tipo: 'aviso',
+        titulo: 'Produto fora do orçamento',
+      });
     }
   };
 

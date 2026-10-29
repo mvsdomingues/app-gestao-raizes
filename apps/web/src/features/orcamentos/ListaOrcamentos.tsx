@@ -9,6 +9,7 @@ import { Paginacao } from '../catalogo/Paginacao';
 import { ModalNovoPedido } from '../pedidos/ModalNovoPedido';
 import { useEditarOrcamento } from './editar-orcamento';
 import { TagStatusOrcamento, useSituacaoOrcamento } from './situacao';
+import { erro } from '../../lib/dialogo';
 
 const POR_PAGINA = 20;
 const FILTROS_VAZIOS: FiltrosOrcamentos = { numero: '', produto: '', de: '', ate: '', min: '', max: '', status: '', meus: '' };
@@ -112,7 +113,7 @@ export function ListaOrcamentos() {
       });
     } catch (e) {
       console.error(e);
-      alert('Não foi possível abrir este orçamento.');
+      void erro('Não foi possível abrir este orçamento.');
     }
   };
 
@@ -215,7 +216,7 @@ export function ListaOrcamentos() {
                   Total
                 </th>
                 <th style={{ width: 150 }}>Situação</th>
-                <th style={{ width: 300 }} />
+                <th style={{ width: 380 }} />
               </tr>
             </thead>
             <tbody>
@@ -256,14 +257,14 @@ export function ListaOrcamentos() {
                     {r.status === 'ABERTO' && (
                       <button
                         className="btn-editar-orc btn-marcar-enviado"
-                        title={`Marcar o ${r.numero} como enviado ao cliente`}
+                        title={`Enviar o ${r.numero} para o cliente`}
                         disabled={processando !== null}
                         onClick={(e) => {
                           e.stopPropagation();
                           void alterarSituacao(r.id, r.numero, r.status, 'ENVIADO');
                         }}
                       >
-                        {processando === r.id ? 'Salvando…' : '✉ Enviado'}
+                        {processando === r.id ? 'Salvando…' : '✉ Enviar para o Cliente'}
                       </button>
                     )}
                     {!r.pedido && pode('pedidos') && (

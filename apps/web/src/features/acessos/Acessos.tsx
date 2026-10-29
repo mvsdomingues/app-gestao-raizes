@@ -4,6 +4,7 @@ import { useApp } from '../../app/contexto';
 import { useSessao } from '../../app/sessao';
 import { Carregando } from '../../components/Carregando';
 import { api } from '../../lib/api';
+import { confirmar } from '../../lib/dialogo';
 
 type Estado = { tipo: 'carregando' } | { tipo: 'erro'; msg: string } | { tipo: 'ok'; usuarios: AcessoUsuario[] };
 
@@ -60,8 +61,16 @@ export function Acessos() {
       return n;
     });
 
-  const escolher = (id: number) => {
-    if (alterado && !confirm('Há alterações não salvas. Descartar?')) return;
+  const escolher = async (id: number) => {
+    if (
+      alterado &&
+      !(await confirmar('Há alterações não salvas nos acessos deste usuário. Descartar?', {
+        titulo: 'Alterações não salvas',
+        ok: 'Descartar',
+        perigo: true,
+      }))
+    )
+      return;
     setAviso(null);
     setSelecionado(id);
   };
@@ -69,7 +78,14 @@ export function Acessos() {
   const salvar = async () => {
     if (!atual) return;
     if (atual.id === eu?.id && !marcadas.has('acessos')) {
-      if (!confirm('Você está removendo o seu próprio acesso à tela Acessos e não poderá mais alterá-los. Continuar?')) return;
+      if (
+        !(await confirmar('Você está removendo o seu próprio acesso à tela Acessos e não poderá mais alterá-los.', {
+          titulo: 'Remover o seu acesso',
+          ok: 'Remover mesmo assim',
+          perigo: true,
+        }))
+      )
+        return;
     }
     setSalvando(true);
     setAviso(null);
@@ -115,7 +131,7 @@ export function Acessos() {
                   key={u.id}
                   className={`acessos-usuario${u.id === selecionado ? ' ativo' : ''}`}
                   data-login={u.login}
-                  onClick={() => escolher(u.id)}
+                  onClick={() => void escolher(u.id)}
                 >
                   <span className="acessos-usuario-nome">
                     {u.nome}

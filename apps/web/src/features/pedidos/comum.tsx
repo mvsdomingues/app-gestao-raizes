@@ -7,6 +7,7 @@ import {
 } from '@raizes/shared';
 import { useApp } from '../../app/contexto';
 import { api } from '../../lib/api';
+import { confirmar, erroDe, perguntar } from '../../lib/dialogo';
 
 /** Tag colorida com a etapa do pedido. */
 export function TagStatusPedido({ status }: { status: StatusPedido }) {
@@ -51,9 +52,10 @@ export function useAcoesPedido(aoAlterar: (p: Pedido) => void) {
     const prox = proximoStatus(statusAtual);
     if (!prox) return;
     if (
-      !confirm(
+      !(await confirmar(
         `Mover o pedido ${codigo} de "${ROTULOS_STATUS_PEDIDO[statusAtual]}" para "${ROTULOS_STATUS_PEDIDO[prox]}"?`,
-      )
+        { titulo: 'Movimentar pedido', ok: `Mover para ${ROTULOS_STATUS_PEDIDO[prox]}` },
+      ))
     ) {
       return;
     }
@@ -63,30 +65,33 @@ export function useAcoesPedido(aoAlterar: (p: Pedido) => void) {
       definirPedidoDaFolha(p.orcamento_id, { codigo: p.codigo, status: p.status });
       aoAlterar(p);
     } catch (e) {
-      alert('Não foi possível movimentar o pedido: ' + (e instanceof Error ? e.message : e));
+      void erroDe('Não foi possível movimentar o pedido.', e);
     } finally {
       setProcessando(null);
     }
   };
 
   const cancelar = async (codigo: string, orcamentoNumero: string) => {
-    const motivo = prompt(
-      `Cancelar o pedido ${codigo}?\n\n` +
-        `O orçamento ${orcamentoNumero} ficará livre para ser alterado ou usado em outro pedido.\n\n` +
-        'Informe o motivo do cancelamento:',
+    const motivo = await perguntar(
+      `O orçamento ${orcamentoNumero} ficará livre para ser alterado ou usado em outro pedido.`,
+      {
+        titulo: `Cancelar o pedido ${codigo}`,
+        rotulo: 'Motivo do cancelamento',
+        obrigatorio: true,
+        placeholder: 'Ex.: quantidade errada, cliente desistiu…',
+        ok: 'Cancelar pedido',
+        cancelar: 'Voltar',
+        perigo: true,
+      },
     );
     if (motivo === null) return;
-    if (!motivo.trim()) {
-      alert('Informe o motivo do cancelamento.');
-      return;
-    }
     setProcessando(codigo);
     try {
-      const p = await api.cancelarPedido(codigo, motivo.trim());
+      const p = await api.cancelarPedido(codigo, motivo);
       definirPedidoDaFolha(p.orcamento_id, null);
       aoAlterar(p);
     } catch (e) {
-      alert('Não foi possível cancelar o pedido: ' + (e instanceof Error ? e.message : e));
+      void erroDe('Não foi possível cancelar o pedido.', e);
     } finally {
       setProcessando(null);
     }

@@ -5,6 +5,7 @@ import { useSessao } from '../../app/sessao';
 import { Carregando } from '../../components/Carregando';
 import { api } from '../../lib/api';
 import { FormularioUsuario, type ModoFormulario } from './FormularioUsuario';
+import { confirmar, erroDe } from '../../lib/dialogo';
 
 type Estado = { tipo: 'carregando' } | { tipo: 'erro'; msg: string } | { tipo: 'ok'; linhas: Usuario[] };
 
@@ -42,11 +43,12 @@ export function Usuarios() {
 
   const inativar = async (u: Usuario) => {
     if (
-      !confirm(
+      !(await confirmar(
         `Inativar o usuário ${u.nome} (${u.login})?\n\n` +
           'Ele não poderá mais entrar no sistema até ser reativado. O cadastro, os acessos e o histórico ' +
           'das ações dele são mantidos.',
-      )
+        { titulo: 'Inativar usuário', ok: 'Inativar', perigo: true },
+      ))
     ) {
       return;
     }
@@ -55,18 +57,24 @@ export function Usuarios() {
       setAviso(`✓ Usuário ${u.login} inativado.`);
       void carregar();
     } catch (e) {
-      alert('Não foi possível inativar: ' + (e instanceof Error ? e.message : e));
+      void erroDe('Não foi possível inativar o usuário.', e);
     }
   };
 
   const reativar = async (u: Usuario) => {
-    if (!confirm(`Reativar o usuário ${u.nome} (${u.login})?\n\nEle volta a entrar com os mesmos acessos de antes.`)) return;
+    if (
+      !(await confirmar(`Reativar o usuário ${u.nome} (${u.login})?\n\nEle volta a entrar com os mesmos acessos de antes.`, {
+        titulo: 'Reativar usuário',
+        ok: 'Reativar',
+      }))
+    )
+      return;
     try {
       await api.reativarUsuario(u.id);
       setAviso(`✓ Usuário ${u.login} reativado.`);
       void carregar();
     } catch (e) {
-      alert('Não foi possível reativar: ' + (e instanceof Error ? e.message : e));
+      void erroDe('Não foi possível reativar o usuário.', e);
     }
   };
 

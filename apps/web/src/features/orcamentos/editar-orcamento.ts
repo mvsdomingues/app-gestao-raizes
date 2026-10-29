@@ -3,6 +3,7 @@ import { motivoBloqueioAlteracao, type ItemOrcamento, type Orcamento, type Param
 import { useApp } from '../../app/contexto';
 import { api } from '../../lib/api';
 import { useCarrinho, type ItemCarrinho, type Itens } from '../../state/carrinho';
+import { avisar, confirmar, erro } from '../../lib/dialogo';
 
 /** Ids dos itens que não estão mais no catálogo (bem abaixo dos ids de produtos próprios). */
 const BASE_ID_FORA_CATALOGO = -1_000_000_000;
@@ -84,16 +85,17 @@ export function useEditarOrcamento() {
         o = await api.orcamento(id);
       } catch (e) {
         console.error(e);
-        alert('Não foi possível carregar este orçamento para alteração.');
+        void erro('Não foi possível carregar este orçamento para alteração.');
         return;
       }
       const bloqueio = motivoBloqueioAlteracao(o.numero, o.status, o.pedido?.codigo);
       if (bloqueio) {
-        alert(
+        void avisar(
           bloqueio +
             (o.status === 'ENVIADO'
               ? '\n\nUse "↩ Voltar para aberto" nos detalhes do orçamento e depois clique em Editar.'
               : '\n\nPara alterá-lo, cancele o pedido na tela Pedidos.'),
+          { tipo: 'aviso', titulo: o.status === 'ENVIADO' ? 'Orçamento já enviado' : 'Orçamento com pedido' },
         );
         return;
       }
@@ -101,10 +103,10 @@ export function useEditarOrcamento() {
       if (qtd > 0 || estado.edicao) {
         const atual = estado.edicao ? ` (alteração do ${estado.edicao.numero} em andamento)` : '';
         if (
-          confirm(
+          await confirmar(
             `O carrinho tem ${qtd} ${qtd === 1 ? 'item' : 'itens'}${atual}.\n\n` +
-              `Para alterar o ${numero}, esvazie o carrinho primeiro (botão "Limpar tudo").\n\n` +
-              'Ir para o carrinho agora?',
+              `Para alterar o ${numero}, esvazie o carrinho primeiro (botão "Limpar tudo").`,
+            { titulo: 'Carrinho em uso', ok: 'Ir para o carrinho', cancelar: 'Ficar aqui' },
           )
         ) {
           irPara('carrinho');
@@ -122,7 +124,7 @@ export function useEditarOrcamento() {
       irPara('carrinho');
     } catch (e) {
       console.error(e);
-      alert('Não foi possível carregar este orçamento para alteração.');
+      void erro('Não foi possível carregar este orçamento para alteração.');
     } finally {
       setCarregando(null);
     }

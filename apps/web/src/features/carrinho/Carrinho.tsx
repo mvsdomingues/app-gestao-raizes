@@ -5,6 +5,7 @@ import { useSessao } from '../../app/sessao';
 import { api, ErroApi } from '../../lib/api';
 import { subtotalCarrinho, useCarrinho } from '../../state/carrinho';
 import { ItemCarrinho } from './ItemCarrinho';
+import { avisar, confirmar, erro } from '../../lib/dialogo';
 
 export function Carrinho() {
   const { tela, visitas, irPara, mostrarOrcamento, parametros } = useApp();
@@ -25,18 +26,18 @@ export function Carrinho() {
   const total = subtotal + valorFrete;
   const unidades = itens.reduce((s, i) => s + i.qty, 0);
 
-  const limparTudo = () => {
+  const limparTudo = async () => {
     if (!count && !edicao) return;
     const msg = edicao
       ? `Limpar o carrinho e sair da alteração do ${edicao.numero}?\n\nO orçamento salvo não é modificado.`
       : 'Limpar todos os itens do orçamento?';
-    if (!confirm(msg)) return;
+    if (!(await confirmar(msg, { titulo: 'Limpar carrinho', ok: 'Limpar', perigo: true }))) return;
     limpar();
   };
 
   const gerarOrcamento = async () => {
     if (!itens.length) {
-      alert('Adicione produtos ao carrinho antes de gerar o orçamento.');
+      void avisar('Adicione produtos ao carrinho antes de gerar o orçamento.', { tipo: 'aviso', titulo: 'Carrinho vazio' });
       return;
     }
     // Imposto de compra, imposto sobre venda e margem: sempre os Parâmetros cadastrados
@@ -64,11 +65,11 @@ export function Carrinho() {
       // Alteração recusada pelo servidor (orçamento enviado ou com pedido): mostra o motivo e mantém o carrinho
       if (edicao && e instanceof ErroApi) {
         setGerando(false);
-        alert(e.message + '\n\nOs itens continuam no carrinho.');
+        void avisar(e.message + '\n\nOs itens continuam no carrinho.', { tipo: 'aviso', titulo: 'Alteração não salva' });
         return;
       }
       console.error('Não foi possível salvar o orçamento no histórico:', e);
-      alert(
+      void erro(
         'Não foi possível salvar o orçamento no histórico (verifique a conexão com o servidor). O orçamento será exibido, mas não ficará registrado; os itens continuam no carrinho para tentar de novo.',
       );
     } finally {
@@ -76,7 +77,7 @@ export function Carrinho() {
     }
     // Sem acesso à tela Orçamentos: só confirma que o orçamento foi gravado
     if (!pode('orcamentos')) {
-      if (id !== undefined) alert(`Orçamento ${numero} gravado.`);
+      if (id !== undefined) void avisar(`Orçamento ${numero} gravado.`, { tipo: 'sucesso' });
       return;
     }
     const eu = usuario ? { id: usuario.id, nome: usuario.nome, login: usuario.login } : null;
@@ -201,7 +202,7 @@ export function Carrinho() {
               <button className="btn-primary" id="btn-gerar" onClick={() => void gerarOrcamento()} disabled={count === 0 || gerando}>
                 {edicao ? `Salvar ${edicao.numero}` : 'Gerar Orçamento'}
               </button>
-              <button className="btn-secondary" onClick={limparTudo}>
+              <button className="btn-secondary" onClick={() => void limparTudo()}>
                 Limpar tudo
               </button>
             </div>

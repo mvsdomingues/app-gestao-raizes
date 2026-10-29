@@ -23,6 +23,7 @@ import {
 } from '@raizes/shared';
 import { api } from '../lib/api';
 import { useSessao } from './sessao';
+import { avisar, erroDe } from '../lib/dialogo';
 
 /** Telas do sistema (cada uma também é uma permissão — ver TELAS_SISTEMA). */
 export type Tela = IdTela;
@@ -135,7 +136,10 @@ export function ProvedorApp({ children }: { children: ReactNode }) {
 
   const irPara = useCallback((t: Tela) => {
     if (!permitidasRef.current.includes(t)) {
-      alert('Você não tem acesso a esta tela. Peça a liberação a quem administra os acessos.');
+      void avisar('Você não tem acesso a esta tela. Peça a liberação a quem administra os acessos.', {
+        tipo: 'aviso',
+        titulo: 'Acesso não liberado',
+      });
       return;
     }
     setTela(t);
@@ -236,7 +240,7 @@ export function ProvedorApp({ children }: { children: ReactNode }) {
           irPara('pedidos');
           document.querySelector('.app-views')?.scrollTo(0, 0);
         } catch (e) {
-          alert('Não foi possível abrir o pedido: ' + (e instanceof Error ? e.message : e));
+          void erroDe('Não foi possível abrir o pedido.', e);
         }
       },
       abaPedidos,
