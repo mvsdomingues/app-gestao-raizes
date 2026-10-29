@@ -41,9 +41,12 @@ export function Carrinho() {
       return;
     }
     // Imposto de compra, imposto sobre venda e margem: sempre os Parâmetros cadastrados
-    const snapshot = itens.map(({ produto, qty, calc }) =>
-      montarItemOrcamento(produto, qty, calcComParametros(calc, parametros)),
-    );
+    const snapshot = itens.map(({ produto, qty, calc, observacao: obsItem }) => {
+      const item = montarItemOrcamento(produto, qty, calcComParametros(calc, parametros));
+      // Observação de cada produto vai junto com o item do orçamento
+      const obs = obsItem?.trim();
+      return obs ? { ...item, observacao: obs } : item;
+    });
     const sub = snapshot.reduce((s, i) => s + i.preco * i.qty, 0);
     const tot = sub + valorFrete;
 

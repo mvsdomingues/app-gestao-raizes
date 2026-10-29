@@ -27,6 +27,8 @@ export interface ItemCarrinho {
   calc: ParametrosCalculo;
   /** Imagem do mockup vinculada ao item ("Salvar no Orçamento"). */
   mockup_img?: string;
+  /** Observação deste produto, gravada no item do orçamento. */
+  observacao?: string;
 }
 
 /**
@@ -67,6 +69,7 @@ type Acao =
   | { tipo: 'qtd'; id: string; qty: number; redesenhar: boolean }
   | { tipo: 'calc'; id: string; campo: CampoNumerico; valor: number }
   | { tipo: 'mockup'; id: string; imagem: string }
+  | { tipo: 'observacaoItem'; id: string; valor: string }
   | { tipo: 'redesenhar' }
   | { tipo: 'frete'; valor: string }
   | { tipo: 'observacao'; valor: string }
@@ -115,6 +118,11 @@ function redutor(estado: EstadoCarrinho, acao: Acao): EstadoCarrinho {
       if (!item) return estado;
       return { ...estado, itens: { ...itens, [acao.id]: { ...item, mockup_img: acao.imagem } } };
     }
+    case 'observacaoItem': {
+      const item = itens[acao.id];
+      if (!item) return estado;
+      return { ...estado, itens: { ...itens, [acao.id]: { ...item, observacao: acao.valor } } };
+    }
     case 'redesenhar':
       return { ...estado, ...redesenho };
     case 'frete':
@@ -136,6 +144,7 @@ interface ContextoCarrinho {
   definirQtd: (id: number | string, qty: number, redesenhar: boolean) => void;
   definirCalc: (id: number | string, campo: CampoNumerico, valor: number) => void;
   vincularMockup: (id: number | string, imagem: string) => void;
+  definirObservacaoItem: (id: number | string, valor: string) => void;
   redesenhar: () => void;
   definirFrete: (valor: string) => void;
   definirObservacao: (valor: string) => void;
@@ -157,6 +166,7 @@ export function ProvedorCarrinho({ children }: { children: ReactNode }) {
       definirQtd: (id, qty, redesenhar) => despachar({ tipo: 'qtd', id: String(id), qty, redesenhar }),
       definirCalc: (id, campo, v) => despachar({ tipo: 'calc', id: String(id), campo, valor: v }),
       vincularMockup: (id, imagem) => despachar({ tipo: 'mockup', id: String(id), imagem }),
+      definirObservacaoItem: (id, valor) => despachar({ tipo: 'observacaoItem', id: String(id), valor }),
       redesenhar: () => despachar({ tipo: 'redesenhar' }),
       definirFrete: (valor) => despachar({ tipo: 'frete', valor }),
       definirObservacao: (valor) => despachar({ tipo: 'observacao', valor }),

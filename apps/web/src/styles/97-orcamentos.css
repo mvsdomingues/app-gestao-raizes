@@ -213,3 +213,25 @@
 }
 .orc-observacoes-titulo { font-size: .66rem; font-weight: 600; letter-spacing: 1px; text-transform: uppercase; color: var(--muted); margin-bottom: 4px; }
 .orc-observacoes-texto { font-size: .86rem; line-height: 1.5; white-space: pre-wrap; color: var(--grafite); }
+
+/* Observação de cada produto: campo no carrinho e linha na folha */
+.cart-item-obs { margin: 8px 0 4px; }
+.cart-item-obs-input {
+  width: 100%;
+  min-height: 34px;
+  padding: 7px 10px;
+  border: 1px dashed var(--border2);
+  border-radius: var(--radius);
+  background: var(--surface);
+  font-family: var(--font-body);
+  font-size: .8rem;
+  color: var(--grafite);
+  resize: vertical;
+  field-sizing: content;
+  max-height: 160px;
+  transition: border-color .15s, background .15s;
+}
+.cart-item-obs-input:focus { outline: none; border-style: solid; border-color: var(--uva); background: #FCFAFD; }
+.cart-item-obs-input:not(:placeholder-shown) { border-style: solid; border-color: var(--border); background: var(--creme); }
+.orc-prod-obs { margin-top: 3px; font-size: .74rem; color: var(--grafite); white-space: pre-wrap; }
+.orc-prod-obs span { font-weight: 600; color: var(--uva); }

@@ -125,4 +125,12 @@ describe('situação do orçamento', () => {
     await req('PUT', `/api/orcamentos/${novo.id}`, { itens: [item], total: 1 });
     expect((await req('GET', `/api/orcamentos/${novo.id}`)).json.observacao).toBeNull();
   });
+
+  it('observação de cada produto é gravada junto com o item', async () => {
+    const itens = [{ ...item, observacao: 'Gravação a laser na tampa' }, { ...item, codigo: 'C2' }];
+    const novo = (await req('POST', '/api/orcamentos', { itens, subtotal: 1, frete: 0, total: 1, observacao: 'Geral' })).json;
+    const o = (await req('GET', `/api/orcamentos/${novo.id}`)).json;
+    expect(o.itens.map((i: { observacao?: string }) => i.observacao)).toEqual(['Gravação a laser na tampa', undefined]);
+    expect(o.observacao).toBe('Geral');
+  });
 });

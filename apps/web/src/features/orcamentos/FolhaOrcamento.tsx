@@ -87,6 +87,11 @@ export function FolhaOrcamento({ folha }: { folha: DadosFolha }) {
                     <div className="orc-prod-composicao">
                       {item.composicao} = <b>{formatBRL(item.preco)}/un</b>
                     </div>
+                    {item.observacao && (
+                      <div className="orc-prod-obs">
+                        <span>Obs.:</span> {item.observacao}
+                      </div>
+                    )}
                   </div>
                 </div>
               </td>

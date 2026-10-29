@@ -14,7 +14,7 @@ import { useCarrinho, type ItemCarrinho as Item } from '../../state/carrinho';
 export function ItemCarrinho({ item }: { item: Item }) {
   const { abrirMockupParaProduto, parametros } = useApp();
   const { pode } = useSessao();
-  const { remover, definirQtd, definirCalc } = useCarrinho();
+  const { remover, definirQtd, definirCalc, definirObservacaoItem } = useCarrinho();
   const { produto: p, qty, calc: c } = item;
   const id = p.id;
 
@@ -91,6 +91,18 @@ export function ItemCarrinho({ item }: { item: Item }) {
             +
           </button>
           <span style={{ fontSize: '.68rem', color: 'var(--muted)', marginLeft: 4 }}>{faixaInicial}</span>
+        </div>
+        <div className="cart-item-obs">
+          <textarea
+            className="cart-item-obs-input"
+            id={`obs-item-${id}`}
+            rows={1}
+            maxLength={500}
+            placeholder="Observação deste produto (cor, gravação, posição do logo…)"
+            aria-label={`Observação de ${p.nome ?? 'produto'}`}
+            value={item.observacao ?? ''}
+            onChange={(e) => definirObservacaoItem(id, e.target.value)}
+          />
         </div>
         <div className="calc-section calc-section-result">
           <div className="calc-result-row">

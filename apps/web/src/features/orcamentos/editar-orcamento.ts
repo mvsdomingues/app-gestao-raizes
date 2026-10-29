@@ -58,6 +58,7 @@ async function montarItensCarrinho(
       },
       qty: item.qty,
       calc: { ...parametros, ...(item.calc ?? {}) },
+      observacao: item.observacao ?? '',
     };
     itens[id] = linha;
   });

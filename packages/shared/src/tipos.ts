@@ -48,6 +48,8 @@ export interface ItemOrcamento {
   custo?: number;
   /** Parâmetros da calculadora usados no item. */
   calc?: import('./calculadora').ParametrosCalculo;
+  /** Observação específica deste produto (cor, gravação, posição do logo…). */
+  observacao?: string;
 }
 
 /** Linha do histórico (GET /api/orcamentos). */
