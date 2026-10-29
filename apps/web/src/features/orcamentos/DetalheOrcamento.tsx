@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { FLUXO_ORCAMENTO, ROTULOS_STATUS_ORCAMENTO, type Orcamento } from '@raizes/shared';
+import { FLUXO_ORCAMENTO, motivoBloqueioAlteracao, ROTULOS_STATUS_ORCAMENTO, type Orcamento } from '@raizes/shared';
 import { useApp } from '../../app/contexto';
 import { useSessao } from '../../app/sessao';
 import { NomeUsuario } from '../../components/NomeUsuario';
@@ -79,7 +79,7 @@ export function DetalheOrcamento() {
                 className="btn-back"
                 id="btn-editar-orcamento"
                 disabled={!!pedido || carregando !== null}
-                title={pedido ? `${folha.numero} está no pedido ${pedido.codigo} e não pode ser alterado` : undefined}
+                title={status ? (motivoBloqueioAlteracao(folha.numero, status, pedido?.codigo) ?? undefined) : undefined}
                 onClick={() => void editar(folha.id!, folha.numero)}
               >
                 {carregando !== null ? 'Abrindo…' : `✎ Editar ${folha.numero}`}

@@ -70,7 +70,10 @@ describe('situação do orçamento', () => {
     const o = (await req('GET', '/api/orcamentos/1')).json;
     expect(o.movimentos.at(-1)).toMatchObject({ status_anterior: 'ENVIADO', status_novo: 'PEDIDO_GERADO', observacao: `Pedido ${p.codigo}` });
     expect((await req('POST', '/api/orcamentos/1/status', { status: 'ABERTO' })).status).toBe(409);
-    expect((await req('PUT', '/api/orcamentos/1', { itens: [item], total: 1 })).status).toBe(409);
+    const r = await req('PUT', '/api/orcamentos/1', { itens: [item], total: 1 });
+    expect(r.status).toBe(409);
+    expect(r.json.erro).toMatch(/está no pedido PED-000001/);
+    expect((await req('PUT', '/api/orcamentos/99', { itens: [item], total: 1 })).status).toBe(404);
   });
 
   it('cancelar o pedido devolve a situação anterior e libera a edição', async () => {
@@ -82,8 +85,14 @@ describe('situação do orçamento', () => {
       status_novo: 'ENVIADO',
       observacao: 'Pedido PED-000001 cancelado',
     });
+    // Enviado: precisa voltar para Aberto antes de alterar
+    const bloqueado = await req('PUT', '/api/orcamentos/1', { itens: [item], total: 1 });
+    expect(bloqueado.status).toBe(409);
+    expect(bloqueado.json.erro).toBe('O ORC-0001 já foi enviado ao cliente e precisa retornar para o status "Aberto" antes de ser alterado.');
+    await req('POST', '/api/orcamentos/1/status', { status: 'ABERTO' });
     expect((await req('PUT', '/api/orcamentos/1', { itens: [item], total: 1 })).status).toBe(200);
-    expect(await status(1)).toBe('ENVIADO'); // alterar não muda a situação
+    expect(await status(1)).toBe('ABERTO');
+    await req('POST', '/api/orcamentos/1/status', { status: 'ENVIADO' });
   });
 
   it('filtra pela situação', async () => {

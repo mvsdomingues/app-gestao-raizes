@@ -31,3 +31,19 @@ export interface MovimentoOrcamento {
   observacao: string | null;
   usuario: UsuarioResumo | null;
 }
+
+/** Só orçamento "Aberto" pode ser alterado. */
+export function podeAlterarOrcamento(status: StatusOrcamento): boolean {
+  return status === 'ABERTO';
+}
+
+/** Mensagem quando o orçamento não pode ser alterado (mesmo texto no servidor e na tela). */
+export function motivoBloqueioAlteracao(numero: string, status: StatusOrcamento, pedido?: string | null): string | null {
+  if (status === 'ENVIADO') {
+    return `O ${numero} já foi enviado ao cliente e precisa retornar para o status "Aberto" antes de ser alterado.`;
+  }
+  if (status === 'PEDIDO_GERADO') {
+    return `O ${numero} está no pedido ${pedido ?? ''} e não pode ser alterado.`.replace('  ', ' ');
+  }
+  return null;
+}

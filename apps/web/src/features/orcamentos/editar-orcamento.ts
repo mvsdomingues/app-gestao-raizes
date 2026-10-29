@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import type { ItemOrcamento, Orcamento, ParametrosCalculo } from '@raizes/shared';
+import { motivoBloqueioAlteracao, type ItemOrcamento, type Orcamento, type ParametrosCalculo } from '@raizes/shared';
 import { useApp } from '../../app/contexto';
 import { api } from '../../lib/api';
 import { useCarrinho, type ItemCarrinho, type Itens } from '../../state/carrinho';
@@ -72,29 +72,43 @@ export function useEditarOrcamento() {
   const { estado, carregarOrcamento } = useCarrinho();
   const [carregando, setCarregando] = useState<number | null>(null);
 
+  /**
+   * Abre o orçamento no carrinho para alteração. Só orçamento "Aberto" pode ser alterado:
+   * enviado precisa voltar para Aberto antes; com pedido gerado, nunca.
+   */
   const editar = async (id: number, numero: string) => {
-    const qtd = Object.keys(estado.itens).length;
-    if (qtd > 0 || estado.edicao) {
-      const atual = estado.edicao ? ` (alteração do ${estado.edicao.numero} em andamento)` : '';
-      if (
-        confirm(
-          `O carrinho tem ${qtd} ${qtd === 1 ? 'item' : 'itens'}${atual}.\n\n` +
-            `Para alterar o ${numero}, esvazie o carrinho primeiro (botão "Limpar tudo").\n\n` +
-            'Ir para o carrinho agora?',
-        )
-      ) {
-        irPara('carrinho');
-      }
-      return;
-    }
     setCarregando(id);
     try {
-      const o = await api.orcamento(id);
-      if (o.pedido) {
+      let o: Orcamento;
+      try {
+        o = await api.orcamento(id);
+      } catch (e) {
+        console.error(e);
+        alert('Não foi possível carregar este orçamento para alteração.');
+        return;
+      }
+      const bloqueio = motivoBloqueioAlteracao(o.numero, o.status, o.pedido?.codigo);
+      if (bloqueio) {
         alert(
-          `O ${o.numero} está atrelado ao pedido ${o.pedido.codigo} e não pode ser alterado.\n\n` +
-            'Para alterá-lo, cancele o pedido na tela Pedidos.',
+          bloqueio +
+            (o.status === 'ENVIADO'
+              ? '\n\nUse "↩ Voltar para aberto" nos detalhes do orçamento e depois clique em Editar.'
+              : '\n\nPara alterá-lo, cancele o pedido na tela Pedidos.'),
         );
+        return;
+      }
+      const qtd = Object.keys(estado.itens).length;
+      if (qtd > 0 || estado.edicao) {
+        const atual = estado.edicao ? ` (alteração do ${estado.edicao.numero} em andamento)` : '';
+        if (
+          confirm(
+            `O carrinho tem ${qtd} ${qtd === 1 ? 'item' : 'itens'}${atual}.\n\n` +
+              `Para alterar o ${numero}, esvazie o carrinho primeiro (botão "Limpar tudo").\n\n` +
+              'Ir para o carrinho agora?',
+          )
+        ) {
+          irPara('carrinho');
+        }
         return;
       }
       const { itens, semAjustes } = await montarItensCarrinho(o, parametros);

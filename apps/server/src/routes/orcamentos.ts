@@ -2,6 +2,7 @@ import { Router, type Request } from 'express';
 import {
   isStatusOrcamento,
   isStatusOrcamentoManual,
+  motivoBloqueioAlteracao,
   numeroOrcamento,
   type Orcamento,
   type OrcamentoCriado,
@@ -15,6 +16,7 @@ import {
   movimentosDoOrcamento,
   registrarMovimentoOrcamento,
   SQL_STATUS_ORCAMENTO,
+  statusDoOrcamento,
 } from '../db/repositorio-orcamentos';
 import { pedidoAtivoDoOrcamento } from '../db/repositorio-pedidos';
 import { colunasResponsavel, extrairResponsavel } from '../db/repositorio-usuarios';
@@ -199,11 +201,11 @@ export function rotasOrcamentos(db: Banco): Router {
     if (!/^\d+$/.test(req.params.oid)) return next();
     const id = Number(req.params.oid);
     const { itens, subtotal, frete, total } = lerCorpo(req);
-    // Orçamento com pedido ativo não pode ser alterado
-    const pedido = pedidoAtivoDoOrcamento(db, id);
-    if (pedido) {
-      throw new ErroHttp(409, `O ${numeroOrcamento(id)} está no pedido ${pedido.codigo} e não pode ser alterado`);
-    }
+    // Só orçamento "Aberto" pode ser alterado (enviado: voltar para Aberto antes; com pedido: nunca)
+    if (!db.prepare('SELECT 1 FROM orcamentos WHERE id = ?').get(id)) throw new ErroHttp(404, 'não encontrado');
+    const situacao = statusDoOrcamento(db, id);
+    const bloqueio = motivoBloqueioAlteracao(numeroOrcamento(id), situacao, pedidoAtivoDoOrcamento(db, id)?.codigo);
+    if (bloqueio) throw new ErroHttp(409, bloqueio);
     const eu = exigirUsuario(res);
     const dataHora = isoLocal();
     const info = db

@@ -138,7 +138,7 @@ O menu fica na **barra lateral** (pode ser recolhido para mostrar só os ícones
    - **Detalhes**: folha do orçamento selecionado, com **Editar**, **Gerar pedido** e **Imprimir / Salvar PDF**.
    - **Situação** de cada orçamento: **Aberto** (ao ser gerado) → **Enviado** (botão *✉ Enviado* na lista ou *Marcar como enviado* nos detalhes; dá para voltar para Aberto) → **Pedido gerado** (automático ao gerar o pedido, com o código `PED-…` clicável). Se o pedido for cancelado, o orçamento volta para a situação que tinha (Aberto ou Enviado).
    - Cada mudança de situação fica no histórico (data, hora e usuário), visível nos detalhes junto com as etapas.
-   - Orçamento com pedido gerado **não pode ser editado**; nas situações Aberto e Enviado, mantém a edição normal e o botão **📦 Gerar pedido**. Alterar o orçamento não muda a situação.
+   - Só orçamento **Aberto** pode ser alterado. Se estiver **Enviado**, o sistema avisa que ele precisa voltar para Aberto antes (botão *↩ Voltar para aberto* nos detalhes); com **pedido gerado**, nunca. O botão **📦 Gerar pedido** vale para Aberto e Enviado.
 
    *Gerar Orçamento* no carrinho grava o orçamento (numeração `ORC-0001`…), esvazia o carrinho e abre a aba **Detalhes**. Ao salvar uma alteração, o orçamento mantém o mesmo número e recebe a data da alteração; não há limite de alterações.
 4. **Pedidos**: tela com duas abas, no mesmo modelo de Orçamentos.
@@ -184,7 +184,7 @@ Todas as rotas exigem login, exceto as de `/api/auth`. Cada rota também exige a
 | `GET/PUT/PATCH/DELETE /api/produtos-proprios/:codigo` | Consulta, substitui, altera campos ou exclui (`PDP-000001`) |
 | `GET/PUT /api/parametros` | Lê / grava os parâmetros da calculadora |
 | `GET /api/orcamentos` | Lista paginada (`numero`, `produto`, `de`, `ate`, `min`, `max`, `status`, `pedido=com\|sem`, `meus=1`, `limit`, `offset`) → `{ total, orcamentos }` (cada um com `pedido` ativo ou `null`) |
-| `POST /api/orcamentos` · `GET/PUT /api/orcamentos/:id` | Grava, consulta (com `status` e `movimentos`) e altera (PUT mantém o número; 409 se houver pedido ativo) |
+| `POST /api/orcamentos` · `GET/PUT /api/orcamentos/:id` | Grava, consulta (com `status` e `movimentos`) e altera (PUT mantém o número; 409 se não estiver Aberto) |
 | `POST /api/orcamentos/:id/status` | Situação manual `{ status: 'ABERTO' \| 'ENVIADO', status_atual }` (409 com pedido gerado) |
 | `GET /api/pedidos` | Lista paginada (`codigo`, `orcamento`, `status` ou `EM_ANDAMENTO`, `de`, `ate`, `meus=1`, `limit`, `offset`) → `{ total, pedidos }` |
 | `POST /api/pedidos` | Cria pedido `{ orcamento_id, observacao? }` (409 se o orçamento já tem pedido ativo) |

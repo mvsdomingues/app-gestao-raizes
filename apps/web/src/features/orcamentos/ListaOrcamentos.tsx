@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useRef, useState, type FormEvent } from 'react';
-import { FLUXO_ORCAMENTO, formatBRL, ROTULOS_STATUS_ORCAMENTO, type FiltrosOrcamentos, type ResumoOrcamento } from '@raizes/shared';
+import { FLUXO_ORCAMENTO, formatBRL, motivoBloqueioAlteracao, ROTULOS_STATUS_ORCAMENTO, type FiltrosOrcamentos, type ResumoOrcamento } from '@raizes/shared';
 import { useApp } from '../../app/contexto';
 import { NomeUsuario } from '../../components/NomeUsuario';
 import { useSessao } from '../../app/sessao';
@@ -282,9 +282,7 @@ export function ListaOrcamentos() {
                     <button
                       className="btn-editar-orc"
                       title={
-                        r.pedido
-                          ? `${r.numero} está no pedido ${r.pedido.codigo} e não pode ser alterado`
-                          : `Alterar ${r.numero} no carrinho`
+                        motivoBloqueioAlteracao(r.numero, r.status, r.pedido?.codigo) ?? `Alterar ${r.numero} no carrinho`
                       }
                       disabled={carregando !== null || !!r.pedido}
                       onClick={(e) => {

@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react';
 import { calcComParametros, formatBRL, montarItemOrcamento } from '@raizes/shared';
 import { useApp } from '../../app/contexto';
 import { useSessao } from '../../app/sessao';
-import { api } from '../../lib/api';
+import { api, ErroApi } from '../../lib/api';
 import { subtotalCarrinho, useCarrinho } from '../../state/carrinho';
 import { ItemCarrinho } from './ItemCarrinho';
 
@@ -61,6 +61,12 @@ export function Carrinho() {
       limpar();
       definirFrete('0');
     } catch (e) {
+      // Alteração recusada pelo servidor (orçamento enviado ou com pedido): mostra o motivo e mantém o carrinho
+      if (edicao && e instanceof ErroApi) {
+        setGerando(false);
+        alert(e.message + '\n\nOs itens continuam no carrinho.');
+        return;
+      }
       console.error('Não foi possível salvar o orçamento no histórico:', e);
       alert(
         'Não foi possível salvar o orçamento no histórico (verifique a conexão com o servidor). O orçamento será exibido, mas não ficará registrado; os itens continuam no carrinho para tentar de novo.',
