@@ -61,6 +61,18 @@ export function garantirEsquema(db: Database.Database): void {
       atualizado TEXT NOT NULL
     );
 
+    -- Histórico de situações do orçamento (Aberto, Enviado, Pedido gerado)
+    CREATE TABLE IF NOT EXISTS orcamentos_movimentos (
+      id              INTEGER PRIMARY KEY AUTOINCREMENT,
+      orcamento_id    INTEGER NOT NULL REFERENCES orcamentos(id),
+      status_anterior TEXT,
+      status_novo     TEXT NOT NULL,
+      data_hora       TEXT NOT NULL,
+      observacao      TEXT,
+      usuario_id      INTEGER REFERENCES usuarios(id)
+    );
+    CREATE INDEX IF NOT EXISTS ix_orcamentos_movimentos_orc ON orcamentos_movimentos(orcamento_id);
+
     -- Pedidos: sempre gerados a partir de um orçamento (código PED-000001…).
     CREATE TABLE IF NOT EXISTS pedidos (
       id            INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -164,5 +176,9 @@ function migrarColunas(db: Database.Database): void {
     if (!colunas(db, tabela).includes(coluna)) {
       db.exec(`ALTER TABLE ${tabela} ADD COLUMN ${coluna} INTEGER REFERENCES usuarios(id)`);
     }
+  }
+  // Situação manual do orçamento (Aberto/Enviado); "Pedido gerado" vem do pedido ativo
+  if (!colunas(db, 'orcamentos').includes('status')) {
+    db.exec(`ALTER TABLE orcamentos ADD COLUMN status TEXT NOT NULL DEFAULT 'ABERTO'`);
   }
 }

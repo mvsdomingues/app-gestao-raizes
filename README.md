@@ -134,9 +134,11 @@ O menu fica na **barra lateral** (pode ser recolhido para mostrar só os ícones
 1. **Catálogo**: busque por nome ou código, filtre por fornecedor/estoque, alterne grade/lista e clique no produto para incluí-lo no carrinho. Mostra os produtos dos fornecedores e os produtos próprios.
 2. **Carrinho**: ajuste quantidades e, em *Ajustar custos e margem*, os custos de personalização e os custos fixos de cada item (começam com os valores da tela **Parâmetros**). Imposto de compra, imposto sobre venda e margem não aparecem no carrinho: são sempre os cadastrados em **Parâmetros**.
 3. **Orçamentos**: tela única com duas abas.
-   - **Todos os orçamentos**: lista paginada (20 por página) com filtros por número (`ORC-0005` ou `5`), produto (descrição ou código de qualquer item), período (de/até), faixa de valor total e pedido (com/sem). Clique em uma linha para ver os detalhes; **✎ Editar** carrega o orçamento de volta no carrinho (o carrinho precisa estar vazio).
+   - **Todos os orçamentos**: lista paginada (20 por página) com filtros por número (`ORC-0005` ou `5`), produto (descrição ou código de qualquer item), período (de/até), faixa de valor total e situação. Clique em uma linha para ver os detalhes; **✎ Editar** carrega o orçamento de volta no carrinho (o carrinho precisa estar vazio).
    - **Detalhes**: folha do orçamento selecionado, com **Editar**, **Gerar pedido** e **Imprimir / Salvar PDF**.
-   - Cada orçamento mostra uma tag: o código do pedido ativo (ex.: `PED-000001`, clique para abrir o pedido) ou **sem pedido**. Orçamento com pedido ativo **não pode ser editado**; sem pedido, mantém a edição normal e o botão **📦 Gerar pedido**.
+   - **Situação** de cada orçamento: **Aberto** (ao ser gerado) → **Enviado** (botão *✉ Enviado* na lista ou *Marcar como enviado* nos detalhes; dá para voltar para Aberto) → **Pedido gerado** (automático ao gerar o pedido, com o código `PED-…` clicável). Se o pedido for cancelado, o orçamento volta para a situação que tinha (Aberto ou Enviado).
+   - Cada mudança de situação fica no histórico (data, hora e usuário), visível nos detalhes junto com as etapas.
+   - Orçamento com pedido gerado **não pode ser editado**; nas situações Aberto e Enviado, mantém a edição normal e o botão **📦 Gerar pedido**. Alterar o orçamento não muda a situação.
 
    *Gerar Orçamento* no carrinho grava o orçamento (numeração `ORC-0001`…), esvazia o carrinho e abre a aba **Detalhes**. Ao salvar uma alteração, o orçamento mantém o mesmo número e recebe a data da alteração; não há limite de alterações.
 4. **Pedidos**: tela com duas abas, no mesmo modelo de Orçamentos.
@@ -181,8 +183,9 @@ Todas as rotas exigem login, exceto as de `/api/auth`. Cada rota também exige a
 | `GET/POST /api/produtos-proprios` | Lista (`?q=` busca) / inclui produto próprio |
 | `GET/PUT/PATCH/DELETE /api/produtos-proprios/:codigo` | Consulta, substitui, altera campos ou exclui (`PDP-000001`) |
 | `GET/PUT /api/parametros` | Lê / grava os parâmetros da calculadora |
-| `GET /api/orcamentos` | Lista paginada (`numero`, `produto`, `de`, `ate`, `min`, `max`, `pedido=com\|sem`, `meus=1`, `limit`, `offset`) → `{ total, orcamentos }` (cada um com `pedido` ativo ou `null`) |
-| `POST /api/orcamentos` · `GET/PUT /api/orcamentos/:id` | Grava, consulta e altera (PUT mantém o número; 409 se houver pedido ativo) |
+| `GET /api/orcamentos` | Lista paginada (`numero`, `produto`, `de`, `ate`, `min`, `max`, `status`, `pedido=com\|sem`, `meus=1`, `limit`, `offset`) → `{ total, orcamentos }` (cada um com `pedido` ativo ou `null`) |
+| `POST /api/orcamentos` · `GET/PUT /api/orcamentos/:id` | Grava, consulta (com `status` e `movimentos`) e altera (PUT mantém o número; 409 se houver pedido ativo) |
+| `POST /api/orcamentos/:id/status` | Situação manual `{ status: 'ABERTO' \| 'ENVIADO', status_atual }` (409 com pedido gerado) |
 | `GET /api/pedidos` | Lista paginada (`codigo`, `orcamento`, `status` ou `EM_ANDAMENTO`, `de`, `ate`, `meus=1`, `limit`, `offset`) → `{ total, pedidos }` |
 | `POST /api/pedidos` | Cria pedido `{ orcamento_id, observacao? }` (409 se o orçamento já tem pedido ativo) |
 | `GET /api/pedidos/:codigo` | Pedido com movimentações e orçamento (`PED-000001`) |

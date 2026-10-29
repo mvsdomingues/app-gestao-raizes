@@ -14,6 +14,7 @@ import {
   type StatusPedido,
 } from '@raizes/shared';
 import { ErroHttp } from '../lib/http';
+import { registrarMovimentoOrcamento } from './repositorio-orcamentos';
 import { colunasResponsavel, extrairResponsavel } from './repositorio-usuarios';
 import { isoLocal } from '../lib/datas';
 import type { Banco } from './conexao';
@@ -186,6 +187,10 @@ export function criarPedido(db: Banco, orcamentoId: number, observacao: string |
        VALUES (?, ?, ?, 'CRIADO', ?, ?, ?, ?)`,
     ).run(id, codigo, orcamentoId, observacao, agora, agora, usuarioId);
     registrarMovimento(db, id, null, 'CRIADO', agora, observacao, usuarioId);
+    // Situação do orçamento passa a "Pedido gerado"
+    const anterior = (db.prepare('SELECT status FROM orcamentos WHERE id = ?').get(orcamentoId) as { status: 'ABERTO' | 'ENVIADO' })
+      .status;
+    registrarMovimentoOrcamento(db, orcamentoId, anterior, 'PEDIDO_GERADO', usuarioId, `Pedido ${codigo}`, agora);
     return codigo;
   })();
 }
@@ -245,5 +250,12 @@ export function cancelarPedido(db: Banco, codigo: string, motivo: string | null,
     const agora = isoLocal();
     db.prepare(`UPDATE pedidos SET status = 'CANCELADO', atualizado = ? WHERE id = ?`).run(agora, p.id);
     registrarMovimento(db, p.id, p.status, 'CANCELADO', agora, motivo, usuarioId);
+    // O orçamento volta à situação que tinha antes do pedido (Aberto ou Enviado)
+    const o = db
+      .prepare(
+        'SELECT o.id, o.status, p.codigo FROM orcamentos o JOIN pedidos p ON p.orcamento_id = o.id WHERE p.id = ?',
+      )
+      .get(p.id) as { id: number; status: 'ABERTO' | 'ENVIADO'; codigo: string };
+    registrarMovimentoOrcamento(db, o.id, 'PEDIDO_GERADO', o.status, usuarioId, `Pedido ${o.codigo} cancelado`, agora);
   })();
 }

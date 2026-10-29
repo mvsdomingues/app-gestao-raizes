@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useRef, useState, type FormEvent } from 'react';
-import { formatBRL, type FiltrosOrcamentos, type ResumoOrcamento } from '@raizes/shared';
+import { FLUXO_ORCAMENTO, formatBRL, ROTULOS_STATUS_ORCAMENTO, type FiltrosOrcamentos, type ResumoOrcamento } from '@raizes/shared';
 import { useApp } from '../../app/contexto';
 import { NomeUsuario } from '../../components/NomeUsuario';
 import { useSessao } from '../../app/sessao';
@@ -8,9 +8,10 @@ import { api } from '../../lib/api';
 import { Paginacao } from '../catalogo/Paginacao';
 import { ModalNovoPedido } from '../pedidos/ModalNovoPedido';
 import { useEditarOrcamento } from './editar-orcamento';
+import { TagStatusOrcamento, useSituacaoOrcamento } from './situacao';
 
 const POR_PAGINA = 20;
-const FILTROS_VAZIOS: FiltrosOrcamentos = { numero: '', produto: '', de: '', ate: '', min: '', max: '', pedido: '', meus: '' };
+const FILTROS_VAZIOS: FiltrosOrcamentos = { numero: '', produto: '', de: '', ate: '', min: '', max: '', status: '', meus: '' };
 
 type Estado =
   | { tipo: 'carregando' }
@@ -29,7 +30,7 @@ function formatarData(dataHora: string): string {
 
 /** Aba "Todos os orçamentos": filtros, tabela paginada, abrir e editar. */
 export function ListaOrcamentos() {
-  const { visitas, mostrarOrcamento, abrirPedido, pedidoAberto } = useApp();
+  const { visitas, mostrarOrcamento, abrirPedido, pedidoAberto, versaoOrcamentos } = useApp();
   const { pode } = useSessao();
   const { editar, carregando } = useEditarOrcamento();
   const [filtros, setFiltros] = useState<FiltrosOrcamentos>(FILTROS_VAZIOS);
@@ -56,10 +57,12 @@ export function ListaOrcamentos() {
     if (visitas.orcamentos > 0) void carregar(aplicados, pagina);
   }, [visitas.orcamentos]);
 
-  // Atualiza as tags quando um pedido é gerado, movimentado ou cancelado
+  // Atualiza as tags quando um pedido é gerado/movimentado/cancelado ou a situação muda
   useEffect(() => {
     if (visitas.orcamentos > 0) void carregar(aplicados, pagina);
-  }, [pedidoAberto]);
+  }, [pedidoAberto, versaoOrcamentos]);
+
+  const { alterar: alterarSituacao, processando } = useSituacaoOrcamento();
 
   const filtrar = (e?: FormEvent) => {
     e?.preventDefault();
@@ -103,6 +106,7 @@ export function ListaOrcamentos() {
         frete: o.frete,
         total: o.total,
         pedido: o.pedido ?? null,
+        status: o.status,
         responsavel: o.responsavel ?? null,
         alteradoPor: o.alterado_por ?? null,
       });
@@ -148,11 +152,14 @@ export function ListaOrcamentos() {
           </div>
         </div>
         <div className="orc-filtro">
-          <label htmlFor="filtro-pedido">Pedido</label>
-          <select id="filtro-pedido" className="custom-input" {...campo('pedido')}>
-            <option value="">Todos</option>
-            <option value="com">Com pedido</option>
-            <option value="sem">Sem pedido</option>
+          <label htmlFor="filtro-status-orc">Situação</label>
+          <select id="filtro-status-orc" className="custom-input" {...campo('status')}>
+            <option value="">Todas</option>
+            {FLUXO_ORCAMENTO.map((s) => (
+              <option key={s} value={s}>
+                {ROTULOS_STATUS_ORCAMENTO[s]}
+              </option>
+            ))}
           </select>
         </div>
         <label className="filtro-meus" title="Mostra só os orçamentos criados por você">
@@ -207,8 +214,8 @@ export function ListaOrcamentos() {
                 <th className="num" style={{ width: 140 }}>
                   Total
                 </th>
-                <th style={{ width: 130 }}>Pedido</th>
-                <th style={{ width: 220 }} />
+                <th style={{ width: 150 }}>Situação</th>
+                <th style={{ width: 300 }} />
               </tr>
             </thead>
             <tbody>
@@ -226,24 +233,39 @@ export function ListaOrcamentos() {
                     {formatBRL(r.total)}
                   </td>
                   <td>
-                    {r.pedido && pode('pedidos') ? (
-                      <button
-                        className="tag-orc-pedido"
-                        title={`Ver o pedido ${r.pedido.codigo}`}
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          void abrirPedido(r.pedido!.codigo);
-                        }}
-                      >
-                        📦 {r.pedido.codigo}
-                      </button>
-                    ) : r.pedido ? (
-                      <span className="tag-orc-pedido sem-link">📦 {r.pedido.codigo}</span>
-                    ) : (
-                      <span className="tag-sem-pedido">sem pedido</span>
-                    )}
+                    <div className="orc-situacao">
+                      <TagStatusOrcamento status={r.status} />
+                      {r.pedido &&
+                        (pode('pedidos') ? (
+                          <button
+                            className="tag-orc-pedido"
+                            title={`Ver o pedido ${r.pedido.codigo}`}
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              void abrirPedido(r.pedido!.codigo);
+                            }}
+                          >
+                            {r.pedido.codigo}
+                          </button>
+                        ) : (
+                          <span className="tag-orc-pedido sem-link">{r.pedido.codigo}</span>
+                        ))}
+                    </div>
                   </td>
                   <td className="hist-acoes">
+                    {r.status === 'ABERTO' && (
+                      <button
+                        className="btn-editar-orc btn-marcar-enviado"
+                        title={`Marcar o ${r.numero} como enviado ao cliente`}
+                        disabled={processando !== null}
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          void alterarSituacao(r.id, r.numero, r.status, 'ENVIADO');
+                        }}
+                      >
+                        {processando === r.id ? 'Salvando…' : '✉ Enviado'}
+                      </button>
+                    )}
                     {!r.pedido && pode('pedidos') && (
                       <button
                         className="btn-editar-orc btn-gerar-pedido"

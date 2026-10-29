@@ -18,6 +18,7 @@ import {
   type Pedido,
   type PedidoDoOrcamento,
   type StatusFornecedor,
+  type StatusOrcamento,
   type UsuarioResumo,
 } from '@raizes/shared';
 import { api } from '../lib/api';
@@ -41,6 +42,8 @@ export interface FolhaOrcamento {
   total: number;
   /** Pedido ativo do orçamento (null = sem pedido) */
   pedido?: PedidoDoOrcamento | null;
+  /** Situação (Aberto, Enviado, Pedido gerado) */
+  status?: StatusOrcamento;
   /** Quem criou / alterou por último (null = registro anterior ao controle de acesso) */
   responsavel?: UsuarioResumo | null;
   alteradoPor?: UsuarioResumo | null;
@@ -77,6 +80,9 @@ interface ContextoApp {
   mostrarOrcamento: (f: FolhaOrcamento) => void;
   abaOrcamentos: AbaOrcamentos;
   setAbaOrcamentos: (a: AbaOrcamentos) => void;
+  /** Avisa que a situação de um orçamento mudou (lista e detalhes recarregam). */
+  versaoOrcamentos: number;
+  avisarOrcamentosAlterados: () => void;
   /** Atualiza a tag de pedido da folha aberta (após gerar/cancelar um pedido). */
   definirPedidoDaFolha: (orcamentoId: number, pedido: PedidoDoOrcamento | null) => void;
 
@@ -124,6 +130,7 @@ export function ProvedorApp({ children }: { children: ReactNode }) {
   const [pedidoAberto, setPedidoAberto] = useState<Pedido | null>(null);
   const [abaPedidos, setAbaPedidos] = useState<AbaPedidos>('lista');
   const [usuarioAcessos, setUsuarioAcessos] = useState<number | null>(null);
+  const [versaoOrcamentos, setVersaoOrcamentos] = useState(0);
   const mockupSolicitado = useRef<number | string | null>(null);
 
   const irPara = useCallback((t: Tela) => {
@@ -204,6 +211,8 @@ export function ProvedorApp({ children }: { children: ReactNode }) {
       },
       abaOrcamentos,
       setAbaOrcamentos,
+      versaoOrcamentos,
+      avisarOrcamentosAlterados: () => setVersaoOrcamentos((v) => v + 1),
       definirPedidoDaFolha: (orcamentoId, pedido) =>
         setFolha((f) => (f && f.id === orcamentoId ? { ...f, pedido } : f)),
       usuarioAcessos,
@@ -238,7 +247,7 @@ export function ProvedorApp({ children }: { children: ReactNode }) {
         irPara('mockup');
       },
     }),
-    [tela, visitas, irPara, fornecedores, carregarFornecedores, status, carregarStatus, imagemAmpliada, parametros, parametrosAtualizado, carregarParametros, versaoCatalogo, folha, abaOrcamentos, pedidoAberto, abaPedidos, usuarioAcessos],
+    [tela, visitas, irPara, fornecedores, carregarFornecedores, status, carregarStatus, imagemAmpliada, parametros, parametrosAtualizado, carregarParametros, versaoCatalogo, folha, abaOrcamentos, pedidoAberto, abaPedidos, usuarioAcessos, versaoOrcamentos],
   );
 
   return <Ctx.Provider value={valor}>{children}</Ctx.Provider>;

@@ -20,6 +20,8 @@ import type {
   RespostaPedidos,
   RespostaQuadroPedidos,
   StatusAtualizacao,
+  StatusOrcamento,
+  StatusOrcamentoManual,
   StatusFornecedor,
 } from '@raizes/shared';
 
@@ -100,6 +102,10 @@ export const api = {
     for (const [k, v] of Object.entries(filtros)) if (v && String(v).trim()) qs.set(k, String(v).trim());
     return enviar<RespostaOrcamentos>('GET', `/api/orcamentos?${qs}`);
   },
+
+  /** Muda a situação manual do orçamento (Aberto ↔ Enviado). */
+  alterarStatusOrcamento: (id: number, status: StatusOrcamentoManual, statusAtual: StatusOrcamento) =>
+    enviar<Orcamento>('POST', `/api/orcamentos/${id}/status`, { status, status_atual: statusAtual }),
 
   async orcamento(id: number): Promise<Orcamento> {
     const resp = await requisitar(`/api/orcamentos/${id}`);

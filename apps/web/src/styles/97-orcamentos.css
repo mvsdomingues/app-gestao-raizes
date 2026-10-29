@@ -107,3 +107,80 @@
 .filtro-meus input { accent-color: var(--uva); width: 15px; height: 15px; margin: 0; }
 .pedidos-barra .filtro-meus { align-self: center; flex-shrink: 0; }
 
+
+/* ── Situação do orçamento: Aberto → Enviado → Pedido gerado ── */
+.so-ABERTO        { --so-fundo: #F0EAF6; --so-texto: var(--uva);     --so-borda: #DCCDEA; }
+.so-ENVIADO       { --so-fundo: #E8ECFB; --so-texto: #3F4BA8;        --so-borda: #C9CFF2; }
+.so-PEDIDO_GERADO { --so-fundo: #EAF5E8; --so-texto: var(--success); --so-borda: #C3E3BE; }
+.tag-orc-status {
+  display: inline-block;
+  padding: 3px 10px;
+  border-radius: 20px;
+  font-size: .68rem;
+  font-weight: 600;
+  letter-spacing: .4px;
+  text-transform: uppercase;
+  white-space: nowrap;
+  background: var(--so-fundo);
+  color: var(--so-texto);
+  border: 1px solid var(--so-borda);
+}
+.orc-situacao { display: flex; align-items: center; gap: 6px; flex-wrap: wrap; }
+.orc-situacao .tag-orc-pedido { padding: 2px 8px; font-size: .68rem; }
+
+.orc-situacao-painel {
+  background: var(--surface);
+  border: 1.5px solid var(--border);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-sm);
+  padding: 16px 20px;
+  margin-bottom: 18px;
+}
+.orc-situacao-topo { display: flex; justify-content: space-between; align-items: center; gap: 12px; flex-wrap: wrap; }
+.orc-situacao-atual { display: flex; align-items: center; gap: 8px; }
+.orc-situacao-rotulo { font-size: .66rem; font-weight: 600; letter-spacing: 1px; text-transform: uppercase; color: var(--muted); }
+.orc-situacao-painel .orc-responsaveis { margin: 0; }
+
+.orc-passos { list-style: none; display: grid; grid-template-columns: repeat(3, 1fr); margin-top: 16px; }
+.orc-passo { position: relative; display: flex; flex-direction: column; align-items: center; gap: 4px; text-align: center; }
+.orc-passo::before {
+  content: '';
+  position: absolute;
+  top: 13px;
+  left: -50%;
+  width: 100%;
+  height: 3px;
+  background: var(--border);
+}
+.orc-passo:first-child::before { display: none; }
+.orc-passo.feito::before, .orc-passo.atual::before { background: var(--so-texto); }
+.orc-passo-marca {
+  position: relative;
+  z-index: 1;
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: .76rem;
+  font-weight: 700;
+  background: var(--surface);
+  border: 2px solid var(--border2);
+  color: var(--muted);
+}
+.orc-passo.feito .orc-passo-marca { background: var(--so-texto); border-color: var(--so-texto); color: #fff; }
+.orc-passo.atual .orc-passo-marca { border-color: var(--so-texto); color: var(--so-texto); box-shadow: 0 0 0 4px var(--so-fundo); }
+.orc-passo-nome { font-size: .72rem; font-weight: 600; letter-spacing: .4px; text-transform: uppercase; }
+.orc-passo.futuro .orc-passo-nome { color: var(--muted); font-weight: 500; }
+.orc-passo-data { font-size: .72rem; color: var(--muted); }
+
+.orc-historico { margin-top: 12px; }
+.orc-historico .link-botao { font-size: .78rem; }
+.orc-historico-tabela { margin-top: 10px; }
+
+.hist-acoes .btn-marcar-enviado:hover:not(:disabled) { background: #3F4BA8; border-color: #3F4BA8; color: #fff; }
+
+@media print {
+  .orc-situacao-painel { display: none !important; }
+}

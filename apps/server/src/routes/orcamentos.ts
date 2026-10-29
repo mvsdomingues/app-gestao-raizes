@@ -1,5 +1,7 @@
 import { Router, type Request } from 'express';
 import {
+  isStatusOrcamento,
+  isStatusOrcamentoManual,
   numeroOrcamento,
   type Orcamento,
   type OrcamentoCriado,
@@ -8,6 +10,12 @@ import {
   type ResumoOrcamento,
 } from '@raizes/shared';
 import type { Banco } from '../db/conexao';
+import {
+  alterarStatusOrcamento,
+  movimentosDoOrcamento,
+  registrarMovimentoOrcamento,
+  SQL_STATUS_ORCAMENTO,
+} from '../db/repositorio-orcamentos';
 import { pedidoAtivoDoOrcamento } from '../db/repositorio-pedidos';
 import { colunasResponsavel, extrairResponsavel } from '../db/repositorio-usuarios';
 import { falsyPython, floatPython } from '../lib/conversao';
@@ -40,7 +48,7 @@ export function lerOrcamento(db: Banco, id: number): Orcamento | undefined {
   const row = db
     .prepare(
       `SELECT orcamentos.id, orcamentos.data_hora, orcamentos.subtotal, orcamentos.frete, orcamentos.total,
-              orcamentos.qtd_itens, orcamentos.itens_json,
+              orcamentos.qtd_itens, orcamentos.itens_json, ${SQL_STATUS_ORCAMENTO} AS status,
               ${colunasResponsavel('ur', 'resp')}, ${colunasResponsavel('ua', 'alt')}
          FROM orcamentos ${JOIN_RESPONSAVEIS} WHERE orcamentos.id = ?`,
     )
@@ -56,6 +64,7 @@ export function lerOrcamento(db: Banco, id: number): Orcamento | undefined {
     numero: numeroOrcamento(row.id),
     itens: JSON.parse(itens_json),
     pedido: pedidoAtivoDoOrcamento(db, row.id),
+    movimentos: movimentosDoOrcamento(db, row.id),
   };
 }
 
@@ -108,6 +117,12 @@ export function rotasOrcamentos(db: Banco): Router {
       wheres.push('orcamentos.usuario_id = ?');
       params.push(exigirUsuario(res).id);
     }
+    // Situação: Aberto, Enviado ou Pedido gerado
+    const status = q('status');
+    if (isStatusOrcamento(status)) {
+      wheres.push(`(${SQL_STATUS_ORCAMENTO}) = ?`);
+      params.push(status);
+    }
     const pedido = q('pedido');
     if (pedido === 'com' || pedido === 'sem') {
       wheres.push(`${pedido === 'sem' ? 'NOT ' : ''}EXISTS (${SQL_PEDIDO_ATIVO.replace('{campo}', '1')})`);
@@ -122,7 +137,7 @@ export function rotasOrcamentos(db: Banco): Router {
     const rows = db
       .prepare(
         `SELECT orcamentos.id, orcamentos.data_hora, orcamentos.subtotal, orcamentos.frete, orcamentos.total,
-                orcamentos.qtd_itens,
+                orcamentos.qtd_itens, ${SQL_STATUS_ORCAMENTO} AS status,
                 (${SQL_PEDIDO_ATIVO.replace('{campo}', 'codigo')}) AS pedido_codigo,
                 (${SQL_PEDIDO_ATIVO.replace('{campo}', 'status')}) AS pedido_status,
                 ${colunasResponsavel('ur', 'resp')}, ${colunasResponsavel('ua', 'alt')}
@@ -174,6 +189,7 @@ export function rotasOrcamentos(db: Banco): Router {
       )
       .run(dataHora, subtotal, frete, total, itens.length, JSON.stringify(itens), eu.id);
     const id = Number(info.lastInsertRowid);
+    registrarMovimentoOrcamento(db, id, null, 'ABERTO', eu.id, null, dataHora);
     const corpo: OrcamentoCriado = { id, numero: numeroOrcamento(id), data_hora: dataHora };
     res.json(corpo);
   });
@@ -199,6 +215,24 @@ export function rotasOrcamentos(db: Banco): Router {
     if (!info.changes) throw new ErroHttp(404, 'não encontrado');
     const corpo: OrcamentoCriado = { id, numero: numeroOrcamento(id), data_hora: dataHora };
     res.json(corpo);
+  });
+
+  /** Muda a situação manual: { status: 'ENVIADO' | 'ABERTO', status_atual } */
+  r.post('/api/orcamentos/:oid/status', (req, res, next) => {
+    if (!/^\d+$/.test(req.params.oid)) return next();
+    const id = Number(req.params.oid);
+    const corpo = corpoJson(req);
+    if (!isStatusOrcamentoManual(corpo.status)) {
+      throw new ErroHttp(400, 'Situação inválida: use ABERTO ou ENVIADO ("Pedido gerado" vem da geração do pedido)');
+    }
+    alterarStatusOrcamento(
+      db,
+      id,
+      corpo.status,
+      exigirUsuario(res).id,
+      typeof corpo.status_atual === 'string' ? corpo.status_atual : undefined,
+    );
+    res.json(lerOrcamento(db, id));
   });
 
   r.get('/api/orcamentos/:oid', (req, res, next) => {

@@ -59,6 +59,8 @@ export interface ResumoOrcamento {
   frete: number;
   total: number;
   qtd_itens: number;
+  /** Situação: Aberto, Enviado ou Pedido gerado (este enquanto houver pedido ativo). */
+  status: import('./orcamentos').StatusOrcamento;
   /** Pedido ativo gerado a partir do orçamento (null = sem pedido; o orçamento pode ser alterado). */
   pedido?: import('./pedidos').PedidoDoOrcamento | null;
   /** Usuário que criou o orçamento (null nos orçamentos anteriores ao controle de acesso). */
@@ -87,11 +89,15 @@ export interface FiltrosOrcamentos {
   pedido?: string;
   /** "1" = só os criados pelo usuário logado (filtro rápido) */
   meus?: string;
+  /** ABERTO, ENVIADO ou PEDIDO_GERADO; vazio = todas */
+  status?: string;
 }
 
 /** Orçamento completo (GET /api/orcamentos/:id). */
 export interface Orcamento extends ResumoOrcamento {
   itens: ItemOrcamento[];
+  /** Histórico de situações (mais antigo primeiro) */
+  movimentos?: import('./orcamentos').MovimentoOrcamento[];
 }
 
 /** Corpo de POST /api/orcamentos */
