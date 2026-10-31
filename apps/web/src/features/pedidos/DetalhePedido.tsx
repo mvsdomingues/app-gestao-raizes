@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { formatBRL, FLUXO_PEDIDO, podeCancelar, proximoStatus, ROTULOS_STATUS_PEDIDO, type Pedido } from '@raizes/shared';
+import { formatBRL, FLUXO_PEDIDO, podeCancelar, proximoStatus, ROTULOS_STATUS_PEDIDO, type Pedido, type StatusPedido } from '@raizes/shared';
 import { useApp } from '../../app/contexto';
 import { NomeUsuario } from '../../components/NomeUsuario';
 import { useSessao } from '../../app/sessao';
@@ -42,8 +42,12 @@ export function DetalhePedido() {
   const cancelamento = cancelado ? p.movimentos.findLast((m) => m.status_novo === 'CANCELADO') : undefined;
   // Data/hora em que o pedido entrou em cada etapa do fluxo
   const entrada = new Map(p.movimentos.filter((m) => m.status_novo !== 'CANCELADO').map((m) => [m.status_novo, m.data_hora]));
+  // Cancelado: as etapas cumpridas até o cancelamento e, no fim, "Cancelado" como etapa atual
+  const ultimaAntes = FLUXO_PEDIDO.indexOf((cancelamento?.status_anterior ?? 'CRIADO') as (typeof FLUXO_PEDIDO)[number]);
+  const etapas: StatusPedido[] = cancelado ? [...FLUXO_PEDIDO.slice(0, Math.max(0, ultimaAntes) + 1), 'CANCELADO'] : [...FLUXO_PEDIDO];
+  if (cancelamento) entrada.set('CANCELADO', cancelamento.data_hora);
   const indiceAtual = cancelado
-    ? FLUXO_PEDIDO.indexOf((cancelamento?.status_anterior ?? 'CRIADO') as (typeof FLUXO_PEDIDO)[number])
+    ? etapas.length - 1
     : p.status === 'ENCERRADO'
       ? FLUXO_PEDIDO.length // fluxo concluído: todas as etapas feitas
       : FLUXO_PEDIDO.indexOf(p.status as (typeof FLUXO_PEDIDO)[number]);
@@ -126,14 +130,18 @@ export function DetalhePedido() {
           </div>
         )}
 
-        <ol className={`pedido-fluxo${cancelado ? ' cancelado' : ''}`} aria-label="Etapas do pedido">
-          {FLUXO_PEDIDO.map((s, i) => {
+        <ol
+          className={`pedido-fluxo${cancelado ? ' cancelado' : ''}`}
+          aria-label="Etapas do pedido"
+          style={cancelado ? { gridTemplateColumns: `repeat(${etapas.length}, 1fr)` } : undefined}
+        >
+          {etapas.map((s, i) => {
             const estado = i < indiceAtual ? 'feito' : i === indiceAtual ? 'atual' : 'futuro';
             // Etapa futura não mostra data (o pedido pode ter voltado de uma etapa)
             const quando = estado === 'futuro' ? undefined : entrada.get(s);
             return (
               <li key={s} className={`pedido-etapa ${estado}${quando ? ' registrado' : ''}`}>
-                <span className="pedido-etapa-marca">{quando && estado !== 'atual' ? '✓' : i + 1}</span>
+                <span className="pedido-etapa-marca">{s === 'CANCELADO' ? '✕' : quando && estado !== 'atual' ? '✓' : i + 1}</span>
                 <span className="pedido-etapa-nome">{ROTULOS_STATUS_PEDIDO[s]}</span>
                 <span className="pedido-etapa-data">{quando ? formatarDataHora(quando) : '—'}</span>
               </li>

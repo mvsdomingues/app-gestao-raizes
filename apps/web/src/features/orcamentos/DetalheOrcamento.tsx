@@ -1,5 +1,12 @@
 import { useEffect, useState } from 'react';
-import { FLUXO_ORCAMENTO, motivoBloqueioAlteracao, podeGerarPedido, ROTULOS_STATUS_ORCAMENTO, type Orcamento } from '@raizes/shared';
+import {
+  FLUXO_ORCAMENTO,
+  motivoBloqueioAlteracao,
+  podeGerarPedido,
+  ROTULOS_STATUS_ORCAMENTO,
+  type Orcamento,
+  type StatusOrcamento,
+} from '@raizes/shared';
 import { PainelLink } from './LinkCliente';
 import { useApp } from '../../app/contexto';
 import { useSessao } from '../../app/sessao';
@@ -45,9 +52,12 @@ export function DetalheOrcamento() {
   const entrada = new Map(movimentos.map((m) => [m.status_novo, m]));
   const cancelado = status === 'CANCELADO';
   const cancelamento = cancelado ? movimentos.findLast((m) => m.status_novo === 'CANCELADO') : undefined;
-  // Cancelado: as etapas mostram até onde o orçamento chegou antes de ser cancelado
-  const etapa = cancelado ? (cancelamento?.status_anterior ?? 'ABERTO') : status;
-  const indice = etapa && etapa !== 'CANCELADO' ? FLUXO_ORCAMENTO.indexOf(etapa) : -1;
+  // Cancelado: as etapas cumpridas até o cancelamento e, no fim, "Cancelado" como etapa atual
+  const antesDoCancelamento = cancelamento?.status_anterior === 'ENVIADO' ? 2 : 1;
+  const etapas: StatusOrcamento[] = cancelado
+    ? [...FLUXO_ORCAMENTO.slice(0, antesDoCancelamento), 'CANCELADO']
+    : [...FLUXO_ORCAMENTO];
+  const indice = status ? etapas.indexOf(status) : -1;
   const resposta = info?.resposta_cliente ?? null;
   const cliente = info ? (info.cliente ?? null) : (folha?.cliente ?? null);
 
@@ -191,13 +201,17 @@ export function DetalheOrcamento() {
           )}
           {info?.link && status !== 'ABERTO' && <PainelLink orcamento={info} aoAtualizar={setInfo} />}
 
-          <ol className="orc-passos" aria-label="Situação do orçamento">
-            {FLUXO_ORCAMENTO.map((s, i) => {
+          <ol
+            className={`orc-passos${cancelado ? ' cancelado' : ''}`}
+            aria-label="Situação do orçamento"
+            style={{ gridTemplateColumns: `repeat(${etapas.length}, 1fr)` }}
+          >
+            {etapas.map((s, i) => {
               const m = i <= indice ? entrada.get(s) : undefined;
               const estado = i < indice ? 'feito' : i === indice ? 'atual' : 'futuro';
               return (
                 <li key={s} className={`orc-passo ${estado} so-${s}`}>
-                  <span className="orc-passo-marca">{estado === 'feito' ? '✓' : i + 1}</span>
+                  <span className="orc-passo-marca">{estado === 'feito' ? '✓' : s === 'CANCELADO' ? '✕' : i + 1}</span>
                   <span className="orc-passo-nome">{ROTULOS_STATUS_ORCAMENTO[s]}</span>
                   <span className="orc-passo-data">
                     {m ? (

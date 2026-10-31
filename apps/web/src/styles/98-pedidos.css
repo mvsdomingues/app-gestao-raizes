@@ -127,6 +127,8 @@
 .pedido-etapa.futuro .pedido-etapa-nome { color: var(--muted); font-weight: 500; }
 .pedido-etapa-data { font-size: .72rem; color: var(--muted); }
 .pedido-fluxo.cancelado .pedido-etapa.atual .pedido-etapa-marca { border-color: var(--danger); color: var(--danger); box-shadow: 0 0 0 4px #FDECEA; }
+.pedido-fluxo.cancelado .pedido-etapa.atual::before { background: var(--danger); }
+.pedido-fluxo.cancelado .pedido-etapa.atual .pedido-etapa-nome { color: var(--danger); }
 .pedido-tempo { margin-top: 18px; font-size: .8rem; color: var(--muted); text-align: right; }
 .pedido-tempo b { color: var(--berinjela); }
 

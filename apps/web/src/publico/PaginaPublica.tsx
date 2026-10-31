@@ -141,17 +141,24 @@ export function PaginaPublica() {
                 Personalizados recebe o pedido na hora e entra em contato para os próximos passos.
               </>
             ) : (
-              <>Conte para nós o motivo; isso nos ajuda a melhorar a proposta.</>
+              <>
+                Conte para nós o motivo. Se precisar de alterações, detalhe aqui o que deve mudar (quantidades, produtos, cores,
+                prazo…) e a Raízes envia um orçamento revisado.
+              </>
             )}
           </p>
-          <label htmlFor="pub-texto">{painel === 'aceitar' ? 'Observação (opcional)' : 'Motivo da rejeição'}</label>
+          <label htmlFor="pub-texto">{painel === 'aceitar' ? 'Observação (opcional)' : 'Motivo ou alterações necessárias'}</label>
           <textarea
             id="pub-texto"
             className="custom-input"
             rows={4}
             maxLength={1000}
             autoFocus
-            placeholder={painel === 'aceitar' ? 'Ex.: entregar na portaria, ajuste de data…' : 'Ex.: prazo, valor, mudança de planos…'}
+            placeholder={
+              painel === 'aceitar'
+                ? 'Ex.: entregar na portaria, ajuste de data…'
+                : 'Ex.: trocar a cor da caneca para azul e aumentar para 150 unidades; ou: prazo, valor…'
+            }
             value={texto}
             onChange={(e) => setTexto(e.target.value)}
           />
@@ -232,6 +239,12 @@ function Situacao({ o }: { o: OrcamentoPublico }) {
     <div className={`pub-situacao ${c.classe}`} id="pub-situacao" data-situacao={o.situacao}>
       <div className="pub-situacao-titulo">{c.titulo}</div>
       <div className="pub-situacao-texto">{c.texto}</div>
+      {o.situacao === 'DISPONIVEL' && (
+        <div className="pub-situacao-alteracao" id="pub-dica-alteracao">
+          <b>Precisa mudar alguma coisa?</b> Use o botão <b>Rejeitar</b> no fim da página e descreva no campo de motivo as
+          alterações necessárias (quantidades, produtos, cores, prazo…). A Raízes ajusta o orçamento e envia a nova versão.
+        </div>
+      )}
     </div>
   );
 }

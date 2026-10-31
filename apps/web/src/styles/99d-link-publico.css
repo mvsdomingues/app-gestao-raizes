@@ -26,6 +26,11 @@ body.pagina-publica { display: block; background: var(--creme); }
 .pub-situacao.neutro { background: var(--creme2); border-color: var(--border); }
 .pub-situacao-titulo { font-family: var(--font-display); font-size: 1.35rem; font-weight: 600; color: var(--berinjela); }
 .pub-situacao-texto { font-size: .9rem; margin-top: 2px; color: var(--grafite); }
+.pub-situacao-alteracao {
+  margin-top: 10px; padding: 9px 12px; border-radius: var(--radius);
+  background: #fff; border: 1px solid #D9CCE2; font-size: .84rem; color: var(--grafite); line-height: 1.45;
+}
+.pub-situacao-alteracao b { color: var(--berinjela); }
 
 .pub-folha { background: #fff; border-radius: var(--radius-lg); box-shadow: var(--shadow); padding: 36px 40px; }
 .pub-folha .orc-table { font-size: .84rem; }
@@ -79,8 +84,9 @@ body.pagina-publica { display: block; background: var(--creme); }
 }
 
 /* ── Sistema interno ── */
-.tag-orc-status.so-CANCELADO { background: #ECEAE6; color: #6B645C; }
-.orc-passo.so-CANCELADO .orc-passo-marca { background: #ECEAE6; }
+/* Fluxo cancelado: a linha até "Cancelado" e a marca em vermelho */
+.orc-passos.cancelado .orc-passo.so-CANCELADO::before { background: var(--danger); }
+.orc-passos.cancelado .orc-passo.so-CANCELADO .orc-passo-nome { color: var(--danger); }
 .orc-cancelado {
   margin-top: 14px; padding: 10px 14px; border-radius: var(--radius);
   background: #F4F2EE; border-left: 3px solid #9C958C; font-size: .86rem;

@@ -112,6 +112,7 @@
 .so-ABERTO        { --so-fundo: #F0EAF6; --so-texto: var(--uva);     --so-borda: #DCCDEA; }
 .so-ENVIADO       { --so-fundo: #E8ECFB; --so-texto: #3F4BA8;        --so-borda: #C9CFF2; }
 .so-PEDIDO_GERADO { --so-fundo: #EAF5E8; --so-texto: var(--success); --so-borda: #C3E3BE; }
+.so-CANCELADO     { --so-fundo: #FDECEA; --so-texto: var(--danger);  --so-borda: #F2C4BE; }
 .tag-orc-status {
   display: inline-block;
   padding: 3px 10px;
