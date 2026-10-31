@@ -122,3 +122,22 @@
   .param-exemplo { position: static; }
   .cadastro-table th:nth-child(7), .cadastro-table td:nth-child(7) { display: none; }
 }
+
+/* Parâmetros em abas (Precificação / Sistema) */
+.param-abas { margin-bottom: 18px; }
+.param-sistema { max-width: 720px; }
+.param-opcao {
+  display: flex; align-items: flex-start; gap: 12px; margin-top: 16px; padding: 14px 16px;
+  border: 1px solid var(--border); border-radius: var(--radius); background: var(--creme); cursor: pointer;
+}
+.param-opcao input { width: 18px; height: 18px; margin-top: 2px; accent-color: var(--uva); flex-shrink: 0; }
+.param-opcao > span { display: flex; flex-direction: column; gap: 4px; font-size: .9rem; }
+.param-opcao b { color: var(--berinjela); }
+.param-opcao-sub { font-size: .8rem; color: var(--muted); line-height: 1.45; }
+.param-estado {
+  align-self: flex-start; font-size: .66rem; font-weight: 600; letter-spacing: .5px; text-transform: uppercase;
+  padding: 2px 9px; border-radius: 20px;
+}
+.param-estado.ativo { background: #EAF5E8; color: var(--success); }
+.param-estado.inativo { background: #ECEAE6; color: #6B645C; }
+.param-sistema .param-nota { margin-top: 12px; }

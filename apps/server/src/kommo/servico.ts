@@ -19,6 +19,7 @@ import {
   ultimaMarca,
 } from '../db/repositorio-clientes';
 import { isoLocal } from '../lib/datas';
+import { notasKommoAtivas } from '../db/repositorio-parametros';
 import type { ApiKommo } from './api';
 
 export type TipoSincronizacao = 'completa' | 'incremental';
@@ -136,8 +137,14 @@ export class ServicoKommo {
     );
   }
 
+  /** Notas no Kommo ligadas (Parâmetros › Sistema). Desligadas: nenhuma nota é criada nem enviada. */
+  get notasAtivas(): boolean {
+    return notasKommoAtivas(this.db);
+  }
+
   /** Pedido gerado: registra uma nota no contato do Kommo (com nova tentativa se falhar). */
   notificarPedido(p: { contatoId: number; pedidoId: number; codigo: string; orcamento: string; total: number; usuario?: string }): void {
+    if (!this.notasAtivas) return;
     const texto =
       `Pedido ${p.codigo} gerado a partir do orçamento ${p.orcamento} · ${formatBRL(p.total)}` +
       (p.usuario ? ` · por ${p.usuario}` : '') +
@@ -157,6 +164,7 @@ export class ServicoKommo {
     /** Link enviado ao cliente */
     link?: string;
   }): void {
+    if (!this.notasAtivas) return;
     const texto =
       `Orçamento ${o.numero} enviado ao cliente · ${formatBRL(o.total)} · ${o.itens} ${o.itens === 1 ? 'item' : 'itens'}` +
       (o.usuario ? ` · por ${o.usuario}` : '') +
@@ -176,6 +184,7 @@ export class ServicoKommo {
     pedido?: { id: number; codigo: string };
     motivo?: string;
   }): void {
+    if (!this.notasAtivas) return;
     const texto = r.aceito
       ? `Cliente aceitou o orçamento ${r.numero} pelo link · pedido ${r.pedido?.codigo ?? ''} gerado · ${formatBRL(r.total)}` +
         (r.motivo ? ` · observação: ${r.motivo}` : '') +
@@ -188,6 +197,8 @@ export class ServicoKommo {
   /** Envia as notas pendentes (uma rodada por vez). */
   enviarNotas(): Promise<void> {
     if (this.enviandoNotas) return this.enviandoNotas;
+    // Desligadas: as pendentes (de antes) esperam na fila até as notas voltarem a ser ligadas
+    if (!this.notasAtivas) return Promise.resolve();
     this.enviandoNotas = (async () => {
       for (const n of notasPendentes(this.db)) {
         try {
@@ -209,6 +220,7 @@ export class ServicoKommo {
       intervalo_min: this.intervaloMin,
       total: totalClientes(this.db),
       notas_pendentes: contarNotasPendentes(this.db),
+      notas_ativas: this.notasAtivas,
       ultima: ultimaExecucao(this.db),
       ultima_ok: ultimaExecucaoOk(this.db),
     };

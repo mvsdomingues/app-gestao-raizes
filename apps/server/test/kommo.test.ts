@@ -219,7 +219,7 @@ describe('API de clientes, vínculo ao orçamento e nota no pedido', () => {
   });
 
   it('config e busca local', async () => {
-    expect((await req('GET', '/api/clientes/config')).json).toEqual({ ativo: true, subdominio: 'conta' });
+    expect((await req('GET', '/api/clientes/config')).json).toEqual({ ativo: true, subdominio: 'conta', notas: true });
     const r = await req('GET', '/api/clientes?busca=97777-1111');
     expect(r.json).toMatchObject({ tipo: 'telefone', fonte: 'local', clientes: [{ id: 10, nome: 'Beatriz Alves', orcamentos: 0 }] });
     expect((await req('GET', '/api/clientes/10')).json).toMatchObject({ id: 10 });
@@ -329,11 +329,37 @@ describe('API de clientes, vínculo ao orçamento e nota no pedido', () => {
   });
 
   it('com a integração desligada: busca vazia, envio sem cliente liberado, 503 nas ações', async () => {
-    expect((await req('GET', '/api/clientes/config', undefined, baseSem, cookieSem)).json).toEqual({ ativo: false, subdominio: null });
+    expect((await req('GET', '/api/clientes/config', undefined, baseSem, cookieSem)).json).toEqual({ ativo: false, subdominio: null, notas: false });
     expect((await req('GET', '/api/clientes/sincronizacao', undefined, baseSem, cookieSem)).json.configurado).toBe(false);
     expect((await req('POST', '/api/clientes/sincronizar', {}, baseSem, cookieSem)).status).toBe(503);
     const r = await req('POST', '/api/orcamentos', { itens: [item], subtotal: 1, frete: 0, total: 1 }, baseSem, cookieSem);
     expect((await req('POST', `/api/orcamentos/${r.json.id}/status`, { status: 'ENVIADO' }, baseSem, cookieSem)).status).toBe(200);
+  });
+
+  it('parâmetro de sistema: notas no Kommo desligadas não criam nem enviam notas', async () => {
+    await servico.enviarNotas();
+    expect((await req('GET', '/api/parametros/sistema')).json).toMatchObject({ valores: { kommo_notas_ativo: true } });
+    expect((await req('PUT', '/api/parametros/sistema', { kommo_notas_ativo: 'nao' })).status).toBe(400);
+    const off = await req('PUT', '/api/parametros/sistema', { kommo_notas_ativo: false });
+    expect(off.json.valores.kommo_notas_ativo).toBe(false);
+    expect(off.json.atualizado).toBeTruthy();
+    expect((await req('GET', '/api/clientes/config')).json.notas).toBe(false);
+    expect((await req('GET', '/api/clientes/sincronizacao')).json.notas_ativas).toBe(false);
+    // Uma nota que já estava na fila (falhou antes) não é reenviada enquanto desligado
+    db.prepare(`INSERT INTO kommo_notas (contato_id, texto, criado) VALUES (10, 'pendente antiga', '2026-01-01T00:00:00')`).run();
+    const antes = mock.notas.length;
+    const pendentesAntes = servico.status().notas_pendentes;
+    // Envio, pedido: nada novo na fila e nada enviado
+    const o = await req('POST', '/api/orcamentos', { itens: [item], subtotal: 5, frete: 0, total: 5, cliente_kommo_id: 10 });
+    await req('POST', `/api/orcamentos/${o.json.id}/status`, { status: 'ENVIADO' });
+    await req('POST', '/api/pedidos', { orcamento_id: o.json.id });
+    await servico.enviarNotas();
+    expect(mock.notas.length).toBe(antes);
+    expect(servico.status().notas_pendentes).toBe(pendentesAntes);
+    // Ligando de novo: a pendente antiga sai; as ações feitas enquanto desligado não geram nota
+    await req('PUT', '/api/parametros/sistema', { kommo_notas_ativo: true });
+    await servico.enviarNotas();
+    expect(mock.notas.map((n) => n.params.text).slice(antes)).toEqual(['pendente antiga']);
   });
 
   it('permissões: busca para quem acessa carrinho/orçamentos/pedidos; sincronizar só com a tela Atualização', async () => {

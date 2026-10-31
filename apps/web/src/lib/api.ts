@@ -8,6 +8,8 @@ import type {
   ParametrosCalculo,
   ProdutoProprio,
   RespostaParametros,
+  RespostaParametrosSistema,
+  ParametrosSistema,
   Orcamento,
   OrcamentoCriado,
   Produto,
@@ -198,6 +200,9 @@ export const api = {
   // ── Parâmetros da calculadora ──
   parametros: () => enviar<RespostaParametros>('GET', '/api/parametros'),
   salvarParametros: (valores: ParametrosCalculo) => enviar<RespostaParametros>('PUT', '/api/parametros', valores),
+  parametrosSistema: () => enviar<RespostaParametrosSistema>('GET', '/api/parametros/sistema'),
+  salvarParametrosSistema: (valores: Partial<ParametrosSistema>) =>
+    enviar<RespostaParametrosSistema>('PUT', '/api/parametros/sistema', valores),
 };
 
 /** URL usada para carregar imagens externas no canvas sem bloqueio de CORS. */

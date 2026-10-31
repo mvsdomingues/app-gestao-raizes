@@ -6,6 +6,12 @@ const DESLIGADO: ConfigClientes = { ativo: false, subdominio: null };
 let cache: Promise<ConfigClientes> | null = null;
 let valor: ConfigClientes | null = null;
 
+/** Esquece a configuração (ex.: depois de mudar os parâmetros de sistema). */
+export function invalidarConfigClientes(): void {
+  cache = null;
+  valor = null;
+}
+
 /** Integração com o Kommo ligada? (consulta uma vez por sessão do navegador) */
 export function useConfigClientes(): ConfigClientes {
   const [c, setC] = useState<ConfigClientes>(valor ?? DESLIGADO);

@@ -87,7 +87,7 @@ const REGRAS: Regra[] = [
   { metodos: 'TODOS', caminho: /^\/api\/atualizar(\/|$)/, telas: ['status'] },
   { metodos: 'TODOS', caminho: /^\/api\/clientes\/(sincronizacao|sincronizar)$/, telas: ['status'] },
   { metodos: 'TODOS', caminho: /^\/api\/clientes(\/|$)/, telas: ['carrinho', 'orcamentos', 'pedidos'] },
-  { metodos: 'ESCRITA', caminho: /^\/api\/parametros$/, telas: ['parametros'] },
+  { metodos: 'ESCRITA', caminho: /^\/api\/parametros(\/|$)/, telas: ['parametros'] },
   { metodos: 'ESCRITA', caminho: /^\/api\/produtos-proprios(\/|$)/, telas: ['produtos-proprios'] },
   { metodos: 'GET', caminho: /^\/api\/orcamentos(\/|$)/, telas: ['orcamentos', 'pedidos'] },
   { metodos: 'ESCRITA', caminho: /^\/api\/orcamentos\/\d+\/(status|link)$/, telas: ['orcamentos'] },

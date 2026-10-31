@@ -10,6 +10,9 @@ import {
 } from '@raizes/shared';
 import { useApp } from '../../app/contexto';
 import { api } from '../../lib/api';
+import { ParametrosSistema } from './ParametrosSistema';
+
+type Aba = 'precificacao' | 'sistema';
 
 /** Valores como digitados na tela (percentuais em %, ex.: "35"). */
 type Formulario = Record<CampoNumerico, string> & { imposto_compra_ativo: boolean };
@@ -40,9 +43,13 @@ function paraParametros(f: Formulario): ParametrosCalculo {
 // Simulação exibida ao lado dos campos
 const EXEMPLO = { custo: 20, qty: 50 };
 
-/** Aba "Parâmetros": valores iniciais da calculadora de preço do carrinho. */
+/**
+ * Tela "Parâmetros", em abas: Precificação (valores da calculadora de preço do carrinho)
+ * e Sistema (comportamento do sistema, como as notas no Kommo).
+ */
 export function Parametros() {
   const { tela, visitas, parametros, parametrosAtualizado, definirParametros, carregarParametros } = useApp();
+  const [aba, setAba] = useState<Aba>('precificacao');
   const [form, setForm] = useState<Formulario>(() => paraFormulario(parametros));
   const [salvando, setSalvando] = useState(false);
   const [mensagem, setMensagem] = useState<{ tipo: 'ok' | 'erro'; texto: string } | null>(null);
@@ -108,10 +115,39 @@ export function Parametros() {
       <div className="cadastro-wrap" style={{ maxWidth: 980 }}>
         <div className="status-page-title">Parâmetros</div>
         <p className="status-page-sub">
-          Valores usados para preencher a calculadora de cada item do carrinho (em <b>Ajustar custos e margem</b>).
+          {aba === 'precificacao' ? (
+            <>
+              Valores usados para preencher a calculadora de cada item do carrinho (em <b>Ajustar custos e margem</b>).
+            </>
+          ) : (
+            'Configurações que mudam o comportamento do sistema para todos os usuários.'
+          )}
         </p>
 
-        <div className="param-grid">
+        <div className="subabas param-abas" role="tablist" aria-label="Grupos de parâmetros">
+          <button
+            role="tab"
+            id="aba-param-precificacao"
+            aria-selected={aba === 'precificacao'}
+            className={`subaba${aba === 'precificacao' ? ' active' : ''}`}
+            onClick={() => setAba('precificacao')}
+          >
+            Precificação
+          </button>
+          <button
+            role="tab"
+            id="aba-param-sistema"
+            aria-selected={aba === 'sistema'}
+            className={`subaba${aba === 'sistema' ? ' active' : ''}`}
+            onClick={() => setAba('sistema')}
+          >
+            Sistema
+          </button>
+        </div>
+
+        {aba === 'sistema' && <ParametrosSistema visitas={visitas.parametros} />}
+
+        <div className="param-grid" style={{ display: aba === 'precificacao' ? undefined : 'none' }}>
           <div className="update-panel param-panel">
             <div className="update-panel-header">
               <div>

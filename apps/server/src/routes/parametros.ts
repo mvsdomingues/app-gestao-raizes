@@ -8,6 +8,7 @@ import {
 import type { Banco } from '../db/conexao';
 import { dataHoraLocal } from '../lib/datas';
 import { corpoJson, ErroHttp } from '../lib/http';
+import { gravarParametrosSistema, lerParametrosSistema } from '../db/repositorio-parametros';
 
 const CHAVES = Object.keys(CALC_DEFAULTS) as (keyof ParametrosCalculo)[];
 
@@ -34,6 +35,17 @@ export function lerParametros(db: Banco): RespostaParametros {
 
 export function rotasParametros(db: Banco): Router {
   const r = Router();
+
+  // ── Parâmetros de sistema (aba "Sistema") ──
+  r.get('/api/parametros/sistema', (_req, res) => {
+    res.json(lerParametrosSistema(db));
+  });
+
+  r.put('/api/parametros/sistema', (req, res) => {
+    const erros = gravarParametrosSistema(db, corpoJson(req));
+    if (erros.length) throw new ErroHttp(400, erros.join('; '));
+    res.json(lerParametrosSistema(db));
+  });
 
   r.get('/api/parametros', (_req, res) => {
     res.json(lerParametros(db));

@@ -113,6 +113,10 @@ export function PainelKommo({ visivel }: { visivel: boolean }) {
               <b>{formatarDataHora(s.ultima_ok)}</b>
             </div>
           )}
+          <div>
+            <span>Notas no Kommo</span>
+            <b id="kommo-notas">{s.notas_ativas === false ? 'desligadas (Parâmetros › Sistema)' : 'ligadas'}</b>
+          </div>
           {s.notas_pendentes > 0 && (
             <div>
               <span>Notas aguardando envio</span>

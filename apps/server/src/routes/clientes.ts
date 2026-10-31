@@ -2,6 +2,7 @@ import { Router } from 'express';
 import type { ConfigClientes, RespostaBuscaClientes } from '@raizes/shared';
 import type { Banco } from '../db/conexao';
 import { buscarClientes, obterCliente } from '../db/repositorio-clientes';
+import { notasKommoAtivas } from '../db/repositorio-parametros';
 import { ErroKommo } from '../kommo/api';
 import type { ServicoKommo } from '../kommo/servico';
 import { corpoJson, ErroHttp } from '../lib/http';
@@ -18,7 +19,7 @@ export function rotasClientes(db: Banco, kommo: ServicoKommo | null): Router {
   };
 
   r.get('/api/clientes/config', (_req, res) => {
-    const corpo: ConfigClientes = { ativo: !!kommo, subdominio: kommo?.subdominio ?? null };
+    const corpo: ConfigClientes = { ativo: !!kommo, subdominio: kommo?.subdominio ?? null, notas: !!kommo && notasKommoAtivas(db) };
     res.json(corpo);
   });
 

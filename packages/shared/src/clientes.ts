@@ -98,6 +98,8 @@ export interface RespostaBuscaClientes {
 
 /** Configuração da integração vista pelas telas. */
 export interface ConfigClientes {
+  /** Notas no Kommo ligadas (Parâmetros › Sistema) */
+  notas?: boolean;
   ativo: boolean;
   subdominio: string | null;
 }
@@ -121,6 +123,8 @@ export interface StatusSincronizacaoClientes {
   total: number;
   /** Notas de pedido aguardando envio ao Kommo */
   notas_pendentes: number;
+  /** Notas no Kommo ligadas (Parâmetros › Sistema) */
+  notas_ativas?: boolean;
   ultima: ExecucaoSincronizacao | null;
   /** Fim da última sincronização bem-sucedida */
   ultima_ok: string | null;

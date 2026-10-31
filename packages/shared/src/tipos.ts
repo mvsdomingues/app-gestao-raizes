@@ -189,3 +189,20 @@ export interface RespostaParametros {
   /** Data/hora da última alteração (null = valores padrão de fábrica). */
   atualizado: string | null;
 }
+
+/** Parâmetros de sistema (aba "Sistema" da tela Parâmetros). */
+export interface ParametrosSistema {
+  /** Envia as notas para o contato no Kommo (orçamento enviado, aceite, recusa, pedido gerado) */
+  kommo_notas_ativo: boolean;
+}
+
+export const SISTEMA_DEFAULTS: ParametrosSistema = {
+  kommo_notas_ativo: true,
+};
+
+/** GET/PUT /api/parametros/sistema */
+export interface RespostaParametrosSistema {
+  valores: ParametrosSistema;
+  /** Data/hora da última alteração (null = valores padrão). */
+  atualizado: string | null;
+}

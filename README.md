@@ -158,7 +158,9 @@ O menu fica na **barra lateral** (pode ser recolhido para mostrar só os ícones
 **Cadastros**
 
 6. **Produtos Próprios**: inclua, busque, altere e exclua produtos da própria empresa. Cada um recebe um código sequencial `PDP-000001`, `PDP-000002`… (códigos excluídos não são reutilizados). A foto pode ser enviada do computador ou informada por URL; os arquivos ficam em `data/imagens/proprios/`.
-7. **Parâmetros**: valores da calculadora (material, mão de obra, imposto de compra, designer, logística, imposto sobre venda e margem), com simulação de preço. Material, mão de obra, designer e logística são o ponto de partida de cada item novo; imposto de compra, imposto sobre venda e margem valem sempre para todos os itens do carrinho.
+7. **Parâmetros**: tela em abas.
+   - **Precificação**: valores da calculadora (material, mão de obra, imposto de compra, designer, logística, imposto sobre venda e margem), com simulação de preço. Material, mão de obra, designer e logística são o ponto de partida de cada item novo; imposto de compra, imposto sobre venda e margem valem sempre para todos os itens do carrinho.
+   - **Sistema**: configurações gerais. **Enviar notas para o Kommo** (ativo por padrão): desligado, nenhuma nota é criada nem enviada ao Kommo (envio do orçamento, aceite, recusa e pedido gerado); as que já aguardavam reenvio ficam na fila até ser ligado de novo.
 
 **Sistema**
 
@@ -183,7 +185,7 @@ Com `KOMMO_SUBDOMINIO` e `KOMMO_TOKEN` no `.env`, o orçamento passa a ter **cli
 - **Carrinho**: campo **Cliente** no resumo, com uma caixa de busca única. O sistema reconhece o que foi digitado: telefone (qualquer formato, com ou sem +55), parte do nome (sem acento; todas as palavras), e-mail ou `#código` do Kommo. A lista mostra nome, telefones, código, data de criação, quantos orçamentos o cliente já tem e o aviso *telefone repetido* quando dois contatos têm o mesmo número. Se não achar (contato criado há poucos minutos), **Buscar direto no Kommo** consulta o Kommo na hora. Setas e Enter escolhem; o cliente escolhido mostra *Abrir no Kommo*, *Trocar* e *Remover*.
 - O cliente é **opcional para gerar** o orçamento e **obrigatório para enviar** (*Enviar para o Cliente*). O orçamento guarda o código do contato e uma cópia do nome e do telefone.
 - O cliente aparece nas listas e nos detalhes de Orçamentos e Pedidos, na folha impressa e no cartão do Quadro; as listas têm filtro por cliente e os detalhes, o link *Abrir no Kommo*.
-- **Notas no contato do Kommo**: ao clicar em *Enviar para o Cliente* ("Orçamento ORC-… enviado ao cliente", com valor, quantidade de itens e usuário) e ao gerar o pedido (código do pedido, orçamento, valor e usuário). As notas ficam no histórico do **contato** (não no negócio). Se o Kommo estiver fora do ar, a nota fica na fila e é reenviada a cada sincronização.
+- **Notas no contato do Kommo** (podem ser desligadas em *Parâmetros › Sistema*): ao clicar em *Enviar para o Cliente* ("Orçamento ORC-… enviado ao cliente", com valor, quantidade de itens e usuário) e ao gerar o pedido (código do pedido, orçamento, valor e usuário). As notas ficam no histórico do **contato** (não no negócio). Se o Kommo estiver fora do ar, a nota fica na fila e é reenviada a cada sincronização.
 
 Sem as variáveis no `.env`, nada disso aparece e os orçamentos funcionam como antes.
 
@@ -211,6 +213,7 @@ Todas as rotas exigem login, exceto as de `/api/auth`. Cada rota também exige a
 | `GET/POST /api/produtos-proprios` | Lista (`?q=` busca) / inclui produto próprio |
 | `GET/PUT/PATCH/DELETE /api/produtos-proprios/:codigo` | Consulta, substitui, altera campos ou exclui (`PDP-000001`) |
 | `GET/PUT /api/parametros` | Lê / grava os parâmetros da calculadora |
+| `GET/PUT /api/parametros/sistema` | Parâmetros de sistema (`{ kommo_notas_ativo }`) |
 | `GET /api/orcamentos` | Lista paginada (`numero`, `produto`, `de`, `ate`, `min`, `max`, `status`, `pedido=com\|sem`, `meus=1`, `cliente`, `limit`, `offset`) → `{ total, orcamentos }` (cada um com `pedido` ativo ou `null`) |
 | `POST /api/orcamentos` · `GET/PUT /api/orcamentos/:id` | Grava, consulta (com `status`, `movimentos` e `cliente`) e altera (PUT mantém o número; 409 se não estiver Aberto). `cliente_kommo_id` vincula o cliente (400 se não estiver na base; ausente no PUT = mantém) |
 | `POST /api/orcamentos/:id/status` | Situação manual `{ status: 'ABERTO' \| 'ENVIADO' \| 'CANCELADO', status_atual, motivo? }` (Cancelado exige motivo; Aberto a partir de Cancelado = reabrir) (409 com pedido gerado ou, com o Kommo ligado, ao enviar sem cliente) |
