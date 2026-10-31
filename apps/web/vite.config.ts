@@ -20,9 +20,11 @@ export default defineConfig({
   plugins: [react(), paginaPublica],
   server: {
     port: 5173,
+    // changeOrigin: false mantém o endereço do navegador (localhost:5173) no cabeçalho Host,
+    // para o servidor montar o link do orçamento com a porta do Vite, não a da API.
     proxy: {
-      '/api': API,
-      '/static': API,
+      '/api': { target: API, changeOrigin: false },
+      '/static': { target: API, changeOrigin: false },
     },
   },
   build: {
