@@ -6,6 +6,7 @@ import { useSessao } from '../../app/sessao';
 import { api } from '../../lib/api';
 import { erroDe } from '../../lib/dialogo';
 import { FolhaOrcamento } from '../orcamentos/FolhaOrcamento';
+import { ClienteVinculado } from '../clientes/ClienteVinculado';
 import { agoraLocal, duracao, formatarDataHora, TagStatusPedido, useAcoesPedido } from './comum';
 
 /** Aba "Detalhes": etapas do pedido, histórico de movimentações e o orçamento de origem. */
@@ -61,6 +62,7 @@ export function DetalhePedido() {
       pedido: p.orcamento.pedido ?? null,
       responsavel: p.orcamento.responsavel ?? null,
       alteradoPor: p.orcamento.alterado_por ?? null,
+      cliente: p.orcamento.cliente ?? null,
     });
 
   return (
@@ -111,6 +113,9 @@ export function DetalhePedido() {
             <TagStatusPedido status={p.status} />
             <div className="pedido-total">{formatBRL(p.total)}</div>
           </div>
+        </div>
+        <div className="pedido-cliente" id="pedido-cliente">
+          <span>Cliente:</span> <ClienteVinculado cliente={p.cliente} vazio="sem cliente vinculado" />
         </div>
         <ObservacaoPedido pedido={p} aoSalvar={atualizarPedidoAberto} />
         {cancelamento && (
@@ -186,6 +191,7 @@ export function DetalhePedido() {
             frete: p.orcamento.frete,
             total: p.orcamento.total,
             observacao: p.orcamento.observacao ?? null,
+            cliente: p.cliente,
           }}
         />
       </div>

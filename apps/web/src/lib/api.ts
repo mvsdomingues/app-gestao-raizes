@@ -23,6 +23,10 @@ import type {
   StatusOrcamento,
   StatusOrcamentoManual,
   StatusFornecedor,
+  ClienteKommo,
+  ConfigClientes,
+  RespostaBuscaClientes,
+  StatusSincronizacaoClientes,
 } from '@raizes/shared';
 
 /** Avisado quando a sessão expira (o app volta para a tela de login). */
@@ -51,7 +55,14 @@ async function postJson(url: string, corpo: unknown): Promise<Response> {
 }
 
 /** Erro devolvido pela API com a mensagem do servidor ({ erro: "…" }). */
-export class ErroApi extends Error {}
+export class ErroApi extends Error {
+  constructor(
+    message: string,
+    readonly status = 0,
+  ) {
+    super(message);
+  }
+}
 
 /** Requisição JSON que lança ErroApi com a mensagem do servidor quando falha. */
 async function enviar<T>(metodo: string, url: string, corpo?: unknown): Promise<T> {
@@ -61,7 +72,7 @@ async function enviar<T>(metodo: string, url: string, corpo?: unknown): Promise<
     body: corpo === undefined ? undefined : JSON.stringify(corpo),
   });
   const dados = (await resp.json().catch(() => ({}))) as T & { erro?: string };
-  if (!resp.ok) throw new ErroApi(dados.erro || `Erro ${resp.status}`);
+  if (!resp.ok) throw new ErroApi(dados.erro || `Erro ${resp.status}`, resp.status);
   return dados;
 }
 
@@ -88,6 +99,10 @@ export const api = {
 
   async criarOrcamento(dados: NovoOrcamento): Promise<OrcamentoCriado> {
     const resp = await postJson('/api/orcamentos', dados);
+    if (resp.status === 400) {
+      const corpo = (await resp.json().catch(() => ({}))) as { erro?: string };
+      throw new ErroApi(corpo.erro || 'Orçamento recusado pelo servidor', 400);
+    }
     if (!resp.ok) throw new Error('Falha ao salvar orçamento');
     return (await resp.json()) as OrcamentoCriado;
   },
@@ -166,6 +181,17 @@ export const api = {
   reativarUsuario: (id: number) => enviar<Usuario>('POST', `/api/usuarios/${id}/reativar`, {}),
   acessos: () => enviar<AcessoUsuario[]>('GET', '/api/acessos'),
   salvarAcessos: (id: number, permissoes: IdTela[]) => enviar<AcessoUsuario>('PUT', `/api/acessos/${id}`, { permissoes }),
+
+  // ── Clientes (Kommo) ──
+  configClientes: () => enviar<ConfigClientes>('GET', '/api/clientes/config'),
+  buscarClientes: (busca: string, limite = 10) =>
+    enviar<RespostaBuscaClientes>('GET', `/api/clientes?busca=${encodeURIComponent(busca)}&limite=${limite}`),
+  buscarClientesKommo: (busca: string) =>
+    enviar<RespostaBuscaClientes>('GET', `/api/clientes/kommo?busca=${encodeURIComponent(busca)}`),
+  cliente: (id: number) => enviar<ClienteKommo>('GET', `/api/clientes/${id}`),
+  statusSincronizacaoClientes: () => enviar<StatusSincronizacaoClientes>('GET', '/api/clientes/sincronizacao'),
+  sincronizarClientes: (completa = false) =>
+    enviar<StatusSincronizacaoClientes>('POST', '/api/clientes/sincronizar', { completa }),
 
   // ── Parâmetros da calculadora ──
   parametros: () => enviar<RespostaParametros>('GET', '/api/parametros'),

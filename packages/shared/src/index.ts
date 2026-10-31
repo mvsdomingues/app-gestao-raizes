@@ -5,3 +5,4 @@ export * from './calculadora';
 export * from './pedidos';
 export * from './acesso';
 export * from './orcamentos';
+export * from './clientes';

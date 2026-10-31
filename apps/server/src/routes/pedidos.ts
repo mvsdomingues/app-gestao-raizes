@@ -19,6 +19,7 @@ import {
 } from '../db/repositorio-pedidos';
 import { corpoJson, ErroHttp } from '../lib/http';
 import { exigirUsuario } from '../lib/sessao';
+import type { ServicoKommo } from '../kommo/servico';
 import { lerOrcamento } from './orcamentos';
 
 function textoOpcional(v: unknown, max = 500): string | null {
@@ -31,7 +32,7 @@ function textoOpcional(v: unknown, max = 500): string | null {
  * Pedidos: criação a partir de um orçamento, consulta e movimentação do fluxo.
  * Não há alteração nem exclusão — pedido errado é cancelado (o orçamento fica livre).
  */
-export function rotasPedidos(db: Banco): Router {
+export function rotasPedidos(db: Banco, kommo: ServicoKommo | null = null): Router {
   const r = Router();
 
   const detalhe = (codigo: string): Pedido => {
@@ -51,6 +52,7 @@ export function rotasPedidos(db: Banco): Router {
       de: q('de'),
       ate: q('ate'),
       meus: q('meus'),
+      cliente: q('cliente'),
     };
     const limit = Math.min(200, Math.max(1, Number.parseInt(q('limit') || '20', 10) || 20));
     const offset = Math.max(0, Number.parseInt(q('offset') || '0', 10) || 0);
@@ -77,8 +79,21 @@ export function rotasPedidos(db: Banco): Router {
     if (!Number.isInteger(orcamentoId) || orcamentoId <= 0) {
       throw new ErroHttp(400, 'Informe o orçamento do pedido');
     }
-    const codigo = criarPedido(db, orcamentoId, textoOpcional(corpo.observacao), exigirUsuario(res).id);
-    res.status(201).json(detalhe(codigo));
+    const eu = exigirUsuario(res);
+    const codigo = criarPedido(db, orcamentoId, textoOpcional(corpo.observacao), eu.id);
+    const p = detalhe(codigo);
+    // Fase 4 da integração: nota no contato do Kommo (enviada em segundo plano, com nova tentativa)
+    if (kommo && p.cliente) {
+      kommo.notificarPedido({
+        contatoId: p.cliente.id,
+        pedidoId: p.id,
+        codigo: p.codigo,
+        orcamento: p.orcamento_numero,
+        total: p.total,
+        usuario: eu.nome,
+      });
+    }
+    res.status(201).json(p);
   });
 
   r.post('/api/pedidos/:codigo/avancar', (req, res) => {

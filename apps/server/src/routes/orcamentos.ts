@@ -7,6 +7,7 @@ import {
   type Orcamento,
   type OrcamentoCriado,
   type StatusPedido,
+  type ClienteVinculado,
   type RespostaOrcamentos,
   type ResumoOrcamento,
 } from '@raizes/shared';
@@ -19,13 +20,27 @@ import {
   statusDoOrcamento,
 } from '../db/repositorio-orcamentos';
 import { pedidoAtivoDoOrcamento } from '../db/repositorio-pedidos';
+import { vinculoDoCliente } from '../db/repositorio-clientes';
 import { colunasResponsavel, extrairResponsavel } from '../db/repositorio-usuarios';
 import { falsyPython, floatPython } from '../lib/conversao';
 import { isoLocal } from '../lib/datas';
 import { corpoJson, ErroHttp } from '../lib/http';
 import { exigirUsuario } from '../lib/sessao';
 
-interface LinhaOrcamento extends Omit<ResumoOrcamento, 'numero' | 'responsavel' | 'alterado_por'> {
+/** Cliente gravado no orçamento a partir das colunas cliente_* (null = sem cliente). */
+function clienteDaLinha(l: Record<string, unknown>): ClienteVinculado | null {
+  const id = l.cliente_kommo_id as number | null;
+  const nome = l.cliente_nome as string | null;
+  const telefone = l.cliente_telefone as string | null;
+  delete l.cliente_kommo_id;
+  delete l.cliente_nome;
+  delete l.cliente_telefone;
+  return id ? { id, nome: nome ?? '', telefone: telefone ?? null } : null;
+}
+
+const COLUNAS_CLIENTE = 'orcamentos.cliente_kommo_id, orcamentos.cliente_nome, orcamentos.cliente_telefone';
+
+interface LinhaOrcamento extends Omit<ResumoOrcamento, 'numero' | 'responsavel' | 'alterado_por' | 'cliente'> {
   itens_json: string;
   usuario_id?: number | null;
   alterado_por?: number | null;
@@ -51,6 +66,7 @@ export function lerOrcamento(db: Banco, id: number): Orcamento | undefined {
     .prepare(
       `SELECT orcamentos.id, orcamentos.data_hora, orcamentos.subtotal, orcamentos.frete, orcamentos.total,
               orcamentos.qtd_itens, orcamentos.itens_json, orcamentos.observacao, ${SQL_STATUS_ORCAMENTO} AS status,
+              ${COLUNAS_CLIENTE},
               ${colunasResponsavel('ur', 'resp')}, ${colunasResponsavel('ua', 'alt')}
          FROM orcamentos ${JOIN_RESPONSAVEIS} WHERE orcamentos.id = ?`,
     )
@@ -58,9 +74,11 @@ export function lerOrcamento(db: Banco, id: number): Orcamento | undefined {
   if (!row) return undefined;
   const responsavel = extrairResponsavel(row, 'resp');
   const alteradoPor = extrairResponsavel(row, 'alt');
+  const cliente = clienteDaLinha(row);
   const { itens_json, ...resto } = row;
   return {
     ...resto,
+    cliente,
     responsavel,
     alterado_por: alteradoPor,
     numero: numeroOrcamento(row.id),
@@ -70,7 +88,12 @@ export function lerOrcamento(db: Banco, id: number): Orcamento | undefined {
   };
 }
 
-export function rotasOrcamentos(db: Banco): Router {
+export interface OpcoesOrcamentos {
+  /** Com a integração do Kommo ligada, só envia ao cliente o orçamento que tem cliente vinculado. */
+  exigirClienteAoEnviar?: boolean;
+}
+
+export function rotasOrcamentos(db: Banco, opcoes: OpcoesOrcamentos = {}): Router {
   const r = Router();
 
   /**
@@ -119,6 +142,12 @@ export function rotasOrcamentos(db: Banco): Router {
       wheres.push('orcamentos.usuario_id = ?');
       params.push(exigirUsuario(res).id);
     }
+    // Cliente do Kommo (código do contato)
+    const cliente = q('cliente').replace(/\D/g, '');
+    if (cliente) {
+      wheres.push('orcamentos.cliente_kommo_id = ?');
+      params.push(Number(cliente));
+    }
     // Situação: Aberto, Enviado ou Pedido gerado
     const status = q('status');
     if (isStatusOrcamento(status)) {
@@ -142,6 +171,7 @@ export function rotasOrcamentos(db: Banco): Router {
                 orcamentos.qtd_itens, ${SQL_STATUS_ORCAMENTO} AS status,
                 (${SQL_PEDIDO_ATIVO.replace('{campo}', 'codigo')}) AS pedido_codigo,
                 (${SQL_PEDIDO_ATIVO.replace('{campo}', 'status')}) AS pedido_status,
+                ${COLUNAS_CLIENTE},
                 ${colunasResponsavel('ur', 'resp')}, ${colunasResponsavel('ua', 'alt')}
            FROM orcamentos ${JOIN_RESPONSAVEIS} ${whereSql}
           ORDER BY orcamentos.id DESC LIMIT ? OFFSET ?`,
@@ -154,9 +184,11 @@ export function rotasOrcamentos(db: Banco): Router {
       orcamentos: rows.map((linha) => {
         const responsavel = extrairResponsavel(linha, 'resp');
         const alteradoPor = extrairResponsavel(linha, 'alt');
+        const cliente = clienteDaLinha(linha);
         const { pedido_codigo, pedido_status, ...row } = linha;
         return {
           ...row,
+          cliente,
           numero: numeroOrcamento(row.id),
           pedido: pedido_codigo ? { codigo: pedido_codigo, status: pedido_status! } : null,
           responsavel,
@@ -174,6 +206,8 @@ export function rotasOrcamentos(db: Banco): Router {
     frete: number;
     total: number;
     observacao: string | null;
+    /** undefined = não informado; null = sem cliente */
+    clienteId: number | null | undefined;
   } {
     const data = corpoJson(req);
     const itens = data.itens ?? [];
@@ -181,22 +215,51 @@ export function rotasOrcamentos(db: Banco): Router {
     try {
       const num = (v: unknown) => (falsyPython(v) ? 0 : floatPython(v));
       const obs = typeof data.observacao === 'string' ? data.observacao.trim().slice(0, 2000) : '';
-      return { itens, subtotal: num(data.subtotal), frete: num(data.frete), total: num(data.total), observacao: obs || null };
+      const bruto = data.cliente_kommo_id;
+      const clienteId =
+        bruto === undefined ? undefined : bruto === null || bruto === '' ? null : Number.isInteger(Number(bruto)) ? Number(bruto) : NaN;
+      if (Number.isNaN(clienteId)) throw new Error('cliente');
+      return {
+        itens,
+        subtotal: num(data.subtotal),
+        frete: num(data.frete),
+        total: num(data.total),
+        observacao: obs || null,
+        clienteId,
+      };
     } catch {
       throw new ErroHttp(400, 'valores inválidos');
     }
   }
 
+  /**
+   * Cópia de nome e telefone do cliente para gravar no orçamento. O contato precisa estar
+   * na base sincronizada; numa alteração, o mesmo cliente já vinculado é mantido mesmo
+   * que tenha sido removido do Kommo depois.
+   */
+  function dadosDoCliente(
+    clienteId: number | null | undefined,
+    atual?: { cliente_kommo_id: number | null; cliente_nome: string | null; cliente_telefone: string | null },
+  ): [number | null, string | null, string | null] {
+    if (!clienteId) return [null, null, null];
+    const v = vinculoDoCliente(db, clienteId);
+    if (v) return [v.id, v.nome, v.telefone];
+    if (atual?.cliente_kommo_id === clienteId) return [clienteId, atual.cliente_nome, atual.cliente_telefone];
+    throw new ErroHttp(400, 'Cliente não encontrado na base do Kommo. Sincronize os clientes e escolha de novo.');
+  }
+
   r.post('/api/orcamentos', (req, res) => {
     const eu = exigirUsuario(res);
-    const { itens, subtotal, frete, total, observacao } = lerCorpo(req);
+    const { itens, subtotal, frete, total, observacao, clienteId } = lerCorpo(req);
+    const [cid, cnome, ctel] = dadosDoCliente(clienteId);
     const dataHora = isoLocal();
     const info = db
       .prepare(
-        `INSERT INTO orcamentos (data_hora, subtotal, frete, total, qtd_itens, itens_json, usuario_id, observacao)
-         VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
+        `INSERT INTO orcamentos (data_hora, subtotal, frete, total, qtd_itens, itens_json, usuario_id, observacao,
+                                 cliente_kommo_id, cliente_nome, cliente_telefone)
+         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
       )
-      .run(dataHora, subtotal, frete, total, itens.length, JSON.stringify(itens), eu.id, observacao);
+      .run(dataHora, subtotal, frete, total, itens.length, JSON.stringify(itens), eu.id, observacao, cid, cnome, ctel);
     const id = Number(info.lastInsertRowid);
     registrarMovimentoOrcamento(db, id, null, 'ABERTO', eu.id, null, dataHora);
     const corpo: OrcamentoCriado = { id, numero: numeroOrcamento(id), data_hora: dataHora };
@@ -207,20 +270,26 @@ export function rotasOrcamentos(db: Banco): Router {
   r.put('/api/orcamentos/:oid', (req, res, next) => {
     if (!/^\d+$/.test(req.params.oid)) return next();
     const id = Number(req.params.oid);
-    const { itens, subtotal, frete, total, observacao } = lerCorpo(req);
+    const { itens, subtotal, frete, total, observacao, clienteId } = lerCorpo(req);
     // Só orçamento "Aberto" pode ser alterado (enviado: voltar para Aberto antes; com pedido: nunca)
     if (!db.prepare('SELECT 1 FROM orcamentos WHERE id = ?').get(id)) throw new ErroHttp(404, 'não encontrado');
     const situacao = statusDoOrcamento(db, id);
     const bloqueio = motivoBloqueioAlteracao(numeroOrcamento(id), situacao, pedidoAtivoDoOrcamento(db, id)?.codigo);
     if (bloqueio) throw new ErroHttp(409, bloqueio);
     const eu = exigirUsuario(res);
+    const atual = db
+      .prepare('SELECT cliente_kommo_id, cliente_nome, cliente_telefone FROM orcamentos WHERE id = ?')
+      .get(id) as { cliente_kommo_id: number | null; cliente_nome: string | null; cliente_telefone: string | null };
+    // Cliente não informado = mantém o atual
+    const [cid, cnome, ctel] =
+      clienteId === undefined ? [atual.cliente_kommo_id, atual.cliente_nome, atual.cliente_telefone] : dadosDoCliente(clienteId, atual);
     const dataHora = isoLocal();
     const info = db
       .prepare(
         `UPDATE orcamentos SET data_hora = ?, subtotal = ?, frete = ?, total = ?, qtd_itens = ?, itens_json = ?,
-                alterado_por = ?, observacao = ? WHERE id = ?`,
+                alterado_por = ?, observacao = ?, cliente_kommo_id = ?, cliente_nome = ?, cliente_telefone = ? WHERE id = ?`,
       )
-      .run(dataHora, subtotal, frete, total, itens.length, JSON.stringify(itens), eu.id, observacao, id);
+      .run(dataHora, subtotal, frete, total, itens.length, JSON.stringify(itens), eu.id, observacao, cid, cnome, ctel, id);
     if (!info.changes) throw new ErroHttp(404, 'não encontrado');
     const corpo: OrcamentoCriado = { id, numero: numeroOrcamento(id), data_hora: dataHora };
     res.json(corpo);
@@ -233,6 +302,18 @@ export function rotasOrcamentos(db: Banco): Router {
     const corpo = corpoJson(req);
     if (!isStatusOrcamentoManual(corpo.status)) {
       throw new ErroHttp(400, 'Situação inválida: use ABERTO ou ENVIADO ("Pedido gerado" vem da geração do pedido)');
+    }
+    // Com o Kommo ligado, só envia ao cliente o orçamento que tem cliente vinculado
+    if (corpo.status === 'ENVIADO' && opcoes.exigirClienteAoEnviar) {
+      const o = db.prepare('SELECT cliente_kommo_id FROM orcamentos WHERE id = ?').get(id) as
+        | { cliente_kommo_id: number | null }
+        | undefined;
+      if (o && !o.cliente_kommo_id) {
+        throw new ErroHttp(
+          409,
+          `O ${numeroOrcamento(id)} não tem cliente vinculado. Edite o orçamento, escolha o cliente no carrinho e depois envie.`,
+        );
+      }
     }
     alterarStatusOrcamento(
       db,

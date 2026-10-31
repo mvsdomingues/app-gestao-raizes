@@ -33,7 +33,8 @@ interface LinhaPedido {
 
 const SELECT_PEDIDO = `
   SELECT p.id, p.codigo, p.status, p.orcamento_id, p.observacao, p.criado, p.atualizado,
-         o.total, o.qtd_itens, ${colunasResponsavel('ur', 'resp')}
+         o.total, o.qtd_itens, o.cliente_kommo_id, o.cliente_nome, o.cliente_telefone,
+         ${colunasResponsavel('ur', 'resp')}
     FROM pedidos p
     JOIN orcamentos o ON o.id = p.orcamento_id
     LEFT JOIN usuarios ur ON ur.id = p.usuario_id`;
@@ -41,7 +42,12 @@ const SELECT_PEDIDO = `
 function resumo(l: LinhaPedido): ResumoPedido & { observacao: string | null } {
   const linha = { ...l } as LinhaPedido & Record<string, unknown>;
   const responsavel = extrairResponsavel(linha, 'resp');
-  return { ...linha, orcamento_numero: numeroOrcamento(l.orcamento_id), responsavel };
+  const cid = linha.cliente_kommo_id as number | null;
+  const cliente = cid ? { id: cid, nome: (linha.cliente_nome as string) ?? '', telefone: (linha.cliente_telefone as string | null) ?? null } : null;
+  delete linha.cliente_kommo_id;
+  delete linha.cliente_nome;
+  delete linha.cliente_telefone;
+  return { ...linha, orcamento_numero: numeroOrcamento(l.orcamento_id), responsavel, cliente };
 }
 
 /** Pedido ativo (não cancelado) de um orçamento, se existir. */
@@ -62,6 +68,11 @@ export function listarPedidos(
 ): { total: number; pedidos: ResumoPedido[] } {
   const wheres: string[] = [];
   const params: unknown[] = [];
+  const cliente = (filtros.cliente ?? '').replace(/\D/g, '');
+  if (cliente) {
+    wheres.push('p.orcamento_id IN (SELECT id FROM orcamentos WHERE cliente_kommo_id = ?)');
+    params.push(Number(cliente));
+  }
   if (filtros.meus === '1' && usuarioId) {
     wheres.push('p.usuario_id = ?');
     params.push(usuarioId);

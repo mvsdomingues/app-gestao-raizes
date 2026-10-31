@@ -224,6 +224,11 @@ export function QuadroPedidos({ ativo, versao, aoAlterar }: Props) {
                       <div className="kanban-ref">
                         {c.orcamento_numero} · {c.qtd_itens} {c.qtd_itens === 1 ? 'item' : 'itens'}
                       </div>
+                      {c.cliente && (
+                        <div className="kanban-cliente" title={c.cliente.telefone ?? undefined}>
+                          {c.cliente.nome || `#${c.cliente.id}`}
+                        </div>
+                      )}
                       {c.responsavel && (
                         <div className="kanban-responsavel" title={`Criado por ${c.responsavel.nome} (@${c.responsavel.login})`}>
                           👤 {c.responsavel.nome}

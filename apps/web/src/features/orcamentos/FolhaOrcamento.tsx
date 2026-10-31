@@ -1,4 +1,4 @@
-import { formatBRL } from '@raizes/shared';
+import { formatarTelefone, formatBRL } from '@raizes/shared';
 import type { FolhaOrcamento as DadosFolha } from '../../app/contexto';
 import { ImagemProduto } from '../../components/ImagemProduto';
 import { classeFornecedor } from '../../lib/fornecedor';
@@ -33,6 +33,14 @@ export function FolhaOrcamento({ folha }: { folha: DadosFolha }) {
           </div>
         </div>
       </div>
+
+      {folha.cliente && (
+        <div className="orc-cliente" id="orc-cliente">
+          <span className="orc-cliente-rotulo">Cliente</span>
+          <span className="orc-cliente-nome">{folha.cliente.nome || `Contato #${folha.cliente.id}`}</span>
+          {folha.cliente.telefone && <span className="orc-cliente-tel">{formatarTelefone(folha.cliente.telefone)}</span>}
+        </div>
+      )}
 
       <div className="orc-totals-block">
         <div>

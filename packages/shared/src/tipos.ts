@@ -69,6 +69,8 @@ export interface ResumoOrcamento {
   responsavel?: import('./acesso').UsuarioResumo | null;
   /** Usuário da última alteração (null se nunca foi alterado). */
   alterado_por?: import('./acesso').UsuarioResumo | null;
+  /** Cliente do Kommo vinculado (null = sem cliente) */
+  cliente?: import('./clientes').ClienteVinculado | null;
 }
 
 /** Resposta paginada de GET /api/orcamentos */
@@ -93,6 +95,8 @@ export interface FiltrosOrcamentos {
   meus?: string;
   /** ABERTO, ENVIADO ou PEDIDO_GERADO; vazio = todas */
   status?: string;
+  /** Código do contato do Kommo */
+  cliente?: string;
 }
 
 /** Orçamento completo (GET /api/orcamentos/:id). */
@@ -112,6 +116,8 @@ export interface NovoOrcamento {
   total: number;
   /** Observações livres (texto) */
   observacao?: string;
+  /** Código do contato do Kommo (null = sem cliente) */
+  cliente_kommo_id?: number | null;
 }
 
 /** Resposta de POST /api/orcamentos */

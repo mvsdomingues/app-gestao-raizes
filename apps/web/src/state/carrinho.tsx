@@ -3,6 +3,7 @@ import {
   calcComParametros,
   calcPreco,
   type CampoNumerico,
+  type ClienteVinculado,
   type OrigemProduto,
   type ParametrosCalculo,
   type Produto,
@@ -52,6 +53,8 @@ export interface EstadoCarrinho {
   observacao: string;
   /** Orçamento salvo que está sendo alterado (null = orçamento novo). */
   edicao: EdicaoOrcamento | null;
+  /** Cliente do Kommo vinculado ao orçamento (opcional ao gerar; obrigatório ao enviar). */
+  cliente: ClienteVinculado | null;
 }
 
 /** Orçamento do histórico carregado no carrinho para alteração. */
@@ -73,7 +76,8 @@ type Acao =
   | { tipo: 'redesenhar' }
   | { tipo: 'frete'; valor: string }
   | { tipo: 'observacao'; valor: string }
-  | { tipo: 'carregarOrcamento'; itens: Itens; frete: string; observacao: string; edicao: EdicaoOrcamento }
+  | { tipo: 'carregarOrcamento'; itens: Itens; frete: string; observacao: string; edicao: EdicaoOrcamento; cliente: ClienteVinculado | null }
+  | { tipo: 'cliente'; cliente: ClienteVinculado | null }
   | { tipo: 'edicao'; edicao: EdicaoOrcamento | null };
 
 function semItem(itens: Itens, id: string): Itens {
@@ -97,7 +101,7 @@ function redutor(estado: EstadoCarrinho, acao: Acao): EstadoCarrinho {
       return { ...estado, ...redesenho, itens: semItem(itens, acao.id) };
     case 'limpar':
       // Esvaziar o carrinho também encerra a alteração de um orçamento salvo
-      return { ...estado, ...redesenho, itens: {}, edicao: null, observacao: '' };
+      return { ...estado, ...redesenho, itens: {}, edicao: null, observacao: '', cliente: null };
     case 'qtd': {
       const item = itens[acao.id];
       if (!item) return estado;
@@ -130,7 +134,16 @@ function redutor(estado: EstadoCarrinho, acao: Acao): EstadoCarrinho {
     case 'observacao':
       return { ...estado, observacao: acao.valor };
     case 'carregarOrcamento':
-      return { ...redesenho, itens: acao.itens, frete: acao.frete, observacao: acao.observacao, edicao: acao.edicao };
+      return {
+        ...redesenho,
+        itens: acao.itens,
+        frete: acao.frete,
+        observacao: acao.observacao,
+        edicao: acao.edicao,
+        cliente: acao.cliente,
+      };
+    case 'cliente':
+      return { ...estado, cliente: acao.cliente };
     case 'edicao':
       return { ...estado, edicao: acao.edicao };
   }
@@ -149,14 +162,28 @@ interface ContextoCarrinho {
   definirFrete: (valor: string) => void;
   definirObservacao: (valor: string) => void;
   /** Substitui o carrinho pelos itens de um orçamento salvo (modo de alteração). */
-  carregarOrcamento: (itens: Itens, frete: string, edicao: EdicaoOrcamento, observacao?: string) => void;
+  carregarOrcamento: (
+    itens: Itens,
+    frete: string,
+    edicao: EdicaoOrcamento,
+    observacao?: string,
+    cliente?: ClienteVinculado | null,
+  ) => void;
+  definirCliente: (cliente: ClienteVinculado | null) => void;
   definirEdicao: (edicao: EdicaoOrcamento | null) => void;
 }
 
 const Ctx = createContext<ContextoCarrinho | null>(null);
 
 export function ProvedorCarrinho({ children }: { children: ReactNode }) {
-  const [estado, despachar] = useReducer(redutor, { itens: {}, versao: 0, frete: '0', observacao: '', edicao: null });
+  const [estado, despachar] = useReducer(redutor, {
+    itens: {},
+    versao: 0,
+    frete: '0',
+    observacao: '',
+    edicao: null,
+    cliente: null,
+  });
   const valor = useMemo<ContextoCarrinho>(
     () => ({
       estado,
@@ -170,8 +197,9 @@ export function ProvedorCarrinho({ children }: { children: ReactNode }) {
       redesenhar: () => despachar({ tipo: 'redesenhar' }),
       definirFrete: (valor) => despachar({ tipo: 'frete', valor }),
       definirObservacao: (valor) => despachar({ tipo: 'observacao', valor }),
-      carregarOrcamento: (itens, frete, edicao, observacao = '') =>
-        despachar({ tipo: 'carregarOrcamento', itens, frete, observacao, edicao }),
+      carregarOrcamento: (itens, frete, edicao, observacao = '', cliente = null) =>
+        despachar({ tipo: 'carregarOrcamento', itens, frete, observacao, edicao, cliente }),
+      definirCliente: (cliente) => despachar({ tipo: 'cliente', cliente }),
       definirEdicao: (edicao) => despachar({ tipo: 'edicao', edicao }),
     }),
     [estado],

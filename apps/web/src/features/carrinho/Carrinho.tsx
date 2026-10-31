@@ -6,12 +6,15 @@ import { api, ErroApi } from '../../lib/api';
 import { subtotalCarrinho, useCarrinho } from '../../state/carrinho';
 import { ItemCarrinho } from './ItemCarrinho';
 import { avisar, confirmar, erro } from '../../lib/dialogo';
+import { useConfigClientes } from '../clientes/config';
+import { SeletorCliente } from '../clientes/SeletorCliente';
 
 export function Carrinho() {
   const { tela, visitas, irPara, mostrarOrcamento, parametros } = useApp();
   const { pode, usuario } = useSessao();
-  const { estado, limpar, redesenhar, definirFrete, definirObservacao } = useCarrinho();
-  const { frete, edicao, observacao } = estado;
+  const { estado, limpar, redesenhar, definirFrete, definirObservacao, definirCliente } = useCarrinho();
+  const { frete, edicao, observacao, cliente } = estado;
+  const kommo = useConfigClientes();
   const [gerando, setGerando] = useState(false);
 
   // Abrir a aba redesenha a lista (reinicia campos e fecha os painéis)
@@ -54,7 +57,14 @@ export function Carrinho() {
     let numero = '—';
     let id: number | undefined;
     let dataHora = new Date().toISOString();
-    const dados = { itens: snapshot, subtotal: sub, frete: valorFrete, total: tot, observacao: observacao.trim() };
+    const dados = {
+      itens: snapshot,
+      subtotal: sub,
+      frete: valorFrete,
+      total: tot,
+      observacao: observacao.trim(),
+      cliente_kommo_id: cliente?.id ?? null,
+    };
     try {
       // Alteração de orçamento salvo: mesmo número, data atualizada
       const salvo = edicao ? await api.atualizarOrcamento(edicao.id, dados) : await api.criarOrcamento(dados);
@@ -65,8 +75,8 @@ export function Carrinho() {
       limpar();
       definirFrete('0');
     } catch (e) {
-      // Alteração recusada pelo servidor (orçamento enviado ou com pedido): mostra o motivo e mantém o carrinho
-      if (edicao && e instanceof ErroApi) {
+      // Recusado pelo servidor (orçamento enviado, com pedido ou cliente inválido): mostra o motivo e mantém o carrinho
+      if (e instanceof ErroApi && (edicao || e.status === 400)) {
         setGerando(false);
         void avisar(e.message + '\n\nOs itens continuam no carrinho.', { tipo: 'aviso', titulo: 'Alteração não salva' });
         return;
@@ -93,6 +103,7 @@ export function Carrinho() {
       frete: valorFrete,
       total: tot,
       observacao: observacao.trim() || null,
+      cliente,
       // Alteração: o criador original aparece ao reabrir o orçamento pela lista
       ...(edicao ? { alteradoPor: eu } : { responsavel: eu, alteradoPor: null }),
     });
@@ -159,6 +170,16 @@ export function Carrinho() {
           <aside className="carrinho-resumo-col">
             <div className="carrinho-resumo">
               <div className="carrinho-resumo-title">Resumo</div>
+
+              {(kommo.ativo || cliente) && (
+                <div className="cart-cliente" id="cart-cliente">
+                  <label className="cart-field-label" htmlFor="campo-cliente">
+                    Cliente
+                    <span className="cart-cliente-dica">{cliente ? 'contato do Kommo' : 'obrigatório para enviar ao cliente'}</span>
+                  </label>
+                  <SeletorCliente id="campo-cliente" valor={cliente} aoMudar={definirCliente} />
+                </div>
+              )}
 
               <div className="cart-extra-fields">
                 <div className="cart-field-row">

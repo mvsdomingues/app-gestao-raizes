@@ -134,6 +134,47 @@ export function garantirEsquema(db: Database.Database): void {
       tela TEXT PRIMARY KEY
     );
 
+    -- ── Integração com o Kommo ──
+    -- Cópia local dos contatos (só o necessário para buscar e exibir). Nunca apagados:
+    -- contato que some do Kommo fica com removido = 1.
+    CREATE TABLE IF NOT EXISTS clientes_kommo (
+      id               INTEGER PRIMARY KEY,
+      nome             TEXT NOT NULL DEFAULT '',
+      nome_busca       TEXT NOT NULL DEFAULT '',
+      telefones        TEXT NOT NULL DEFAULT '[]',
+      telefones_busca  TEXT NOT NULL DEFAULT '',
+      emails           TEXT NOT NULL DEFAULT '[]',
+      emails_busca     TEXT NOT NULL DEFAULT '',
+      criado_kommo     TEXT,
+      atualizado_kommo TEXT,
+      removido         INTEGER NOT NULL DEFAULT 0,
+      sincronizado_em  TEXT NOT NULL
+    );
+    CREATE INDEX IF NOT EXISTS ix_clientes_kommo_nome ON clientes_kommo(nome_busca);
+    -- Cada execução da sincronização (para o status na tela Atualização)
+    CREATE TABLE IF NOT EXISTS kommo_sincronizacao (
+      id        INTEGER PRIMARY KEY AUTOINCREMENT,
+      tipo      TEXT NOT NULL,
+      inicio    TEXT NOT NULL,
+      fim       TEXT,
+      status    TEXT NOT NULL,
+      recebidos INTEGER NOT NULL DEFAULT 0,
+      mensagem  TEXT,
+      -- Unix timestamp usado como ponto de partida da próxima sincronização incremental
+      marca     INTEGER
+    );
+    -- Notas a registrar no contato do Kommo (ex.: pedido gerado), com nova tentativa
+    CREATE TABLE IF NOT EXISTS kommo_notas (
+      id          INTEGER PRIMARY KEY AUTOINCREMENT,
+      contato_id  INTEGER NOT NULL,
+      pedido_id   INTEGER,
+      texto       TEXT NOT NULL,
+      criado      TEXT NOT NULL,
+      enviado_em  TEXT,
+      tentativas  INTEGER NOT NULL DEFAULT 0,
+      ultimo_erro TEXT
+    );
+
     -- Catálogo único: produtos dos fornecedores + produtos próprios.
     -- Os próprios recebem id negativo para nunca colidir com os dos fornecedores.
     DROP VIEW IF EXISTS catalogo;
@@ -181,6 +222,15 @@ function migrarColunas(db: Database.Database): void {
   if (!colunas(db, 'orcamentos').includes('status')) {
     db.exec(`ALTER TABLE orcamentos ADD COLUMN status TEXT NOT NULL DEFAULT 'ABERTO'`);
   }
+  // Cliente do Kommo vinculado ao orçamento (código + cópia de nome e telefone)
+  for (const [coluna, tipo] of [
+    ['cliente_kommo_id', 'INTEGER'],
+    ['cliente_nome', 'TEXT'],
+    ['cliente_telefone', 'TEXT'],
+  ] as const) {
+    if (!colunas(db, 'orcamentos').includes(coluna)) db.exec(`ALTER TABLE orcamentos ADD COLUMN ${coluna} ${tipo}`);
+  }
+  db.exec('CREATE INDEX IF NOT EXISTS ix_orcamentos_cliente ON orcamentos(cliente_kommo_id)');
   // Observações livres do orçamento (digitadas no carrinho)
   if (!colunas(db, 'orcamentos').includes('observacao')) {
     db.exec(`ALTER TABLE orcamentos ADD COLUMN observacao TEXT`);

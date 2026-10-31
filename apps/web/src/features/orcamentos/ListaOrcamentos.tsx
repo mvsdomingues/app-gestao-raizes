@@ -10,9 +10,13 @@ import { ModalNovoPedido } from '../pedidos/ModalNovoPedido';
 import { useEditarOrcamento } from './editar-orcamento';
 import { TagStatusOrcamento, useSituacaoOrcamento } from './situacao';
 import { erro } from '../../lib/dialogo';
+import { ClienteVinculado } from '../clientes/ClienteVinculado';
+import { useConfigClientes } from '../clientes/config';
+import { SeletorCliente } from '../clientes/SeletorCliente';
+import type { ClienteVinculado as Cliente } from '@raizes/shared';
 
 const POR_PAGINA = 20;
-const FILTROS_VAZIOS: FiltrosOrcamentos = { numero: '', produto: '', de: '', ate: '', min: '', max: '', status: '', meus: '' };
+const FILTROS_VAZIOS: FiltrosOrcamentos = { numero: '', produto: '', de: '', ate: '', min: '', max: '', status: '', meus: '', cliente: '' };
 
 type Estado =
   | { tipo: 'carregando' }
@@ -40,6 +44,8 @@ export function ListaOrcamentos() {
   const [estado, setEstado] = useState<Estado>({ tipo: 'carregando' });
   const [gerarPara, setGerarPara] = useState<ResumoOrcamento | null>(null);
   const seq = useRef(0);
+  const kommo = useConfigClientes();
+  const [clienteFiltro, setClienteFiltro] = useState<Cliente | null>(null);
 
   const carregar = useCallback(async (f: FiltrosOrcamentos, pag: number) => {
     const meu = ++seq.current;
@@ -82,7 +88,19 @@ export function ListaOrcamentos() {
     void carregar(novos, 1);
   };
 
+  /** Filtro por cliente: aplica na hora, como o "Somente os meus". */
+  const filtrarCliente = (c: Cliente | null) => {
+    setClienteFiltro(c);
+    const cliente = c ? String(c.id) : '';
+    setFiltros((f) => ({ ...f, cliente }));
+    const novos = { ...aplicados, cliente };
+    setAplicados(novos);
+    setPagina(1);
+    void carregar(novos, 1);
+  };
+
   const limparFiltros = () => {
+    setClienteFiltro(null);
     setFiltros(FILTROS_VAZIOS);
     setAplicados(FILTROS_VAZIOS);
     setPagina(1);
@@ -111,6 +129,7 @@ export function ListaOrcamentos() {
         observacao: o.observacao ?? null,
         responsavel: o.responsavel ?? null,
         alteradoPor: o.alterado_por ?? null,
+        cliente: o.cliente ?? null,
       });
     } catch (e) {
       console.error(e);
@@ -153,6 +172,12 @@ export function ListaOrcamentos() {
             <input id="filtro-max" className="custom-input" type="number" min="0" step="0.01" placeholder="máx." {...campo('max')} />
           </div>
         </div>
+        {(kommo.ativo || clienteFiltro) && (
+          <div className="orc-filtro orc-filtro-cliente">
+            <label htmlFor="filtro-cliente-orc">Cliente</label>
+            <SeletorCliente id="filtro-cliente-orc" compacto valor={clienteFiltro} aoMudar={filtrarCliente} placeholder="Telefone ou nome" />
+          </div>
+        )}
         <div className="orc-filtro">
           <label htmlFor="filtro-status-orc">Situação</label>
           <select id="filtro-status-orc" className="custom-input" {...campo('status')}>
@@ -209,6 +234,7 @@ export function ListaOrcamentos() {
               <tr>
                 <th style={{ width: 120 }}>Número</th>
                 <th>Data</th>
+                {kommo.ativo && <th>Cliente</th>}
                 <th style={{ width: 160 }}>Responsável</th>
                 <th className="num" style={{ width: 80 }}>
                   Itens
@@ -227,6 +253,11 @@ export function ListaOrcamentos() {
                     <span className="orc-num-badge">{r.numero}</span>
                   </td>
                   <td>{formatarData(r.data_hora)}</td>
+                  {kommo.ativo && (
+                    <td className="col-cliente">
+                      <ClienteVinculado cliente={r.cliente} link={false} />
+                    </td>
+                  )}
                   <td>
                     <NomeUsuario usuario={r.responsavel} />
                   </td>
@@ -262,7 +293,7 @@ export function ListaOrcamentos() {
                         disabled={processando !== null}
                         onClick={(e) => {
                           e.stopPropagation();
-                          void alterarSituacao(r.id, r.numero, r.status, 'ENVIADO');
+                          void alterarSituacao(r.id, r.numero, r.status, 'ENVIADO', r.cliente ?? null);
                         }}
                       >
                         {processando === r.id ? 'Salvando…' : '✉ Enviar para o Cliente'}

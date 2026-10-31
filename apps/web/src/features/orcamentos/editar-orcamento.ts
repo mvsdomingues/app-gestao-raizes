@@ -126,6 +126,7 @@ export function useEditarOrcamento() {
             : undefined,
         },
         o.observacao ?? '',
+        o.cliente ?? null,
       );
       irPara('carrinho');
     } catch (e) {

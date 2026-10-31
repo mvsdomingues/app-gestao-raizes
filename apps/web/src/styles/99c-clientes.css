@@ -1,0 +1,105 @@
+/* ═══════════════════════════════════════════════
+   CLIENTES (Kommo) — seletor, vínculo e sincronização
+═══════════════════════════════════════════════ */
+
+/* ── Exibição "nome · telefone · Abrir no Kommo" ── */
+.cliente-vinculado { display: inline-flex; align-items: baseline; flex-wrap: wrap; gap: 0 4px; }
+.cliente-nome { font-weight: 600; color: var(--text); }
+.cliente-tel { color: var(--muted); white-space: nowrap; }
+.cliente-vazio { color: var(--muted); font-style: italic; }
+.cliente-link-kommo { margin-left: 8px; font-size: .76rem; font-weight: 600; color: var(--uva); text-decoration: none; white-space: nowrap; }
+.cliente-link-kommo:hover { text-decoration: underline; }
+.col-cliente { max-width: 220px; font-size: .84rem; }
+.col-cliente .cliente-vinculado { display: block; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+
+/* ── Seletor (caixa de busca única) ── */
+.seletor-cliente { position: relative; width: 100%; }
+.seletor-cliente-input { width: 100%; }
+.seletor-cliente-dica { margin-top: 4px; font-size: .72rem; color: var(--muted); }
+.seletor-cliente-dica b { color: var(--uva); }
+.seletor-cliente-lista {
+  position: absolute; z-index: 30; left: 0; right: 0; top: calc(100% + 4px);
+  min-width: 260px; max-height: 340px; overflow-y: auto;
+  background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius);
+  box-shadow: var(--shadow);
+}
+.seletor-cliente:not(.compacto) .seletor-cliente-lista { top: 42px; }
+.seletor-cliente-msg { padding: 10px 12px; font-size: .8rem; color: var(--muted); }
+.seletor-cliente-msg.erro { color: var(--danger); }
+.seletor-cliente-opcao {
+  display: flex; flex-direction: column; gap: 1px; width: 100%; text-align: left;
+  padding: 8px 12px; border: 0; border-bottom: 1px solid var(--creme2); background: none;
+  font: inherit; cursor: pointer;
+}
+.seletor-cliente-opcao.ativo { background: #F2ECF5; }
+.opcao-nome { font-weight: 600; font-size: .86rem; color: var(--text); display: flex; align-items: center; gap: 6px; flex-wrap: wrap; }
+.opcao-sub { font-size: .78rem; color: var(--grafite); }
+.opcao-meta { font-size: .7rem; color: var(--muted); }
+.opcao-duplicado {
+  font-size: .62rem; font-weight: 600; text-transform: uppercase; letter-spacing: .5px;
+  padding: 1px 6px; border-radius: 10px; background: #FFF3D6; color: #8A5A00;
+}
+.seletor-cliente-kommo {
+  display: block; width: 100%; padding: 9px 12px; border: 0; background: var(--creme);
+  font: inherit; font-size: .8rem; font-weight: 600; color: var(--uva); text-align: left; cursor: pointer;
+}
+.seletor-cliente-kommo:hover:not(:disabled) { background: var(--creme2); }
+
+/* Cliente escolhido (carrinho) */
+.cliente-cartao {
+  padding: 10px 12px; border: 1px solid #D9CCE2; border-left: 3px solid var(--uva);
+  border-radius: var(--radius); background: #FAF7FC;
+}
+.cliente-cartao-nome { font-weight: 600; font-size: .92rem; color: var(--berinjela); }
+.cliente-cartao-sub { font-size: .78rem; color: var(--muted); margin-top: 1px; }
+.cliente-cartao-acoes { display: flex; gap: 14px; margin-top: 6px; font-size: .76rem; }
+.cliente-cartao-acoes a { text-decoration: none; }
+.link-botao.perigo { color: var(--danger); }
+
+/* Versão compacta (filtros) */
+.seletor-chip {
+  display: inline-flex; align-items: center; gap: 6px; max-width: 100%;
+  padding: 6px 6px 6px 10px; border-radius: 16px; background: #F2ECF5; color: var(--berinjela);
+  font-size: .82rem; font-weight: 600;
+}
+.seletor-chip button { border: 0; background: none; font-size: 1rem; line-height: 1; color: var(--uva); cursor: pointer; padding: 0 4px; }
+.orc-filtro-cliente { min-width: 200px; }
+
+/* ── Carrinho ── */
+.cart-cliente { margin-bottom: 14px; padding-bottom: 14px; border-bottom: 1px solid var(--border); }
+.cart-cliente .cart-field-label { display: flex; justify-content: space-between; align-items: baseline; margin-bottom: 6px; }
+.cart-cliente-dica { font-size: .68rem; font-weight: 400; color: var(--muted); text-transform: none; letter-spacing: 0; }
+
+/* ── Orçamento: painel, folha ── */
+.orc-cliente-painel { display: flex; align-items: baseline; gap: 10px; flex-wrap: wrap; margin-top: 12px; font-size: .86rem; }
+.orc-cliente-painel.sem-cliente .cliente-vazio { color: #8A5A00; }
+.orc-cliente {
+  display: flex; align-items: baseline; gap: 12px; flex-wrap: wrap;
+  margin: -6px 0 18px; padding: 10px 14px; border-radius: var(--radius); background: var(--creme);
+}
+.orc-cliente-rotulo { font-size: .66rem; font-weight: 600; letter-spacing: 1px; text-transform: uppercase; color: var(--muted); }
+.orc-cliente-nome { font-family: var(--font-display); font-size: 1.15rem; font-weight: 600; color: var(--berinjela); }
+.orc-cliente-tel { font-size: .86rem; color: var(--grafite); }
+
+/* ── Pedido ── */
+.pedido-cliente { margin-top: 12px; font-size: .88rem; }
+.pedido-cliente > span:first-child { font-weight: 600; color: var(--muted); }
+.kanban-cliente { font-size: .74rem; font-weight: 600; color: var(--berinjela); margin-top: 3px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+
+/* ── Atualização: cartão do Kommo ── */
+.painel-kommo { margin-top: 20px; }
+.painel-kommo-botoes { display: flex; flex-direction: column; align-items: flex-end; gap: 6px; }
+.painel-kommo-botoes .link-botao { font-size: .76rem; }
+.painel-kommo-info { display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 12px 20px; margin-top: 14px; }
+.painel-kommo-info > div { display: flex; flex-direction: column; gap: 2px; font-size: .84rem; }
+.painel-kommo-info span:first-child { font-size: .66rem; font-weight: 600; letter-spacing: 1px; text-transform: uppercase; color: var(--muted); }
+.painel-kommo-info .painel-kommo-msg { grid-column: 1 / -1; font-size: .8rem; color: var(--muted); }
+.painel-kommo-msg.erro { color: var(--danger); }
+.kommo-status.st-OK { color: var(--success); }
+.kommo-status.st-ERRO { color: var(--danger); }
+.painel-kommo code { font-size: .78rem; background: var(--creme2); padding: 0 4px; border-radius: 3px; }
+
+@media print {
+  .cliente-link-kommo { display: none !important; }
+  .orc-cliente { background: none; padding: 0 0 6px; border-bottom: 1px solid #E5E0D8; border-radius: 0; }
+}

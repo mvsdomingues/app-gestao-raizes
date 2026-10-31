@@ -46,7 +46,31 @@ export const config = {
   imagensDir: caminho(process.env.IMAGENS_DIR, 'data/imagens'),
   /** Build do front-end servido pelo Express em produção. */
   webDist: resolve(RAIZ, 'apps/web/dist'),
+  /** Integração com o Kommo (desligada sem KOMMO_TOKEN). */
+  kommo: configKommo(),
 };
+
+/** Configuração do Kommo; null quando não há token ou subdomínio. */
+export interface ConfigKommo {
+  subdominio: string;
+  token: string;
+  /** Endereço da API (padrão: https://<subdominio>.kommo.com) */
+  baseUrl: string;
+  /** Intervalo da sincronização incremental, em minutos */
+  syncMinutos: number;
+}
+
+function configKommo(): ConfigKommo | null {
+  const subdominio = process.env.KOMMO_SUBDOMINIO?.trim() ?? '';
+  const token = process.env.KOMMO_TOKEN?.trim() ?? '';
+  if (!subdominio || !token) return null;
+  return {
+    subdominio,
+    token,
+    baseUrl: process.env.KOMMO_BASE_URL?.trim() || `https://${subdominio}.kommo.com`,
+    syncMinutos: Math.max(1, Number(process.env.KOMMO_SYNC_MINUTOS) || 10),
+  };
+}
 
 /** Lê uma variável obrigatória (credenciais de fornecedores). */
 export function exigirEnv(nome: string): string {

@@ -9,11 +9,14 @@ import { ModalNovoPedido } from '../pedidos/ModalNovoPedido';
 import { useEditarOrcamento } from './editar-orcamento';
 import { FolhaOrcamento } from './FolhaOrcamento';
 import { TagStatusOrcamento, useSituacaoOrcamento } from './situacao';
+import { ClienteVinculado } from '../clientes/ClienteVinculado';
+import { useConfigClientes } from '../clientes/config';
 
 /** Aba "Detalhes": situação, ações e folha do orçamento selecionado. */
 export function DetalheOrcamento() {
   const { folha, irPara, setAbaOrcamentos, abrirPedido, versaoOrcamentos } = useApp();
   const { pode } = useSessao();
+  const kommo = useConfigClientes();
   const [gerando, setGerando] = useState(false);
   const [historico, setHistorico] = useState(false);
   /** Dados atuais do orçamento salvo (situação e histórico) */
@@ -40,6 +43,7 @@ export function DetalheOrcamento() {
   // Última entrada em cada situação (data e quem)
   const entrada = new Map(movimentos.map((m) => [m.status_novo, m]));
   const indice = status ? FLUXO_ORCAMENTO.indexOf(status) : -1;
+  const cliente = info ? (info.cliente ?? null) : (folha?.cliente ?? null);
 
   return (
     <>
@@ -54,7 +58,7 @@ export function DetalheOrcamento() {
                 className="btn-back"
                 id="btn-marcar-enviado"
                 disabled={processando !== null}
-                onClick={() => void alterar(folha.id!, folha.numero, status, 'ENVIADO')}
+                onClick={() => void alterar(folha.id!, folha.numero, status, 'ENVIADO', info ? (info.cliente ?? null) : folha.cliente)}
               >
                 ✉ Enviar para o Cliente
               </button>
@@ -130,6 +134,19 @@ export function DetalheOrcamento() {
             </div>
           </div>
 
+          {(kommo.ativo || cliente) && (
+            <div className={`orc-cliente-painel${cliente ? '' : ' sem-cliente'}`} id="orc-cliente-painel">
+              <span className="orc-situacao-rotulo">Cliente</span>
+              {cliente ? (
+                <ClienteVinculado cliente={cliente} />
+              ) : (
+                <span className="cliente-vazio">
+                  Nenhum cliente vinculado{status === 'ABERTO' ? ' — escolha o cliente ao editar o orçamento (obrigatório para enviar).' : '.'}
+                </span>
+              )}
+            </div>
+          )}
+
           <ol className="orc-passos" aria-label="Situação do orçamento">
             {FLUXO_ORCAMENTO.map((s, i) => {
               const m = i <= indice ? entrada.get(s) : undefined;
@@ -198,7 +215,7 @@ export function DetalheOrcamento() {
 
       <div className="orcamento-sheet-full" id="orcamento-sheet">
         {folha ? (
-          <FolhaOrcamento folha={folha} />
+          <FolhaOrcamento folha={{ ...folha, cliente }} />
         ) : (
           <div className="orc-empty-state">
             <div className="orc-empty-icon">📄</div>

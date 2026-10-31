@@ -20,6 +20,7 @@ import {
   type StatusFornecedor,
   type StatusOrcamento,
   type UsuarioResumo,
+  type ClienteVinculado,
 } from '@raizes/shared';
 import { api } from '../lib/api';
 import { useSessao } from './sessao';
@@ -50,6 +51,8 @@ export interface FolhaOrcamento {
   /** Quem criou / alterou por último (null = registro anterior ao controle de acesso) */
   responsavel?: UsuarioResumo | null;
   alteradoPor?: UsuarioResumo | null;
+  /** Cliente do Kommo vinculado (null = sem cliente) */
+  cliente?: ClienteVinculado | null;
 }
 
 interface ContextoApp {

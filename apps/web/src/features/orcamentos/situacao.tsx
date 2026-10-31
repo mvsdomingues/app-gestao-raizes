@@ -4,10 +4,12 @@ import {
   type Orcamento,
   type StatusOrcamento,
   type StatusOrcamentoManual,
+  type ClienteVinculado,
 } from '@raizes/shared';
+import { useConfigClientes } from '../clientes/config';
 import { useApp } from '../../app/contexto';
-import { api } from '../../lib/api';
-import { confirmar, erroDe } from '../../lib/dialogo';
+import { avisar, confirmar, erroDe } from '../../lib/dialogo';
+import { api, ErroApi } from '../../lib/api';
 
 /** Tag colorida com a situação do orçamento (Aberto, Enviado, Pedido gerado). */
 export function TagStatusOrcamento({ status }: { status: StatusOrcamento }) {
@@ -18,8 +20,23 @@ export function TagStatusOrcamento({ status }: { status: StatusOrcamento }) {
 export function useSituacaoOrcamento(aoAlterar?: (o: Orcamento) => void) {
   const { avisarOrcamentosAlterados } = useApp();
   const [processando, setProcessando] = useState<number | null>(null);
+  const kommo = useConfigClientes();
 
-  const alterar = async (id: number, numero: string, atual: StatusOrcamento, novo: StatusOrcamentoManual) => {
+  /** cliente: o vinculado ao orçamento (null = sem cliente; undefined = não conferir aqui) */
+  const alterar = async (
+    id: number,
+    numero: string,
+    atual: StatusOrcamento,
+    novo: StatusOrcamentoManual,
+    cliente?: ClienteVinculado | null,
+  ) => {
+    if (novo === 'ENVIADO' && kommo.ativo && cliente === null) {
+      void avisar(
+        `O ${numero} não tem cliente vinculado.\n\nEdite o orçamento, escolha o cliente no carrinho e depois envie.`,
+        { tipo: 'aviso', titulo: 'Vincule um cliente' },
+      );
+      return;
+    }
     const ok =
       novo === 'ENVIADO'
         ? await confirmar(`Enviar o ${numero} para o cliente?\n\nA situação passa para "Enviado" e ele só poderá ser alterado depois de voltar para "Aberto".`, {
@@ -37,7 +54,9 @@ export function useSituacaoOrcamento(aoAlterar?: (o: Orcamento) => void) {
       aoAlterar?.(o);
       avisarOrcamentosAlterados();
     } catch (e) {
-      void erroDe('Não foi possível alterar a situação do orçamento.', e);
+      // Conflito (ex.: sem cliente vinculado, situação mudou): é um aviso, não uma falha
+      if (e instanceof ErroApi && e.status === 409) void avisar(e.message, { tipo: 'aviso', titulo: 'Não foi possível enviar' });
+      else void erroDe('Não foi possível alterar a situação do orçamento.', e);
     } finally {
       setProcessando(null);
     }

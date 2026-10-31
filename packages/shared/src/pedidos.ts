@@ -2,6 +2,7 @@
 // PEDIDOS — sempre gerados a partir de um orçamento (1 orçamento → 1 pedido ativo)
 // ══════════════════════════════════════════════════════════
 import type { UsuarioResumo } from './acesso';
+import type { ClienteVinculado } from './clientes';
 import type { Orcamento } from './tipos';
 
 /** Etapas do fluxo, na ordem. */
@@ -73,6 +74,8 @@ export interface ResumoPedido {
   atualizado: string;
   /** Usuário que criou o pedido (null nos pedidos anteriores ao controle de acesso). */
   responsavel: UsuarioResumo | null;
+  /** Cliente do orçamento de origem */
+  cliente: ClienteVinculado | null;
 }
 
 /** Movimentação do fluxo (base para o controle de SLA). */
@@ -127,4 +130,6 @@ export interface FiltrosPedidos {
   ate?: string;
   /** "1" = só os criados pelo usuário logado (filtro rápido) */
   meus?: string;
+  /** Código do contato do Kommo */
+  cliente?: string;
 }

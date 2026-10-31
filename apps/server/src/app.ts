@@ -13,6 +13,8 @@ import { rotasPedidos } from './routes/pedidos';
 import { rotasProdutosProprios } from './routes/produtos-proprios';
 import { rotaProxyImagem } from './routes/proxy-imagem';
 import { rotasUsuarios } from './routes/usuarios';
+import { rotasClientes } from './routes/clientes';
+import type { ServicoKommo } from './kommo/servico';
 import type { GerenciadorAtualizacao } from './services/gerenciador-atualizacao';
 
 export interface OpcoesApp {
@@ -21,9 +23,11 @@ export interface OpcoesApp {
   imagensDir: string;
   /** Pasta com o build do front-end; se não existir, só a API é servida. */
   webDist?: string;
+  /** Integração com o Kommo (null/ausente = desligada) */
+  kommo?: ServicoKommo | null;
 }
 
-export function criarApp({ db, gerenciador, imagensDir, webDist }: OpcoesApp) {
+export function criarApp({ db, gerenciador, imagensDir, webDist, kommo = null }: OpcoesApp) {
   const app = express();
   app.disable('x-powered-by');
   app.set('json spaces', 0);
@@ -44,8 +48,9 @@ export function criarApp({ db, gerenciador, imagensDir, webDist }: OpcoesApp) {
   app.use(rotasUsuarios(db));
 
   app.use(rotasCatalogo(db));
-  app.use(rotasOrcamentos(db));
-  app.use(rotasPedidos(db));
+  app.use(rotasClientes(db, kommo));
+  app.use(rotasOrcamentos(db, { exigirClienteAoEnviar: !!kommo }));
+  app.use(rotasPedidos(db, kommo));
   app.use(rotasProdutosProprios(db, imagensDir));
   app.use(rotasParametros(db));
   app.use(rotasAtualizacao(gerenciador));
