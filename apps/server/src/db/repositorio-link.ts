@@ -17,12 +17,24 @@ import { SQL_STATUS_ORCAMENTO } from './repositorio-orcamentos';
 import { criarPedido, pedidoAtivoDoOrcamento } from './repositorio-pedidos';
 import { registrarMovimentoOrcamento } from './repositorio-orcamentos';
 
-/** 32 bytes aleatórios em base64url = 43 caracteres (impossível de adivinhar). */
+const LETRAS = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789';
+
+/**
+ * 43 caracteres sorteados entre letras e números (≈ 256 bits: impossível de adivinhar).
+ * Só letras e números: "_" e "-" quebram o link no WhatsApp ("_" marca itálico).
+ * Sorteio sem viés: bytes ≥ 248 são descartados (248 = 4 × 62).
+ */
 export function novoCodigoLink(): string {
-  return randomBytes(32).toString('base64url');
+  let codigo = '';
+  while (codigo.length < 43) {
+    for (const b of randomBytes(64)) {
+      if (b < 248 && codigo.length < 43) codigo += LETRAS[b % 62];
+    }
+  }
+  return codigo;
 }
 
-/** Formato válido de um código (evita consultar o banco com qualquer coisa). */
+/** Formato válido de um código (os antigos, com "_" e "-", continuam valendo). */
 export function codigoLinkValido(codigo: string): boolean {
   return /^[A-Za-z0-9_-]{43}$/.test(codigo);
 }

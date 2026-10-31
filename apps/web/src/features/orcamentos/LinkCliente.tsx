@@ -25,7 +25,8 @@ export async function copiarTexto(texto: string): Promise<boolean> {
 /** Link do WhatsApp com o telefone do cliente (DDI 55 quando falta) e a mensagem pronta. */
 export function urlWhatsApp(o: Pick<Orcamento, 'numero' | 'cliente'>, link: string): string {
   const nome = o.cliente?.nome?.split(' ')[0];
-  const msg = `Olá${nome ? `, ${nome}` : ''}! Segue o seu orçamento ${o.numero} da Raízes Personalizados: ${link}`;
+  // Link sozinho na última linha: o WhatsApp reconhece melhor o endereço inteiro
+  const msg = `Olá${nome ? `, ${nome}` : ''}! Segue o seu orçamento ${o.numero} da Raízes Personalizados:\n\n${link}`;
   let tel = digitos(o.cliente?.telefone ?? '');
   if (tel.length === 10 || tel.length === 11) tel = '55' + tel;
   return `https://wa.me/${tel}?text=${encodeURIComponent(msg)}`;

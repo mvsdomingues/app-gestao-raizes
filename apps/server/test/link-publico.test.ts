@@ -119,7 +119,7 @@ describe('status Cancelado', () => {
 describe('link do cliente', () => {
   it('enviar gera o link (código aleatório de 43 caracteres) com validade de 7 dias; reenviar mantém o link', async () => {
     const e = await enviado();
-    expect(e.codigo).toMatch(/^[A-Za-z0-9_-]{43}$/);
+    expect(e.codigo).toMatch(/^[A-Za-z0-9]{43}$/);
     expect(e.url).toBe(`${base}/o/${e.codigo}`);
     const o = await req('GET', `/api/orcamentos/${e.id}`);
     const dias = (Date.parse(o.json.link.valido_ate) - Date.parse(o.json.link.enviado_em)) / 864e5;
@@ -128,6 +128,13 @@ describe('link do cliente', () => {
     await req('POST', `/api/orcamentos/${e.id}/status`, { status: 'ABERTO' });
     const de2 = await req('POST', `/api/orcamentos/${e.id}/status`, { status: 'ENVIADO' });
     expect(de2.json.link.url).toBe(e.url);
+  });
+
+  it('códigos só com letras e números, todos diferentes', async () => {
+    const { novoCodigoLink } = await import('../src/db/repositorio-link');
+    const codigos = new Set(Array.from({ length: 2000 }, () => novoCodigoLink()));
+    expect(codigos.size).toBe(2000);
+    for (const c of codigos) expect(c).toMatch(/^[A-Za-z0-9]{43}$/);
   });
 
   it('página pública: sem login, sem custos nem fornecedor, marca como visto', async () => {
