@@ -154,12 +154,34 @@ export class ServicoKommo {
     total: number;
     itens: number;
     usuario?: string;
+    /** Link enviado ao cliente */
+    link?: string;
   }): void {
     const texto =
       `Orçamento ${o.numero} enviado ao cliente · ${formatBRL(o.total)} · ${o.itens} ${o.itens === 1 ? 'item' : 'itens'}` +
       (o.usuario ? ` · por ${o.usuario}` : '') +
+      (o.link ? ` · link: ${o.link}` : '') +
       ' (Raízes · Orçamentos)';
     enfileirarNota(this.db, o.contatoId, null, texto, o.orcamentoId);
+    void this.enviarNotas();
+  }
+
+  /** Resposta do cliente pelo link (aceite com pedido gerado, ou recusa com motivo). */
+  notificarRespostaCliente(r: {
+    contatoId: number;
+    orcamentoId: number;
+    numero: string;
+    total: number;
+    aceito: boolean;
+    pedido?: { id: number; codigo: string };
+    motivo?: string;
+  }): void {
+    const texto = r.aceito
+      ? `Cliente aceitou o orçamento ${r.numero} pelo link · pedido ${r.pedido?.codigo ?? ''} gerado · ${formatBRL(r.total)}` +
+        (r.motivo ? ` · observação: ${r.motivo}` : '') +
+        ' (Raízes · Orçamentos)'
+      : `Cliente recusou o orçamento ${r.numero} pelo link · ${formatBRL(r.total)} · motivo: ${r.motivo ?? ''} (Raízes · Orçamentos)`;
+    enfileirarNota(this.db, r.contatoId, r.pedido?.id ?? null, texto, r.orcamentoId);
     void this.enviarNotas();
   }
 

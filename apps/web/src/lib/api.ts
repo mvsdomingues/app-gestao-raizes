@@ -119,8 +119,10 @@ export const api = {
   },
 
   /** Muda a situação manual do orçamento (Aberto ↔ Enviado). */
-  alterarStatusOrcamento: (id: number, status: StatusOrcamentoManual, statusAtual: StatusOrcamento) =>
-    enviar<Orcamento>('POST', `/api/orcamentos/${id}/status`, { status, status_atual: statusAtual }),
+  alterarStatusOrcamento: (id: number, status: StatusOrcamentoManual, statusAtual: StatusOrcamento, motivo?: string) =>
+    enviar<Orcamento>('POST', `/api/orcamentos/${id}/status`, { status, status_atual: statusAtual, motivo }),
+  /** "Gerar novo link": o anterior deixa de funcionar */
+  trocarLinkOrcamento: (id: number) => enviar<Orcamento>('POST', `/api/orcamentos/${id}/link`, {}),
 
   async orcamento(id: number): Promise<Orcamento> {
     const resp = await requisitar(`/api/orcamentos/${id}`);

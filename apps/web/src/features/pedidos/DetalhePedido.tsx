@@ -171,7 +171,7 @@ export function DetalhePedido() {
               </td>
               <td>{i > 0 ? duracao(p.movimentos[i - 1]!.data_hora, m.data_hora) : '—'}</td>
               <td>
-                <NomeUsuario usuario={m.usuario} />
+                <NomeUsuario usuario={m.usuario} origem={m.origem} />
               </td>
               <td className="pedido-mov-obs">{m.observacao ?? ''}</td>
             </tr>

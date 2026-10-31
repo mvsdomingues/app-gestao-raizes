@@ -1,26 +1,102 @@
 // ══════════════════════════════════════════════════════════
-// SITUAÇÃO DO ORÇAMENTO — Aberto → Enviado → Pedido gerado
+// SITUAÇÃO DO ORÇAMENTO — Aberto → Enviado → Pedido gerado (ou Cancelado)
 // ══════════════════════════════════════════════════════════
 import type { UsuarioResumo } from './acesso';
 
 /** Etapas, na ordem. "Pedido gerado" é automático: vale enquanto houver pedido ativo. */
 export const FLUXO_ORCAMENTO = ['ABERTO', 'ENVIADO', 'PEDIDO_GERADO'] as const;
-export type StatusOrcamento = (typeof FLUXO_ORCAMENTO)[number];
-/** Situações que o usuário escolhe (a terceira vem da geração do pedido). */
+/** Todas as situações: as etapas do fluxo e "Cancelado" (fora do fluxo, sempre com motivo). */
+export const STATUS_ORCAMENTO = [...FLUXO_ORCAMENTO, 'CANCELADO'] as const;
+export type StatusOrcamento = (typeof STATUS_ORCAMENTO)[number];
+/** Situações que o usuário escolhe ("Pedido gerado" vem da geração do pedido). */
 export type StatusOrcamentoManual = Exclude<StatusOrcamento, 'PEDIDO_GERADO'>;
 
 export const ROTULOS_STATUS_ORCAMENTO: Record<StatusOrcamento, string> = {
   ABERTO: 'Aberto',
   ENVIADO: 'Enviado',
   PEDIDO_GERADO: 'Pedido gerado',
+  CANCELADO: 'Cancelado',
 };
 
 export function isStatusOrcamento(v: unknown): v is StatusOrcamento {
-  return typeof v === 'string' && (FLUXO_ORCAMENTO as readonly string[]).includes(v);
+  return typeof v === 'string' && (STATUS_ORCAMENTO as readonly string[]).includes(v);
 }
 
 export function isStatusOrcamentoManual(v: unknown): v is StatusOrcamentoManual {
-  return v === 'ABERTO' || v === 'ENVIADO';
+  return v === 'ABERTO' || v === 'ENVIADO' || v === 'CANCELADO';
+}
+
+/**
+ * Mudanças manuais permitidas: Aberto ↔ Enviado, Aberto/Enviado → Cancelado (com motivo)
+ * e Cancelado → Aberto ("Reabrir"). Com pedido gerado nada muda até o pedido ser cancelado.
+ */
+export function transicaoPermitida(de: StatusOrcamento, para: StatusOrcamentoManual): boolean {
+  if (de === 'ABERTO') return para === 'ENVIADO' || para === 'CANCELADO';
+  if (de === 'ENVIADO') return para === 'ABERTO' || para === 'CANCELADO';
+  if (de === 'CANCELADO') return para === 'ABERTO';
+  return false;
+}
+
+/** Só Aberto e Enviado viram pedido. */
+export function podeGerarPedido(status: StatusOrcamento): boolean {
+  return status === 'ABERTO' || status === 'ENVIADO';
+}
+
+/** Validade do link enviado ao cliente (igual ao texto "Válido por 7 dias" da folha). */
+export const DIAS_VALIDADE_LINK = 7;
+
+/** Quem fez a movimentação: um usuário do sistema ou o cliente, pelo link. */
+export type OrigemMovimento = 'USUARIO' | 'CLIENTE';
+
+/** Resposta do cliente pelo link. */
+export type RespostaCliente = 'ACEITO' | 'RECUSADO';
+
+/** Link público do orçamento (detalhes internos). */
+export interface LinkOrcamento {
+  url: string;
+  enviado_em: string | null;
+  valido_ate: string | null;
+  visto_em: string | null;
+  /** Data/hora já passou de valido_ate */
+  vencido: boolean;
+}
+
+export interface RespostaDoCliente {
+  resposta: RespostaCliente;
+  em: string;
+  /** Observação do aceite ou motivo da recusa */
+  observacao: string | null;
+}
+
+/** Situação mostrada na página do cliente. */
+export type SituacaoPublica = 'DISPONIVEL' | 'VENCIDO' | 'EM_REVISAO' | 'ACEITO' | 'RECUSADO' | 'CANCELADO';
+
+/** Item na página do cliente: sem custos, composição nem fornecedor. */
+export interface ItemPublico {
+  nome: string;
+  codigo: string;
+  qty: number;
+  preco: number;
+  observacao: string | null;
+  /** Endereço da foto (rota pública amarrada ao link) ou null */
+  imagem: string | null;
+}
+
+/** GET /api/publico/orcamentos/:codigo */
+export interface OrcamentoPublico {
+  numero: string;
+  data_hora: string;
+  valido_ate: string | null;
+  situacao: SituacaoPublica;
+  cliente: { nome: string; telefone: string | null } | null;
+  itens: ItemPublico[];
+  subtotal: number;
+  frete: number;
+  total: number;
+  observacao: string | null;
+  /** Aceite: código do pedido gerado */
+  pedido: string | null;
+  resposta: { resposta: RespostaCliente; em: string; observacao: string | null } | null;
 }
 
 /** Movimentação de situação do orçamento (data/hora e quem fez). */
@@ -30,6 +106,8 @@ export interface MovimentoOrcamento {
   data_hora: string;
   observacao: string | null;
   usuario: UsuarioResumo | null;
+  /** CLIENTE = feita pelo cliente na página do link */
+  origem?: OrigemMovimento;
 }
 
 /** Só orçamento "Aberto" pode ser alterado. */
@@ -41,6 +119,9 @@ export function podeAlterarOrcamento(status: StatusOrcamento): boolean {
 export function motivoBloqueioAlteracao(numero: string, status: StatusOrcamento, pedido?: string | null): string | null {
   if (status === 'ENVIADO') {
     return `O ${numero} já foi enviado ao cliente e precisa retornar para o status "Aberto" antes de ser alterado.`;
+  }
+  if (status === 'CANCELADO') {
+    return `O ${numero} está cancelado. Use "Reabrir" para voltar ao status "Aberto" antes de alterá-lo.`;
   }
   if (status === 'PEDIDO_GERADO') {
     return `O ${numero} está no pedido ${pedido ?? ''} e não pode ser alterado.`.replace('  ', ' ');

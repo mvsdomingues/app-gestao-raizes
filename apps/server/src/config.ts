@@ -46,6 +46,8 @@ export const config = {
   imagensDir: caminho(process.env.IMAGENS_DIR, 'data/imagens'),
   /** Build do front-end servido pelo Express em produção. */
   webDist: resolve(RAIZ, 'apps/web/dist'),
+  /** Endereço público dos links enviados aos clientes (sem barra no fim); null = o endereço de acesso. */
+  urlPublica: process.env.APP_URL_PUBLICA?.trim().replace(/\/+$/, '') || null,
   /** Integração com o Kommo (desligada sem KOMMO_TOKEN). */
   kommo: configKommo(),
 };

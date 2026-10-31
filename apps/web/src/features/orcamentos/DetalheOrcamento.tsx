@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
-import { FLUXO_ORCAMENTO, motivoBloqueioAlteracao, ROTULOS_STATUS_ORCAMENTO, type Orcamento } from '@raizes/shared';
+import { FLUXO_ORCAMENTO, motivoBloqueioAlteracao, podeGerarPedido, ROTULOS_STATUS_ORCAMENTO, type Orcamento } from '@raizes/shared';
+import { PainelLink } from './LinkCliente';
 import { useApp } from '../../app/contexto';
 import { useSessao } from '../../app/sessao';
 import { NomeUsuario } from '../../components/NomeUsuario';
@@ -14,7 +15,7 @@ import { useConfigClientes } from '../clientes/config';
 
 /** Aba "Detalhes": situação, ações e folha do orçamento selecionado. */
 export function DetalheOrcamento() {
-  const { folha, irPara, setAbaOrcamentos, abrirPedido, versaoOrcamentos } = useApp();
+  const { folha, irPara, setAbaOrcamentos, abrirPedido, versaoOrcamentos, abaOrcamentos, tela } = useApp();
   const { pode } = useSessao();
   const kommo = useConfigClientes();
   const [gerando, setGerando] = useState(false);
@@ -35,14 +36,19 @@ export function DetalheOrcamento() {
     return () => {
       vivo = false;
     };
-  }, [folha?.id, folha?.dataHora, folha?.pedido?.codigo, versaoOrcamentos]);
+  }, [folha?.id, folha?.dataHora, folha?.pedido?.codigo, versaoOrcamentos, abaOrcamentos, tela]);
 
   const status = info?.status ?? folha?.status;
   const pedido = info ? info.pedido : folha?.pedido;
   const movimentos = info?.movimentos ?? [];
   // Última entrada em cada situação (data e quem)
   const entrada = new Map(movimentos.map((m) => [m.status_novo, m]));
-  const indice = status ? FLUXO_ORCAMENTO.indexOf(status) : -1;
+  const cancelado = status === 'CANCELADO';
+  const cancelamento = cancelado ? movimentos.findLast((m) => m.status_novo === 'CANCELADO') : undefined;
+  // Cancelado: as etapas mostram até onde o orçamento chegou antes de ser cancelado
+  const etapa = cancelado ? (cancelamento?.status_anterior ?? 'ABERTO') : status;
+  const indice = etapa && etapa !== 'CANCELADO' ? FLUXO_ORCAMENTO.indexOf(etapa) : -1;
+  const resposta = info?.resposta_cliente ?? null;
   const cliente = info ? (info.cliente ?? null) : (folha?.cliente ?? null);
 
   return (
@@ -73,7 +79,27 @@ export function DetalheOrcamento() {
                 ↩ Voltar para aberto
               </button>
             )}
-            {folha.id !== undefined && !pedido && pode('pedidos') && (
+            {folha.id !== undefined && (status === 'ABERTO' || status === 'ENVIADO') && (
+              <button
+                className="btn-back btn-cancelar-pedido"
+                id="btn-cancelar-orcamento"
+                disabled={processando !== null}
+                onClick={() => void alterar(folha.id!, folha.numero, status, 'CANCELADO')}
+              >
+                ✕ Cancelar orçamento
+              </button>
+            )}
+            {folha.id !== undefined && cancelado && (
+              <button
+                className="btn-back"
+                id="btn-reabrir-orcamento"
+                disabled={processando !== null}
+                onClick={() => void alterar(folha.id!, folha.numero, 'CANCELADO', 'ABERTO')}
+              >
+                ↺ Reabrir
+              </button>
+            )}
+            {folha.id !== undefined && !pedido && status && podeGerarPedido(status) && pode('pedidos') && (
               <button className="btn-back" id="btn-gerar-pedido" onClick={() => setGerando(true)}>
                 📦 Gerar pedido
               </button>
@@ -82,7 +108,7 @@ export function DetalheOrcamento() {
               <button
                 className="btn-back"
                 id="btn-editar-orcamento"
-                disabled={!!pedido || carregando !== null}
+                disabled={!!pedido || cancelado || carregando !== null}
                 title={status ? (motivoBloqueioAlteracao(folha.numero, status, pedido?.codigo) ?? undefined) : undefined}
                 onClick={() => void editar(folha.id!, folha.numero)}
               >
@@ -147,6 +173,24 @@ export function DetalheOrcamento() {
             </div>
           )}
 
+          {cancelamento && (
+            <div className="orc-cancelado" id="orc-cancelado">
+              <b>{cancelamento.origem === 'CLIENTE' ? 'Recusado pelo cliente' : 'Cancelado'}</b> em{' '}
+              {formatarDataHora(cancelamento.data_hora)}
+              {cancelamento.origem !== 'CLIENTE' && cancelamento.usuario && <> por {cancelamento.usuario.nome}</>}
+              {cancelamento.observacao && <> — {cancelamento.observacao.replace(/^Recusado pelo cliente: /, 'motivo: ')}</>}. Use{' '}
+              <b>Reabrir</b> para voltar a trabalhar nele.
+            </div>
+          )}
+          {resposta && !cancelado && (
+            <div className={`orc-resposta ${resposta.resposta}`} id="orc-resposta">
+              <b>{resposta.resposta === 'ACEITO' ? '✓ Aceito pelo cliente' : '✕ Recusado pelo cliente'}</b> em{' '}
+              {formatarDataHora(resposta.em)}
+              {resposta.observacao && <> — {resposta.observacao}</>}
+            </div>
+          )}
+          {info?.link && status !== 'ABERTO' && <PainelLink orcamento={info} aoAtualizar={setInfo} />}
+
           <ol className="orc-passos" aria-label="Situação do orçamento">
             {FLUXO_ORCAMENTO.map((s, i) => {
               const m = i <= indice ? entrada.get(s) : undefined;
@@ -159,7 +203,7 @@ export function DetalheOrcamento() {
                     {m ? (
                       <>
                         {formatarDataHora(m.data_hora)}
-                        {m.usuario && <> · {m.usuario.nome}</>}
+                        {m.origem === 'CLIENTE' ? <> · cliente (link)</> : m.usuario && <> · {m.usuario.nome}</>}
                       </>
                     ) : estado === 'futuro' ? (
                       '—'
@@ -200,7 +244,7 @@ export function DetalheOrcamento() {
                           <TagStatusOrcamento status={m.status_novo} />
                         </td>
                         <td>
-                          <NomeUsuario usuario={m.usuario} />
+                          <NomeUsuario usuario={m.usuario} origem={m.origem} />
                         </td>
                         <td className="pedido-mov-obs">{m.observacao ?? ''}</td>
                       </tr>

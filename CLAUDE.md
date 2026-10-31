@@ -6,5 +6,6 @@
 - **Visual:** reutilizar as classes e tokens existentes (`--uva`, `--berinjela`, `--creme`; Cormorant Garamond + Jost). CSS por tela em `apps/web/src/styles/NN-nome.css`, importado em ordem em `styles/index.css`. Mensagens e confirmações usam os pop-ups do site (`avisar`, `erro`, `confirmar`, `perguntar` de `apps/web/src/lib/dialogo.ts`), nunca `alert`/`confirm`/`prompt` do navegador.
 - **Banco:** alterações de esquema em `apps/server/src/db/esquema.ts` (sempre `CREATE … IF NOT EXISTS`, sem perder dados do `data/produtos.db`).
 - **Kommo:** só o servidor fala com o Kommo (`apps/server/src/kommo/`; limite de 7 req/s respeitado em `ApiKommo`). Busca de clientes sempre na cópia local (`clientes_kommo`); o sistema nunca cria contatos no Kommo. Testes usam o Kommo simulado de `apps/server/test/kommo-mock.ts` (`KOMMO_BASE_URL`).
+- **Página pública do cliente** (`/o/<código>`, pacote `apps/web/publico.html` + `src/publico/`): nunca expor custo, composição do preço, fornecedor, usuários ou ids internos; a API pública (`routes/publico.ts`) monta a resposta campo a campo (`orcamentoPublico`). Tudo que a folha mostra só internamente leva a classe `so-tela` (some na impressão).
 - **Credenciais** só no `.env` (nunca no código). `data/` e `.env` ficam fora do Git.
 - Antes de entregar: `npm run typecheck`, `npm test` e `npm run build`.

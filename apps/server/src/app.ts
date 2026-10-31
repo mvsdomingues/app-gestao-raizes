@@ -14,6 +14,7 @@ import { rotasProdutosProprios } from './routes/produtos-proprios';
 import { rotaProxyImagem } from './routes/proxy-imagem';
 import { rotasUsuarios } from './routes/usuarios';
 import { rotasClientes } from './routes/clientes';
+import { rotasPublicas } from './routes/publico';
 import type { ServicoKommo } from './kommo/servico';
 import type { GerenciadorAtualizacao } from './services/gerenciador-atualizacao';
 
@@ -25,9 +26,11 @@ export interface OpcoesApp {
   webDist?: string;
   /** Integração com o Kommo (null/ausente = desligada) */
   kommo?: ServicoKommo | null;
+  /** Endereço dos links enviados aos clientes (APP_URL_PUBLICA); padrão: o endereço de acesso */
+  urlPublica?: string | null;
 }
 
-export function criarApp({ db, gerenciador, imagensDir, webDist, kommo = null }: OpcoesApp) {
+export function criarApp({ db, gerenciador, imagensDir, webDist, kommo = null, urlPublica = null }: OpcoesApp) {
   const app = express();
   app.disable('x-powered-by');
   app.set('json spaces', 0);
@@ -48,8 +51,9 @@ export function criarApp({ db, gerenciador, imagensDir, webDist, kommo = null }:
   app.use(rotasUsuarios(db));
 
   app.use(rotasCatalogo(db));
+  app.use(rotasPublicas(db, imagensDir, kommo));
   app.use(rotasClientes(db, kommo));
-  app.use(rotasOrcamentos(db, { exigirClienteAoEnviar: !!kommo, kommo }));
+  app.use(rotasOrcamentos(db, { exigirClienteAoEnviar: !!kommo, kommo, urlPublica }));
   app.use(rotasPedidos(db, kommo));
   app.use(rotasProdutosProprios(db, imagensDir));
   app.use(rotasParametros(db));
@@ -64,6 +68,13 @@ export function criarApp({ db, gerenciador, imagensDir, webDist, kommo = null }:
   });
 
   if (webDist && existsSync(webDist)) {
+    // Página do cliente (link do orçamento): pacote separado, sem login nem telas internas
+    app.get('/o/:codigo', (_req, res) => {
+      res
+        .set('X-Robots-Tag', 'noindex, nofollow')
+        .set('Referrer-Policy', 'no-referrer')
+        .sendFile(resolve(webDist, 'publico.html'));
+    });
     app.use(express.static(webDist, { index: 'index.html' }));
     app.get('/{*caminho}', (req, res, next) => {
       if (req.path.startsWith('/static/')) return next();

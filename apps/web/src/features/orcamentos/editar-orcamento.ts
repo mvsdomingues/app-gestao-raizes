@@ -95,8 +95,14 @@ export function useEditarOrcamento() {
           bloqueio +
             (o.status === 'ENVIADO'
               ? '\n\nUse "↩ Voltar para aberto" nos detalhes do orçamento e depois clique em Editar.'
-              : '\n\nPara alterá-lo, cancele o pedido na tela Pedidos.'),
-          { tipo: 'aviso', titulo: o.status === 'ENVIADO' ? 'Orçamento já enviado' : 'Orçamento com pedido' },
+              : o.status === 'CANCELADO'
+                ? ''
+                : '\n\nPara alterá-lo, cancele o pedido na tela Pedidos.'),
+          {
+            tipo: 'aviso',
+            titulo:
+              o.status === 'ENVIADO' ? 'Orçamento já enviado' : o.status === 'CANCELADO' ? 'Orçamento cancelado' : 'Orçamento com pedido',
+          },
         );
         return;
       }

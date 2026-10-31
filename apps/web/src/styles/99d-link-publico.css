@@ -1,0 +1,117 @@
+/* ═══════════════════════════════════════════════
+   LINK DO ORÇAMENTO — página do cliente, status Cancelado, link nos detalhes
+═══════════════════════════════════════════════ */
+
+/* Folha: composição do preço e fornecedor só na tela interna */
+.so-impressao { display: none; }
+@media print {
+  .so-tela { display: none !important; }
+  .so-impressao { display: block; }
+}
+
+/* ── Página do cliente (/o/<código>) ── */
+body.pagina-publica { display: block; background: var(--creme); }
+.pub-wrap { max-width: 900px; margin: 0 auto; padding: 24px 16px 48px; }
+.pub-msg { padding: 80px 16px; text-align: center; color: var(--muted); }
+.pub-marca { text-align: center; margin: 24px 0; }
+.pub-cartao { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius-lg); padding: 24px; box-shadow: var(--shadow-sm); }
+.pub-erro { text-align: center; }
+.pub-erro h1 { font-family: var(--font-display); color: var(--berinjela); font-size: 1.8rem; margin-bottom: 8px; }
+.pub-erro p { color: var(--muted); margin-top: 6px; }
+
+.pub-situacao { border-radius: var(--radius-lg); padding: 16px 20px; margin-bottom: 18px; border: 1px solid; }
+.pub-situacao.info { background: #F6F1FA; border-color: #D9CCE2; }
+.pub-situacao.ok { background: #EAF5E8; border-color: #B9DEB4; }
+.pub-situacao.aviso { background: #FFF6E3; border-color: #F1D79B; }
+.pub-situacao.neutro { background: var(--creme2); border-color: var(--border); }
+.pub-situacao-titulo { font-family: var(--font-display); font-size: 1.35rem; font-weight: 600; color: var(--berinjela); }
+.pub-situacao-texto { font-size: .9rem; margin-top: 2px; color: var(--grafite); }
+
+.pub-folha { background: #fff; border-radius: var(--radius-lg); box-shadow: var(--shadow); padding: 36px 40px; }
+.pub-folha .orc-table { font-size: .84rem; }
+
+.pub-acoes { display: flex; justify-content: space-between; align-items: center; gap: 12px; flex-wrap: wrap; margin-top: 22px; }
+.pub-resposta-botoes { display: flex; gap: 10px; flex-wrap: wrap; }
+.pub-btn {
+  font-family: var(--font-body); font-size: .92rem; font-weight: 600; letter-spacing: .3px;
+  padding: 12px 22px; border-radius: var(--radius); border: 1.5px solid transparent; cursor: pointer;
+}
+.pub-btn:disabled { opacity: .5; cursor: default; }
+.pub-btn-aceitar { background: var(--uva); color: #fff; }
+.pub-btn-aceitar:hover:not(:disabled) { background: var(--berinjela); }
+.pub-btn-recusar { background: #fff; color: var(--danger); border-color: #E7B3AD; }
+.pub-btn-recusar:hover:not(:disabled) { background: #FDECEA; }
+.pub-btn-sec { background: transparent; color: var(--uva); border-color: var(--border2); }
+.pub-btn-sec:hover:not(:disabled) { border-color: var(--uva); }
+
+.pub-painel { margin-top: 18px; border-left: 4px solid var(--uva); }
+.pub-painel.recusar { border-left-color: var(--danger); }
+.pub-painel h2 { font-family: var(--font-display); font-size: 1.4rem; color: var(--berinjela); }
+.pub-painel p { font-size: .9rem; margin: 6px 0 14px; }
+.pub-painel label { display: block; font-size: .72rem; font-weight: 600; text-transform: uppercase; letter-spacing: 1px; color: var(--muted); margin-bottom: 5px; }
+.pub-painel textarea { width: 100%; resize: vertical; font-family: var(--font-body); }
+.pub-painel-botoes { display: flex; justify-content: flex-end; gap: 10px; margin-top: 14px; flex-wrap: wrap; }
+.pub-aviso { margin-top: 12px; padding: 10px 14px; border-radius: var(--radius); background: #FFF6E3; color: #7A4F00; font-size: .86rem; }
+.pub-rodape { margin-top: 30px; text-align: center; font-size: .76rem; color: var(--muted); }
+
+@media (max-width: 640px) {
+  .pub-folha { padding: 20px 14px; }
+  .pub-folha .orc-letterhead { flex-direction: column; gap: 12px; }
+  .pub-folha .orc-meta-block { text-align: left; }
+  .pub-folha .orc-totals-block { flex-direction: column; align-items: flex-start; gap: 12px; }
+  .pub-folha .orc-by-supplier .orc-sup-item { text-align: left; }
+  .pub-folha .orc-table { font-size: .76rem; }
+  .pub-folha .orc-table td, .pub-folha .orc-table th { padding: 8px 4px; }
+  .pub-folha .orc-table th:first-child, .pub-folha .orc-table td:first-child { width: 18px !important; }
+  .pub-folha .orc-prod-img, .pub-folha .orc-prod-no-img { width: 36px; height: 36px; }
+  .pub-folha .orc-prod-cell { gap: 8px; }
+  .pub-folha .orc-cliente { flex-direction: column; gap: 2px; }
+  .pub-folha .orc-footer { flex-direction: column; align-items: flex-start; gap: 4px; }
+  .pub-acoes, .pub-resposta-botoes { flex-direction: column-reverse; align-items: stretch; }
+  .pub-btn { width: 100%; }
+}
+
+@media print {
+  body.pagina-publica { background: #fff; }
+  .pub-situacao, .pub-acoes, .pub-painel, .pub-rodape, .pub-aviso { display: none !important; }
+  .pub-wrap { max-width: none; padding: 0; }
+  .pub-folha { box-shadow: none; padding: 0; }
+}
+
+/* ── Sistema interno ── */
+.tag-orc-status.so-CANCELADO { background: #ECEAE6; color: #6B645C; }
+.orc-passo.so-CANCELADO .orc-passo-marca { background: #ECEAE6; }
+.orc-cancelado {
+  margin-top: 14px; padding: 10px 14px; border-radius: var(--radius);
+  background: #F4F2EE; border-left: 3px solid #9C958C; font-size: .86rem;
+}
+.orc-link-painel {
+  margin-top: 14px; padding: 12px 14px; border-radius: var(--radius);
+  border: 1px dashed #D9CCE2; background: #FBF8FD; font-size: .84rem;
+}
+.orc-link-topo { display: flex; justify-content: space-between; align-items: center; gap: 10px; flex-wrap: wrap; }
+.orc-link-url {
+  display: block; margin-top: 6px; padding: 7px 10px; border-radius: 6px; background: #fff; border: 1px solid var(--border);
+  font-family: monospace; font-size: .78rem; color: var(--berinjela); overflow-wrap: anywhere; user-select: all;
+}
+.orc-link-acoes { display: flex; gap: 14px; flex-wrap: wrap; font-size: .8rem; }
+.orc-link-acoes a { color: var(--uva); font-weight: 600; text-decoration: none; }
+.orc-link-meta { margin-top: 6px; font-size: .76rem; color: var(--muted); }
+.orc-link-meta .vencido { color: var(--danger); font-weight: 600; }
+.orc-resposta { margin-top: 12px; padding: 10px 14px; border-radius: var(--radius); font-size: .86rem; }
+.orc-resposta.ACEITO { background: #EAF5E8; border-left: 3px solid var(--success); }
+.orc-resposta.RECUSADO { background: #FDECEA; border-left: 3px solid var(--danger); }
+.icone-resposta { margin-left: 6px; font-size: .78rem; font-weight: 700; }
+.icone-resposta.ACEITO { color: var(--success); }
+.icone-resposta.RECUSADO { color: var(--danger); }
+.icone-resposta.visto { color: var(--muted); font-weight: 500; }
+.hist-acoes .btn-reabrir:hover:not(:disabled) { background: var(--uva); border-color: var(--uva); color: #fff; }
+
+/* Janela "link do orçamento" após enviar */
+.modal-link-url { margin: 12px 0; }
+.modal-link-botoes { display: flex; gap: 10px; flex-wrap: wrap; justify-content: flex-end; }
+.modal-link-botoes a { text-decoration: none; }
+
+@media print {
+  .orc-link-painel, .orc-resposta, .orc-cancelado { display: none !important; }
+}

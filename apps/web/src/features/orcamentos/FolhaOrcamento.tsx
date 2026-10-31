@@ -1,12 +1,31 @@
-import { formatarTelefone, formatBRL } from '@raizes/shared';
+import { formatarTelefone, formatBRL, type ItemOrcamento } from '@raizes/shared';
 import type { FolhaOrcamento as DadosFolha } from '../../app/contexto';
 import { ImagemProduto } from '../../components/ImagemProduto';
 import { classeFornecedor } from '../../lib/fornecedor';
 
 const cinza = { fontSize: '.82rem', color: '#7A7167' } as const;
 
-/** Folha timbrada do orçamento (a mesma impressa / salva em PDF). */
-export function FolhaOrcamento({ folha }: { folha: DadosFolha }) {
+/** Dados da folha: os do orçamento interno ou os da página do cliente (sem custos nem fornecedor). */
+export type DadosFolhaOrcamento = Pick<DadosFolha, 'id' | 'numero' | 'dataHora' | 'subtotal' | 'frete' | 'total' | 'observacao' | 'cliente'> & {
+  itens: (Pick<ItemOrcamento, 'nome' | 'codigo' | 'qty' | 'preco' | 'imagem_url'> &
+    Partial<Pick<ItemOrcamento, 'fornecedor' | 'origem' | 'composicao'>> & { observacao?: string | null })[];
+};
+
+/**
+ * Folha timbrada do orçamento (a mesma impressa / salva em PDF).
+ * Composição do preço e fornecedor só aparecem na tela interna: ficam fora da
+ * impressão (classe "so-tela") e da página do cliente (publico).
+ */
+export function FolhaOrcamento({
+  folha,
+  publico = false,
+  validoAte,
+}: {
+  folha: DadosFolhaOrcamento;
+  publico?: boolean;
+  /** Data/hora até quando vale (link do cliente); sem ela, "Válido por 7 dias" */
+  validoAte?: string | null;
+}) {
   const { numero, dataHora, itens, subtotal, frete, total } = folha;
   const d = dataHora ? new Date(dataHora) : new Date();
   const hoje = d.toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit', year: 'numeric' });
@@ -14,7 +33,8 @@ export function FolhaOrcamento({ folha }: { folha: DadosFolha }) {
 
   // Totais por fornecedor (na ordem em que aparecem)
   const porForn = new Map<string, number>();
-  for (const i of itens) porForn.set(i.fornecedor, (porForn.get(i.fornecedor) || 0) + i.preco * i.qty);
+  if (!publico) for (const i of itens) porForn.set(i.fornecedor ?? '', (porForn.get(i.fornecedor ?? '') || 0) + i.preco * i.qty);
+  const validade = validoAte ? new Date(validoAte).toLocaleDateString('pt-BR') : null;
 
   return (
     <>
@@ -49,11 +69,15 @@ export function FolhaOrcamento({ folha }: { folha: DadosFolha }) {
         </div>
         <div className="orc-by-supplier">
           {[...porForn].map(([f, v]) => (
-            <div className="orc-sup-item" key={f}>
+            <div className="orc-sup-item so-tela" key={f}>
               <label>{f}</label>
               <span>{formatBRL(v)}</span>
             </div>
           ))}
+          <div className={`orc-sup-item${publico ? '' : ' so-impressao'}`}>
+            <label>Subtotal</label>
+            <span>{formatBRL(subtotal)}</span>
+          </div>
           {frete > 0 && (
             <div className="orc-sup-item">
               <label>Frete</label>
@@ -89,12 +113,18 @@ export function FolhaOrcamento({ folha }: { folha: DadosFolha }) {
                   <div>
                     <div>
                       {item.nome}
-                      <span className={`orc-sup-badge ${classeFornecedor(item.fornecedor, item.origem, 'orc-sup-')}`}>{item.fornecedor}</span>
+                      {!publico && item.fornecedor && (
+                        <span className={`orc-sup-badge so-tela ${classeFornecedor(item.fornecedor, item.origem, 'orc-sup-')}`}>
+                          {item.fornecedor}
+                        </span>
+                      )}
                     </div>
                     <div className="orc-prod-code">Cód: {item.codigo || '–'}</div>
-                    <div className="orc-prod-composicao">
-                      {item.composicao} = <b>{formatBRL(item.preco)}/un</b>
-                    </div>
+                    {!publico && item.composicao && (
+                      <div className="orc-prod-composicao so-tela">
+                        {item.composicao} = <b>{formatBRL(item.preco)}/un</b>
+                      </div>
+                    )}
                     {item.observacao && (
                       <div className="orc-prod-obs">
                         <span>Obs.:</span> {item.observacao}
@@ -144,7 +174,7 @@ export function FolhaOrcamento({ folha }: { folha: DadosFolha }) {
 
       <div className="orc-footer">
         <div className="orc-footer-brand">Raízes Personalizados</div>
-        <span>Válido por 7 dias · sujeito à disponibilidade de estoque</span>
+        <span>{validade ? `Válido até ${validade}` : 'Válido por 7 dias'} · sujeito à disponibilidade de estoque</span>
       </div>
     </>
   );

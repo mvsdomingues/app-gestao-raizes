@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useRef, useState, type FormEvent } from 'react';
-import { FLUXO_ORCAMENTO, formatBRL, motivoBloqueioAlteracao, ROTULOS_STATUS_ORCAMENTO, type FiltrosOrcamentos, type ResumoOrcamento } from '@raizes/shared';
+import { STATUS_ORCAMENTO, formatBRL, motivoBloqueioAlteracao, podeGerarPedido, ROTULOS_STATUS_ORCAMENTO, type FiltrosOrcamentos, type ResumoOrcamento } from '@raizes/shared';
 import { useApp } from '../../app/contexto';
 import { NomeUsuario } from '../../components/NomeUsuario';
 import { useSessao } from '../../app/sessao';
@@ -35,7 +35,7 @@ function formatarData(dataHora: string): string {
 
 /** Aba "Todos os orçamentos": filtros, tabela paginada, abrir e editar. */
 export function ListaOrcamentos() {
-  const { visitas, mostrarOrcamento, abrirPedido, pedidoAberto, versaoOrcamentos } = useApp();
+  const { visitas, mostrarOrcamento, abrirPedido, pedidoAberto, versaoOrcamentos, tela, abaOrcamentos } = useApp();
   const { pode } = useSessao();
   const { editar, carregando } = useEditarOrcamento();
   const [filtros, setFiltros] = useState<FiltrosOrcamentos>(FILTROS_VAZIOS);
@@ -68,6 +68,15 @@ export function ListaOrcamentos() {
   useEffect(() => {
     if (visitas.orcamentos > 0) void carregar(aplicados, pagina);
   }, [pedidoAberto, versaoOrcamentos]);
+
+  // Com a lista aberta, atualiza a cada minuto (respostas dos clientes pelo link)
+  useEffect(() => {
+    if (tela !== 'orcamentos' || abaOrcamentos !== 'lista') return;
+    const t = setInterval(() => {
+      if (!document.hidden) void carregar(aplicados, pagina);
+    }, 60_000);
+    return () => clearInterval(t);
+  }, [tela, abaOrcamentos, aplicados, pagina]);
 
   const { alterar: alterarSituacao, processando } = useSituacaoOrcamento();
 
@@ -182,7 +191,7 @@ export function ListaOrcamentos() {
           <label htmlFor="filtro-status-orc">Situação</label>
           <select id="filtro-status-orc" className="custom-input" {...campo('status')}>
             <option value="">Todas</option>
-            {FLUXO_ORCAMENTO.map((s) => (
+            {STATUS_ORCAMENTO.map((s) => (
               <option key={s} value={s}>
                 {ROTULOS_STATUS_ORCAMENTO[s]}
               </option>
@@ -268,6 +277,21 @@ export function ListaOrcamentos() {
                   <td>
                     <div className="orc-situacao">
                       <TagStatusOrcamento status={r.status} />
+                      {r.resposta && r.status !== 'ENVIADO' ? (
+                        <span
+                          className={`icone-resposta ${r.resposta}`}
+                          title={r.resposta === 'ACEITO' ? 'Aceito pelo cliente no link' : 'Recusado pelo cliente no link'}
+                        >
+                          {r.resposta === 'ACEITO' ? '✓ cliente' : '✕ cliente'}
+                        </span>
+                      ) : (
+                        r.status === 'ENVIADO' &&
+                        r.visto && (
+                          <span className="icone-resposta visto" title="O cliente já abriu o link">
+                            👁 visto
+                          </span>
+                        )
+                      )}
                       {r.pedido &&
                         (pode('pedidos') ? (
                           <button
@@ -299,7 +323,20 @@ export function ListaOrcamentos() {
                         {processando === r.id ? 'Salvando…' : '✉ Enviar para o Cliente'}
                       </button>
                     )}
-                    {!r.pedido && pode('pedidos') && (
+                    {r.status === 'CANCELADO' && (
+                      <button
+                        className="btn-editar-orc btn-reabrir"
+                        title={`Reabrir o ${r.numero} (volta para Aberto)`}
+                        disabled={processando !== null}
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          void alterarSituacao(r.id, r.numero, r.status, 'ABERTO');
+                        }}
+                      >
+                        {processando === r.id ? 'Salvando…' : '↺ Reabrir'}
+                      </button>
+                    )}
+                    {!r.pedido && podeGerarPedido(r.status) && pode('pedidos') && (
                       <button
                         className="btn-editar-orc btn-gerar-pedido"
                         title={`Gerar um pedido a partir do ${r.numero}`}
@@ -317,7 +354,7 @@ export function ListaOrcamentos() {
                       title={
                         motivoBloqueioAlteracao(r.numero, r.status, r.pedido?.codigo) ?? `Alterar ${r.numero} no carrinho`
                       }
-                      disabled={carregando !== null || !!r.pedido}
+                      disabled={carregando !== null || !!r.pedido || r.status === 'CANCELADO'}
                       onClick={(e) => {
                         e.stopPropagation();
                         void editar(r.id, r.numero);

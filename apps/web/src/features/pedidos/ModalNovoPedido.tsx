@@ -29,7 +29,8 @@ export function ModalNovoPedido({ aberto, orcamento, fechar }: Props) {
     const numerico = /^(orc-?)?\d+$/i.test(t);
     try {
       const r = await api.orcamentos({ pedido: 'sem', numero: numerico ? t : '', produto: numerico ? '' : t }, 8, 0);
-      setOpcoes(r.orcamentos);
+      // Cancelado não vira pedido (precisa ser reaberto antes)
+      setOpcoes(r.orcamentos.filter((o) => o.status !== 'CANCELADO'));
     } catch {
       setOpcoes([]);
     }

@@ -141,6 +141,8 @@ O menu fica na **barra lateral** (pode ser recolhido para mostrar só os ícones
    - Só orçamento **Aberto** pode ser alterado. Se estiver **Enviado**, o sistema avisa que ele precisa voltar para Aberto antes (botão *↩ Voltar para aberto* nos detalhes); com **pedido gerado**, nunca. O botão **📦 Gerar pedido** vale para Aberto e Enviado.
 
    - **Cliente** (com a integração do Kommo ligada): veja *Clientes do Kommo* abaixo.
+   - **Cancelado**: *✕ Cancelar orçamento* (Aberto ou Enviado, sempre com motivo) ou recusa do cliente pelo link. Cancelado não é alterado nem vira pedido; *↺ Reabrir* volta para Aberto. Orçamento com pedido ativo não é cancelado (cancela-se o pedido).
+   - **Link para o cliente**: veja *Link do orçamento* abaixo.
 
    *Gerar Orçamento* no carrinho grava o orçamento (numeração `ORC-0001`…), esvazia o carrinho e abre a aba **Detalhes**. Ao salvar uma alteração, o orçamento mantém o mesmo número e recebe a data da alteração; não há limite de alterações.
 4. **Pedidos**: tela com duas abas, no mesmo modelo de Orçamentos.
@@ -161,6 +163,17 @@ O menu fica na **barra lateral** (pode ser recolhido para mostrar só os ícones
 **Sistema**
 
 8. **Atualização**: atualiza a base dos fornecedores integrados e mostra o log; com o Kommo ligado, mostra também a sincronização dos clientes.
+
+### Link do orçamento (aceite pelo cliente)
+
+*Enviar para o Cliente* gera um link secreto do orçamento (`/o/<código>`, 43 caracteres aleatórios; não há número nem sequência no endereço). A janela que abre mostra o link, **Copiar link** e **Enviar pelo WhatsApp** (telefone do cliente e mensagem prontos); os detalhes do orçamento mostram o link, a validade, se o cliente já abriu, e **Gerar novo link** (o anterior para de funcionar).
+
+- **Página do cliente** (sem login, funciona no celular): mesmo conteúdo da folha impressa, **sem a composição do preço e sem fornecedor**, com *Imprimir / Salvar PDF* e, no fim, **Aceitar orçamento** (observação opcional) e **Rejeitar** (motivo obrigatório).
+- **Aceitar** gera o pedido na hora (responsável = responsável pelo orçamento; a movimentação aparece como *Cliente (link)*). **Rejeitar** leva o orçamento a **Cancelado** com o motivo. O cliente responde uma vez só; data, hora, IP e navegador ficam gravados. Com o Kommo ligado, aceite e recusa viram notas no contato (a nota de envio leva o link).
+- **Validade**: 7 dias a partir do envio. Vencido, a página continua visível, sem os botões. Orçamento que voltou para Aberto aparece como "em revisão"; ao reenviar, a validade recomeça.
+- **Proteções**: código inválido, revogado ou de orçamento não enviado recebe a mesma resposta ("link inválido"); 20 códigos inválidos seguidos bloqueiam o IP por 15 minutos; páginas fora dos buscadores (`noindex`) e sem `Referer`; fotos servidas pelo sistema (o endereço do fornecedor não aparece).
+- **Endereço do link**: `APP_URL_PUBLICA` no `.env`; sem ela, o endereço pelo qual a tela foi aberta (IP, domínio ou localhost). No Nginx não use senha (`auth_basic`), senão o cliente não abre o link: ver `deploy/nginx/raizes.conf`.
+- **Folha impressa** (botão *Imprimir / Salvar PDF* da tela interna): também sai sem composição do preço e sem fornecedor; essas informações continuam só na tela.
 
 ### Clientes do Kommo
 
@@ -200,7 +213,11 @@ Todas as rotas exigem login, exceto as de `/api/auth`. Cada rota também exige a
 | `GET/PUT /api/parametros` | Lê / grava os parâmetros da calculadora |
 | `GET /api/orcamentos` | Lista paginada (`numero`, `produto`, `de`, `ate`, `min`, `max`, `status`, `pedido=com\|sem`, `meus=1`, `cliente`, `limit`, `offset`) → `{ total, orcamentos }` (cada um com `pedido` ativo ou `null`) |
 | `POST /api/orcamentos` · `GET/PUT /api/orcamentos/:id` | Grava, consulta (com `status`, `movimentos` e `cliente`) e altera (PUT mantém o número; 409 se não estiver Aberto). `cliente_kommo_id` vincula o cliente (400 se não estiver na base; ausente no PUT = mantém) |
-| `POST /api/orcamentos/:id/status` | Situação manual `{ status: 'ABERTO' \| 'ENVIADO', status_atual }` (409 com pedido gerado ou, com o Kommo ligado, ao enviar sem cliente) |
+| `POST /api/orcamentos/:id/status` | Situação manual `{ status: 'ABERTO' \| 'ENVIADO' \| 'CANCELADO', status_atual, motivo? }` (Cancelado exige motivo; Aberto a partir de Cancelado = reabrir) (409 com pedido gerado ou, com o Kommo ligado, ao enviar sem cliente) |
+| `POST /api/orcamentos/:id/link` | Gera um novo link do cliente (o anterior deixa de funcionar) |
+| `GET /api/publico/orcamentos/:codigo` | **Sem login** · orçamento para a página do cliente (sem custos nem fornecedor) |
+| `GET /api/publico/orcamentos/:codigo/imagem/:n` | **Sem login** · foto do item n |
+| `POST /api/publico/orcamentos/:codigo/aceitar` · `.../recusar` | **Sem login** · aceite `{ observacao? }` (gera o pedido) / recusa `{ motivo }` (Cancelado) |
 | `GET /api/clientes?busca=` | Busca na cópia local dos contatos do Kommo (telefone, nome, e-mail ou `#código`) → `{ tipo, fonte, clientes }` |
 | `GET /api/clientes/kommo?busca=` · `GET /api/clientes/:id` | Busca direta no Kommo (grava na cópia local) / um cliente |
 | `GET /api/clientes/config` | `{ ativo, subdominio }` (integração ligada?) |

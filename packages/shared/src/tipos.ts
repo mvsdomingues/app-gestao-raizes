@@ -71,6 +71,10 @@ export interface ResumoOrcamento {
   alterado_por?: import('./acesso').UsuarioResumo | null;
   /** Cliente do Kommo vinculado (null = sem cliente) */
   cliente?: import('./clientes').ClienteVinculado | null;
+  /** Resposta do cliente pelo link (null = sem resposta) */
+  resposta?: import('./orcamentos').RespostaCliente | null;
+  /** O cliente já abriu o link */
+  visto?: boolean;
 }
 
 /** Resposta paginada de GET /api/orcamentos */
@@ -106,6 +110,10 @@ export interface Orcamento extends ResumoOrcamento {
   observacao?: string | null;
   /** Histórico de situações (mais antigo primeiro) */
   movimentos?: import('./orcamentos').MovimentoOrcamento[];
+  /** Link público enviado ao cliente (null = ainda não enviado) */
+  link?: import('./orcamentos').LinkOrcamento | null;
+  /** Resposta do cliente pelo link (da rodada de envio atual) */
+  resposta_cliente?: import('./orcamentos').RespostaDoCliente | null;
 }
 
 /** Corpo de POST /api/orcamentos */

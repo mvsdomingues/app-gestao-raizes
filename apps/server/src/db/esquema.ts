@@ -231,6 +231,25 @@ function migrarColunas(db: Database.Database): void {
     if (!colunas(db, 'orcamentos').includes(coluna)) db.exec(`ALTER TABLE orcamentos ADD COLUMN ${coluna} ${tipo}`);
   }
   db.exec('CREATE INDEX IF NOT EXISTS ix_orcamentos_cliente ON orcamentos(cliente_kommo_id)');
+  // Link público do orçamento e resposta do cliente
+  for (const [coluna, tipo] of [
+    ['link_codigo', 'TEXT'],
+    ['link_enviado_em', 'TEXT'],
+    ['link_valido_ate', 'TEXT'],
+    ['link_visto_em', 'TEXT'],
+    ['resposta', 'TEXT'],
+    ['resposta_em', 'TEXT'],
+    ['resposta_obs', 'TEXT'],
+    ['resposta_ip', 'TEXT'],
+    ['resposta_navegador', 'TEXT'],
+  ] as const) {
+    if (!colunas(db, 'orcamentos').includes(coluna)) db.exec(`ALTER TABLE orcamentos ADD COLUMN ${coluna} ${tipo}`);
+  }
+  db.exec('CREATE UNIQUE INDEX IF NOT EXISTS ux_orcamentos_link ON orcamentos(link_codigo)');
+  // Movimentações feitas pelo cliente (aceite/recusa pelo link)
+  for (const tabela of ['orcamentos_movimentos', 'pedidos_movimentos']) {
+    if (!colunas(db, tabela).includes('origem')) db.exec(`ALTER TABLE ${tabela} ADD COLUMN origem TEXT`);
+  }
   // Nota do Kommo também pode vir do orçamento (enviado ao cliente)
   if (!colunas(db, 'kommo_notas').includes('orcamento_id')) {
     db.exec(`ALTER TABLE kommo_notas ADD COLUMN orcamento_id INTEGER`);

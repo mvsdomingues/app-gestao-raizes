@@ -21,6 +21,8 @@ import {
 } from '../db/repositorio-orcamentos';
 import { pedidoAtivoDoOrcamento } from '../db/repositorio-pedidos';
 import { vinculoDoCliente } from '../db/repositorio-clientes';
+import { COLUNAS_LINK, extrairLink, trocarLink } from '../db/repositorio-link';
+import { urlBase } from '../lib/url';
 import type { ServicoKommo } from '../kommo/servico';
 import { colunasResponsavel, extrairResponsavel } from '../db/repositorio-usuarios';
 import { falsyPython, floatPython } from '../lib/conversao';
@@ -62,12 +64,12 @@ interface ColunasPedido {
 }
 
 /** Orçamento completo (itens + pedido ativo, se houver). */
-export function lerOrcamento(db: Banco, id: number): Orcamento | undefined {
+export function lerOrcamento(db: Banco, id: number, base = ''): Orcamento | undefined {
   const row = db
     .prepare(
       `SELECT orcamentos.id, orcamentos.data_hora, orcamentos.subtotal, orcamentos.frete, orcamentos.total,
               orcamentos.qtd_itens, orcamentos.itens_json, orcamentos.observacao, ${SQL_STATUS_ORCAMENTO} AS status,
-              ${COLUNAS_CLIENTE},
+              ${COLUNAS_CLIENTE}, ${COLUNAS_LINK},
               ${colunasResponsavel('ur', 'resp')}, ${colunasResponsavel('ua', 'alt')}
          FROM orcamentos ${JOIN_RESPONSAVEIS} WHERE orcamentos.id = ?`,
     )
@@ -76,10 +78,13 @@ export function lerOrcamento(db: Banco, id: number): Orcamento | undefined {
   const responsavel = extrairResponsavel(row, 'resp');
   const alteradoPor = extrairResponsavel(row, 'alt');
   const cliente = clienteDaLinha(row);
+  const { link, resposta_cliente } = extrairLink(row, base);
   const { itens_json, ...resto } = row;
   return {
     ...resto,
     cliente,
+    link,
+    resposta_cliente,
     responsavel,
     alterado_por: alteradoPor,
     numero: numeroOrcamento(row.id),
@@ -94,10 +99,13 @@ export interface OpcoesOrcamentos {
   exigirClienteAoEnviar?: boolean;
   /** Integração ligada: "Enviar para o Cliente" registra uma nota no contato do Kommo. */
   kommo?: ServicoKommo | null;
+  /** APP_URL_PUBLICA (endereço dos links enviados aos clientes) */
+  urlPublica?: string | null;
 }
 
 export function rotasOrcamentos(db: Banco, opcoes: OpcoesOrcamentos = {}): Router {
   const r = Router();
+  const base = (req: Request) => urlBase(req, opcoes.urlPublica);
 
   /**
    * Lista paginada com filtros:
@@ -174,7 +182,8 @@ export function rotasOrcamentos(db: Banco, opcoes: OpcoesOrcamentos = {}): Route
                 orcamentos.qtd_itens, ${SQL_STATUS_ORCAMENTO} AS status,
                 (${SQL_PEDIDO_ATIVO.replace('{campo}', 'codigo')}) AS pedido_codigo,
                 (${SQL_PEDIDO_ATIVO.replace('{campo}', 'status')}) AS pedido_status,
-                ${COLUNAS_CLIENTE},
+                ${COLUNAS_CLIENTE}, orcamentos.resposta,
+                (orcamentos.link_visto_em IS NOT NULL AND orcamentos.link_enviado_em IS NOT NULL) AS visto,
                 ${colunasResponsavel('ur', 'resp')}, ${colunasResponsavel('ua', 'alt')}
            FROM orcamentos ${JOIN_RESPONSAVEIS} ${whereSql}
           ORDER BY orcamentos.id DESC LIMIT ? OFFSET ?`,
@@ -192,6 +201,7 @@ export function rotasOrcamentos(db: Banco, opcoes: OpcoesOrcamentos = {}): Route
         return {
           ...row,
           cliente,
+          visto: !!row.visto,
           numero: numeroOrcamento(row.id),
           pedido: pedido_codigo ? { codigo: pedido_codigo, status: pedido_status! } : null,
           responsavel,
@@ -298,13 +308,16 @@ export function rotasOrcamentos(db: Banco, opcoes: OpcoesOrcamentos = {}): Route
     res.json(corpo);
   });
 
-  /** Muda a situação manual: { status: 'ENVIADO' | 'ABERTO', status_atual } */
+  /**
+   * Muda a situação manual: { status: 'ENVIADO' | 'ABERTO' | 'CANCELADO', status_atual, motivo? }
+   * (CANCELADO exige motivo; ABERTO a partir de Cancelado = reabrir)
+   */
   r.post('/api/orcamentos/:oid/status', (req, res, next) => {
     if (!/^\d+$/.test(req.params.oid)) return next();
     const id = Number(req.params.oid);
     const corpo = corpoJson(req);
     if (!isStatusOrcamentoManual(corpo.status)) {
-      throw new ErroHttp(400, 'Situação inválida: use ABERTO ou ENVIADO ("Pedido gerado" vem da geração do pedido)');
+      throw new ErroHttp(400, 'Situação inválida: use ABERTO, ENVIADO ou CANCELADO ("Pedido gerado" vem da geração do pedido)');
     }
     // Com o Kommo ligado, só envia ao cliente o orçamento que tem cliente vinculado
     if (corpo.status === 'ENVIADO' && opcoes.exigirClienteAoEnviar) {
@@ -319,10 +332,16 @@ export function rotasOrcamentos(db: Banco, opcoes: OpcoesOrcamentos = {}): Route
       }
     }
     const eu = exigirUsuario(res);
-    const antes = statusDoOrcamento(db, id);
-    alterarStatusOrcamento(db, id, corpo.status, eu.id, typeof corpo.status_atual === 'string' ? corpo.status_atual : undefined);
-    const o = lerOrcamento(db, id);
-    // Nota "orçamento enviado" no contato do Kommo (só quando passou de fato para Enviado)
+    const antes = alterarStatusOrcamento(
+      db,
+      id,
+      corpo.status,
+      eu.id,
+      typeof corpo.status_atual === 'string' ? corpo.status_atual : undefined,
+      typeof corpo.motivo === 'string' ? corpo.motivo : null,
+    );
+    const o = lerOrcamento(db, id, base(req));
+    // Nota "orçamento enviado" (com o link) no contato do Kommo
     if (opcoes.kommo && corpo.status === 'ENVIADO' && antes !== 'ENVIADO' && o?.cliente) {
       opcoes.kommo.notificarOrcamentoEnviado({
         contatoId: o.cliente.id,
@@ -331,14 +350,23 @@ export function rotasOrcamentos(db: Banco, opcoes: OpcoesOrcamentos = {}): Route
         total: o.total,
         itens: o.qtd_itens,
         usuario: eu.nome,
+        link: o.link?.url,
       });
     }
     res.json(o);
   });
 
+  /** "Gerar novo link": o link anterior deixa de funcionar na hora. */
+  r.post('/api/orcamentos/:oid/link', (req, res, next) => {
+    if (!/^\d+$/.test(req.params.oid)) return next();
+    const id = Number(req.params.oid);
+    trocarLink(db, id);
+    res.json(lerOrcamento(db, id, base(req)));
+  });
+
   r.get('/api/orcamentos/:oid', (req, res, next) => {
     if (!/^\d+$/.test(req.params.oid)) return next();
-    const o = lerOrcamento(db, Number(req.params.oid));
+    const o = lerOrcamento(db, Number(req.params.oid), base(req));
     if (!o) {
       res.status(404).json({ erro: 'não encontrado' });
       return;

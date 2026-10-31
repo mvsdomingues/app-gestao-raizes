@@ -5,7 +5,10 @@ import {
   type MovimentoOrcamento,
   type StatusOrcamento,
   type StatusOrcamentoManual,
+  type OrigemMovimento,
+  transicaoPermitida,
 } from '@raizes/shared';
+import { garantirLink } from './repositorio-link';
 import { isoLocal } from '../lib/datas';
 import { ErroHttp } from '../lib/http';
 import type { Banco } from './conexao';
@@ -35,18 +38,20 @@ export function registrarMovimentoOrcamento(
   usuarioId: number | null,
   observacao: string | null = null,
   quando = isoLocal(),
+  origem: OrigemMovimento = 'USUARIO',
 ): void {
   db.prepare(
-    `INSERT INTO orcamentos_movimentos (orcamento_id, status_anterior, status_novo, data_hora, observacao, usuario_id)
-     VALUES (?, ?, ?, ?, ?, ?)`,
-  ).run(orcamentoId, de, para, quando, observacao, usuarioId);
+    `INSERT INTO orcamentos_movimentos (orcamento_id, status_anterior, status_novo, data_hora, observacao, usuario_id, origem)
+     VALUES (?, ?, ?, ?, ?, ?, ?)`,
+  ).run(orcamentoId, de, para, quando, observacao, usuarioId, origem);
 }
 
 export function movimentosDoOrcamento(db: Banco, id: number): MovimentoOrcamento[] {
   return (
     db
       .prepare(
-        `SELECT m.status_anterior, m.status_novo, m.data_hora, m.observacao, ${colunasResponsavel('u', 'usr')}
+        `SELECT m.status_anterior, m.status_novo, m.data_hora, m.observacao, COALESCE(m.origem, 'USUARIO') AS origem,
+                ${colunasResponsavel('u', 'usr')}
            FROM orcamentos_movimentos m LEFT JOIN usuarios u ON u.id = m.usuario_id
           WHERE m.orcamento_id = ? ORDER BY m.id`,
       )
@@ -55,9 +60,12 @@ export function movimentosDoOrcamento(db: Banco, id: number): MovimentoOrcamento
 }
 
 /**
- * Muda a situação manual (Aberto ↔ Enviado). Com pedido ativo não muda:
- * a situação é "Pedido gerado" até o pedido ser cancelado.
+ * Muda a situação manual: Aberto ↔ Enviado, Aberto/Enviado → Cancelado (com motivo)
+ * e Cancelado → Aberto (reabrir). Com pedido ativo não muda: a situação é
+ * "Pedido gerado" até o pedido ser cancelado.
+ * Enviar cria o link do cliente (se ainda não existe) e reinicia a validade.
  * `esperado` evita mudar duas vezes com cliques repetidos ou duas pessoas ao mesmo tempo.
+ * Devolve a situação anterior.
  */
 export function alterarStatusOrcamento(
   db: Banco,
@@ -65,17 +73,31 @@ export function alterarStatusOrcamento(
   novo: StatusOrcamentoManual,
   usuarioId: number,
   esperado?: string,
-): void {
-  db.transaction(() => {
+  motivo?: string | null,
+): StatusOrcamento {
+  return db.transaction(() => {
     const atual = statusDoOrcamento(db, id);
+    const numero = numeroOrcamento(id);
     if (esperado && esperado !== atual) {
       throw new ErroHttp(409, 'A situação do orçamento foi alterada por outra pessoa. Atualize a tela.');
     }
     if (atual === 'PEDIDO_GERADO') {
-      throw new ErroHttp(409, `O ${numeroOrcamento(id)} já tem pedido gerado; a situação só muda se o pedido for cancelado`);
+      throw new ErroHttp(409, `O ${numero} já tem pedido gerado; a situação só muda se o pedido for cancelado`);
     }
-    if (atual === novo) throw new ErroHttp(409, `O ${numeroOrcamento(id)} já está ${ROTULOS_STATUS_ORCAMENTO[novo].toLowerCase()}`);
+    if (atual === novo) throw new ErroHttp(409, `O ${numero} já está ${ROTULOS_STATUS_ORCAMENTO[novo].toLowerCase()}`);
+    if (!transicaoPermitida(atual, novo)) {
+      throw new ErroHttp(
+        409,
+        `O ${numero} está ${ROTULOS_STATUS_ORCAMENTO[atual].toLowerCase()}; não pode passar para ${ROTULOS_STATUS_ORCAMENTO[novo].toLowerCase()}`,
+      );
+    }
+    const obs = motivo?.trim() || null;
+    if (novo === 'CANCELADO' && (!obs || obs.length < 3)) {
+      throw new ErroHttp(400, 'Informe o motivo do cancelamento');
+    }
     db.prepare('UPDATE orcamentos SET status = ? WHERE id = ?').run(novo, id);
-    registrarMovimentoOrcamento(db, id, atual, novo, usuarioId);
+    if (novo === 'ENVIADO') garantirLink(db, id, true);
+    registrarMovimentoOrcamento(db, id, atual, novo, usuarioId, novo === 'CANCELADO' ? obs : null);
+    return atual;
   })();
 }

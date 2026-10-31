@@ -1,11 +1,23 @@
+import { resolve } from 'node:path';
 import react from '@vitejs/plugin-react';
-import { defineConfig } from 'vite';
+import { defineConfig, type Plugin } from 'vite';
+
+/** Em desenvolvimento, /o/<código> abre a página do cliente (em produção, o Express faz isso). */
+const paginaPublica: Plugin = {
+  name: 'pagina-publica',
+  configureServer(server) {
+    server.middlewares.use((req, _res, next) => {
+      if (req.url?.startsWith('/o/')) req.url = '/publico.html';
+      next();
+    });
+  },
+};
 
 // Em desenvolvimento, a API (porta 5000) é acessada pelo proxy do Vite.
 const API = `http://localhost:${process.env.PORT || 5000}`;
 
 export default defineConfig({
-  plugins: [react()],
+  plugins: [react(), paginaPublica],
   server: {
     port: 5173,
     proxy: {
@@ -17,5 +29,9 @@ export default defineConfig({
     outDir: 'dist',
     emptyOutDir: true,
     sourcemap: true,
+    // Duas páginas: a aplicação interna e a página do cliente (link do orçamento)
+    rollupOptions: {
+      input: { main: resolve(__dirname, 'index.html'), publico: resolve(__dirname, 'publico.html') },
+    },
   },
 });

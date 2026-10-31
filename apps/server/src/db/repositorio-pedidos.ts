@@ -12,6 +12,7 @@ import {
   type PedidoDoOrcamento,
   type ResumoPedido,
   type StatusPedido,
+  type OrigemMovimento,
 } from '@raizes/shared';
 import { ErroHttp } from '../lib/http';
 import { registrarMovimentoOrcamento } from './repositorio-orcamentos';
@@ -150,7 +151,8 @@ export function buscarPedido(db: Banco, codigo: string) {
   const movimentos = (
     db
       .prepare(
-        `SELECT m.status_anterior, m.status_novo, m.data_hora, m.observacao, ${colunasResponsavel('u', 'usr')}
+        `SELECT m.status_anterior, m.status_novo, m.data_hora, m.observacao, COALESCE(m.origem, 'USUARIO') AS origem,
+                ${colunasResponsavel('u', 'usr')}
            FROM pedidos_movimentos m LEFT JOIN usuarios u ON u.id = m.usuario_id
           WHERE m.pedido_id = ? ORDER BY m.id`,
       )
@@ -170,21 +172,41 @@ function registrarMovimento(
   quando: string,
   observacao: string | null,
   usuarioId: number | null,
+  origem: OrigemMovimento = 'USUARIO',
 ) {
   db.prepare(
-    `INSERT INTO pedidos_movimentos (pedido_id, status_anterior, status_novo, data_hora, observacao, usuario_id)
-     VALUES (?, ?, ?, ?, ?, ?)`,
-  ).run(pedidoId, de, para, quando, observacao, usuarioId);
+    `INSERT INTO pedidos_movimentos (pedido_id, status_anterior, status_novo, data_hora, observacao, usuario_id, origem)
+     VALUES (?, ?, ?, ?, ?, ?, ?)`,
+  ).run(pedidoId, de, para, quando, observacao, usuarioId, origem);
+}
+
+export interface OpcoesCriarPedido {
+  /** CLIENTE = aceite pelo link: o usuário informado é só o responsável pelo pedido */
+  origem?: OrigemMovimento;
+  /** Texto da movimentação de criação (padrão: a observação do pedido) */
+  observacaoMovimento?: string;
 }
 
 /** Cria o pedido (status Criado) a partir de um orçamento sem pedido ativo. */
-export function criarPedido(db: Banco, orcamentoId: number, observacao: string | null, usuarioId: number): string {
+export function criarPedido(
+  db: Banco,
+  orcamentoId: number,
+  observacao: string | null,
+  usuarioId: number | null,
+  opcoes: OpcoesCriarPedido = {},
+): string {
+  const origem = opcoes.origem ?? 'USUARIO';
+  // Movimentação feita pelo cliente não tem usuário
+  const quemMovimenta = origem === 'CLIENTE' ? null : usuarioId;
   return db.transaction(() => {
-    const existe = db.prepare('SELECT id FROM orcamentos WHERE id = ?').get(orcamentoId);
+    const existe = db.prepare('SELECT status FROM orcamentos WHERE id = ?').get(orcamentoId) as { status: string } | undefined;
     if (!existe) throw new ErroHttp(404, `Orçamento ${numeroOrcamento(orcamentoId)} não encontrado`);
     const ativo = pedidoAtivoDoOrcamento(db, orcamentoId);
     if (ativo) {
       throw new ErroHttp(409, `O orçamento ${numeroOrcamento(orcamentoId)} já está no pedido ${ativo.codigo}`);
+    }
+    if (existe.status === 'CANCELADO') {
+      throw new ErroHttp(409, `O ${numeroOrcamento(orcamentoId)} está cancelado. Reabra o orçamento antes de gerar o pedido.`);
     }
     const seq = db.prepare(`SELECT seq FROM sqlite_sequence WHERE name = 'pedidos'`).get() as
       | { seq: number }
@@ -197,11 +219,20 @@ export function criarPedido(db: Banco, orcamentoId: number, observacao: string |
       `INSERT INTO pedidos (id, codigo, orcamento_id, status, observacao, criado, atualizado, usuario_id)
        VALUES (?, ?, ?, 'CRIADO', ?, ?, ?, ?)`,
     ).run(id, codigo, orcamentoId, observacao, agora, agora, usuarioId);
-    registrarMovimento(db, id, null, 'CRIADO', agora, observacao, usuarioId);
+    registrarMovimento(db, id, null, 'CRIADO', agora, opcoes.observacaoMovimento ?? observacao, quemMovimenta, origem);
     // Situação do orçamento passa a "Pedido gerado"
     const anterior = (db.prepare('SELECT status FROM orcamentos WHERE id = ?').get(orcamentoId) as { status: 'ABERTO' | 'ENVIADO' })
       .status;
-    registrarMovimentoOrcamento(db, orcamentoId, anterior, 'PEDIDO_GERADO', usuarioId, `Pedido ${codigo}`, agora);
+    registrarMovimentoOrcamento(
+      db,
+      orcamentoId,
+      anterior,
+      'PEDIDO_GERADO',
+      quemMovimenta,
+      origem === 'CLIENTE' ? `Aceito pelo cliente pelo link · pedido ${codigo}` : `Pedido ${codigo}`,
+      agora,
+      origem,
+    );
     return codigo;
   })();
 }

@@ -86,6 +86,8 @@ export interface MovimentoPedido {
   observacao: string | null;
   /** Quem fez a movimentação */
   usuario: UsuarioResumo | null;
+  /** CLIENTE = pedido criado pelo aceite do cliente no link */
+  origem?: import('./orcamentos').OrigemMovimento;
 }
 
 /** Pedido completo, com o histórico de movimentações e o orçamento de referência. */

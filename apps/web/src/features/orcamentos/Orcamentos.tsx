@@ -1,13 +1,19 @@
 import { useApp } from '../../app/contexto';
 import { DetalheOrcamento } from './DetalheOrcamento';
 import { ListaOrcamentos } from './ListaOrcamentos';
+import { ModalLinkEnviado } from './LinkCliente';
 
 /**
  * Tela "Orçamentos": aba com todos os orçamentos gerados (filtros + paginação)
  * e aba com os detalhes do orçamento selecionado ou recém-gerado no carrinho.
  */
 export function Orcamentos() {
-  const { tela, folha, abaOrcamentos, setAbaOrcamentos } = useApp();
+  const { tela, folha, abaOrcamentos, setAbaOrcamentos, avisarOrcamentosAlterados } = useApp();
+  // Trocar de aba recarrega: o cliente pode ter respondido pelo link enquanto isso
+  const irParaAba = (a: 'lista' | 'detalhe') => {
+    setAbaOrcamentos(a);
+    avisarOrcamentosAlterados();
+  };
 
   return (
     <div id="view-orcamento" style={{ display: tela === 'orcamentos' ? 'block' : 'none' }}>
@@ -25,7 +31,7 @@ export function Orcamentos() {
             id="aba-orcamentos-lista"
             aria-selected={abaOrcamentos === 'lista'}
             className={`subaba${abaOrcamentos === 'lista' ? ' active' : ''}`}
-            onClick={() => setAbaOrcamentos('lista')}
+            onClick={() => irParaAba('lista')}
           >
             Todos os orçamentos
           </button>
@@ -34,7 +40,7 @@ export function Orcamentos() {
             id="aba-orcamentos-detalhe"
             aria-selected={abaOrcamentos === 'detalhe'}
             className={`subaba${abaOrcamentos === 'detalhe' ? ' active' : ''}`}
-            onClick={() => setAbaOrcamentos('detalhe')}
+            onClick={() => irParaAba('detalhe')}
           >
             Detalhes
             {folha && <span className="subaba-badge">{folha.numero}</span>}
@@ -47,6 +53,7 @@ export function Orcamentos() {
         <div style={{ display: abaOrcamentos === 'detalhe' ? 'block' : 'none' }}>
           <DetalheOrcamento />
         </div>
+        <ModalLinkEnviado />
       </div>
     </div>
   );
