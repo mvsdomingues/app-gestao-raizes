@@ -146,6 +146,23 @@ export class ServicoKommo {
     void this.enviarNotas();
   }
 
+  /** Orçamento enviado ao cliente: registra uma nota no contato do Kommo (com nova tentativa se falhar). */
+  notificarOrcamentoEnviado(o: {
+    contatoId: number;
+    orcamentoId: number;
+    numero: string;
+    total: number;
+    itens: number;
+    usuario?: string;
+  }): void {
+    const texto =
+      `Orçamento ${o.numero} enviado ao cliente · ${formatBRL(o.total)} · ${o.itens} ${o.itens === 1 ? 'item' : 'itens'}` +
+      (o.usuario ? ` · por ${o.usuario}` : '') +
+      ' (Raízes · Orçamentos)';
+    enfileirarNota(this.db, o.contatoId, null, texto, o.orcamentoId);
+    void this.enviarNotas();
+  }
+
   /** Envia as notas pendentes (uma rodada por vez). */
   enviarNotas(): Promise<void> {
     if (this.enviandoNotas) return this.enviandoNotas;

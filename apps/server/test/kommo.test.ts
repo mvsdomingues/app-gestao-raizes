@@ -266,6 +266,28 @@ describe('API de clientes, vínculo ao orçamento e nota no pedido', () => {
     expect((await req('POST', `/api/orcamentos/${r.json.id}/status`, { status: 'ENVIADO' })).status).toBe(200);
   });
 
+  it('"Enviar para o Cliente" registra a nota "orçamento enviado" no contato', async () => {
+    const r = await req('POST', '/api/orcamentos', { itens: [item, item], subtotal: 400, frete: 0, total: 400, cliente_kommo_id: 10 });
+    const antes = mock.notas.length;
+    expect((await req('POST', `/api/orcamentos/${r.json.id}/status`, { status: 'ENVIADO' })).status).toBe(200);
+    await servico.enviarNotas();
+    expect(mock.notas.length).toBe(antes + 1);
+    expect(mock.notas.at(-1)).toMatchObject({ entity_id: 10, note_type: 'common' });
+    expect(mock.notas.at(-1)!.params.text).toMatch(new RegExp(`Orçamento ${r.json.numero} enviado ao cliente .*2 itens · por Administrador`));
+    // Enviar de novo um orçamento já enviado não duplica a nota; voltar para aberto também não gera nota
+    await req('POST', `/api/orcamentos/${r.json.id}/status`, { status: 'ENVIADO' });
+    await req('POST', `/api/orcamentos/${r.json.id}/status`, { status: 'ABERTO' });
+    await servico.enviarNotas();
+    expect(mock.notas.length).toBe(antes + 1);
+    // Volta para Aberto, envia de novo: nova nota (reenvio ao cliente)
+    await req('POST', `/api/orcamentos/${r.json.id}/status`, { status: 'ENVIADO' });
+    await servico.enviarNotas();
+    expect(mock.notas.length).toBe(antes + 2);
+    // Fica de fora dos filtros por cliente dos próximos testes
+    await req('POST', `/api/orcamentos/${r.json.id}/status`, { status: 'ABERTO' });
+    await req('PUT', `/api/orcamentos/${r.json.id}`, { itens: [item], subtotal: 1, frete: 0, total: 1, cliente_kommo_id: null });
+  });
+
   it('alteração sem informar o cliente mantém o atual; null remove', async () => {
     const r = await req('POST', '/api/orcamentos', { itens: [item], subtotal: 1, frete: 0, total: 1, cliente_kommo_id: 11 });
     await req('PUT', `/api/orcamentos/${r.json.id}`, { itens: [item], subtotal: 2, frete: 0, total: 2 });

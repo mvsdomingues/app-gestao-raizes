@@ -39,7 +39,10 @@ export function useSituacaoOrcamento(aoAlterar?: (o: Orcamento) => void) {
     }
     const ok =
       novo === 'ENVIADO'
-        ? await confirmar(`Enviar o ${numero} para o cliente?\n\nA situação passa para "Enviado" e ele só poderá ser alterado depois de voltar para "Aberto".`, {
+        ? await confirmar(
+            `Enviar o ${numero} para o cliente?\n\nA situação passa para "Enviado" e ele só poderá ser alterado depois de voltar para "Aberto".` +
+              (kommo.ativo && cliente ? `\n\nUma nota "orçamento enviado" será registrada no contato de ${cliente.nome} no Kommo.` : ''),
+            {
             titulo: 'Enviar para o cliente',
             ok: 'Enviar para o cliente',
           })

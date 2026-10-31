@@ -21,6 +21,7 @@ import {
 } from '../db/repositorio-orcamentos';
 import { pedidoAtivoDoOrcamento } from '../db/repositorio-pedidos';
 import { vinculoDoCliente } from '../db/repositorio-clientes';
+import type { ServicoKommo } from '../kommo/servico';
 import { colunasResponsavel, extrairResponsavel } from '../db/repositorio-usuarios';
 import { falsyPython, floatPython } from '../lib/conversao';
 import { isoLocal } from '../lib/datas';
@@ -91,6 +92,8 @@ export function lerOrcamento(db: Banco, id: number): Orcamento | undefined {
 export interface OpcoesOrcamentos {
   /** Com a integração do Kommo ligada, só envia ao cliente o orçamento que tem cliente vinculado. */
   exigirClienteAoEnviar?: boolean;
+  /** Integração ligada: "Enviar para o Cliente" registra uma nota no contato do Kommo. */
+  kommo?: ServicoKommo | null;
 }
 
 export function rotasOrcamentos(db: Banco, opcoes: OpcoesOrcamentos = {}): Router {
@@ -315,14 +318,22 @@ export function rotasOrcamentos(db: Banco, opcoes: OpcoesOrcamentos = {}): Route
         );
       }
     }
-    alterarStatusOrcamento(
-      db,
-      id,
-      corpo.status,
-      exigirUsuario(res).id,
-      typeof corpo.status_atual === 'string' ? corpo.status_atual : undefined,
-    );
-    res.json(lerOrcamento(db, id));
+    const eu = exigirUsuario(res);
+    const antes = statusDoOrcamento(db, id);
+    alterarStatusOrcamento(db, id, corpo.status, eu.id, typeof corpo.status_atual === 'string' ? corpo.status_atual : undefined);
+    const o = lerOrcamento(db, id);
+    // Nota "orçamento enviado" no contato do Kommo (só quando passou de fato para Enviado)
+    if (opcoes.kommo && corpo.status === 'ENVIADO' && antes !== 'ENVIADO' && o?.cliente) {
+      opcoes.kommo.notificarOrcamentoEnviado({
+        contatoId: o.cliente.id,
+        orcamentoId: o.id,
+        numero: o.numero,
+        total: o.total,
+        itens: o.qtd_itens,
+        usuario: eu.nome,
+      });
+    }
+    res.json(o);
   });
 
   r.get('/api/orcamentos/:oid', (req, res, next) => {

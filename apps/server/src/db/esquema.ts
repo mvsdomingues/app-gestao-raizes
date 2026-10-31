@@ -231,6 +231,10 @@ function migrarColunas(db: Database.Database): void {
     if (!colunas(db, 'orcamentos').includes(coluna)) db.exec(`ALTER TABLE orcamentos ADD COLUMN ${coluna} ${tipo}`);
   }
   db.exec('CREATE INDEX IF NOT EXISTS ix_orcamentos_cliente ON orcamentos(cliente_kommo_id)');
+  // Nota do Kommo também pode vir do orçamento (enviado ao cliente)
+  if (!colunas(db, 'kommo_notas').includes('orcamento_id')) {
+    db.exec(`ALTER TABLE kommo_notas ADD COLUMN orcamento_id INTEGER`);
+  }
   // Observações livres do orçamento (digitadas no carrinho)
   if (!colunas(db, 'orcamentos').includes('observacao')) {
     db.exec(`ALTER TABLE orcamentos ADD COLUMN observacao TEXT`);

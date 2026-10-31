@@ -280,10 +280,16 @@ export function ultimaExecucaoOk(db: Banco): string | null {
 
 export const MAX_TENTATIVAS_NOTA = 20;
 
-export function enfileirarNota(db: Banco, contatoId: number, pedidoId: number | null, texto: string): number {
+export function enfileirarNota(
+  db: Banco,
+  contatoId: number,
+  pedidoId: number | null,
+  texto: string,
+  orcamentoId: number | null = null,
+): number {
   const r = db
-    .prepare('INSERT INTO kommo_notas (contato_id, pedido_id, texto, criado) VALUES (?, ?, ?, ?)')
-    .run(contatoId, pedidoId, texto, isoLocal());
+    .prepare('INSERT INTO kommo_notas (contato_id, pedido_id, orcamento_id, texto, criado) VALUES (?, ?, ?, ?, ?)')
+    .run(contatoId, pedidoId, orcamentoId, texto, isoLocal());
   return Number(r.lastInsertRowid);
 }
 

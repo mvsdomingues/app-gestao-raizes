@@ -170,7 +170,7 @@ Com `KOMMO_SUBDOMINIO` e `KOMMO_TOKEN` no `.env`, o orçamento passa a ter **cli
 - **Carrinho**: campo **Cliente** no resumo, com uma caixa de busca única. O sistema reconhece o que foi digitado: telefone (qualquer formato, com ou sem +55), parte do nome (sem acento; todas as palavras), e-mail ou `#código` do Kommo. A lista mostra nome, telefones, código, data de criação, quantos orçamentos o cliente já tem e o aviso *telefone repetido* quando dois contatos têm o mesmo número. Se não achar (contato criado há poucos minutos), **Buscar direto no Kommo** consulta o Kommo na hora. Setas e Enter escolhem; o cliente escolhido mostra *Abrir no Kommo*, *Trocar* e *Remover*.
 - O cliente é **opcional para gerar** o orçamento e **obrigatório para enviar** (*Enviar para o Cliente*). O orçamento guarda o código do contato e uma cópia do nome e do telefone.
 - O cliente aparece nas listas e nos detalhes de Orçamentos e Pedidos, na folha impressa e no cartão do Quadro; as listas têm filtro por cliente e os detalhes, o link *Abrir no Kommo*.
-- **Ao gerar o pedido**, o sistema registra uma nota no contato do Kommo (código do pedido, orçamento, valor e usuário). Se o Kommo estiver fora do ar, a nota fica na fila e é reenviada a cada sincronização.
+- **Notas no contato do Kommo**: ao clicar em *Enviar para o Cliente* ("Orçamento ORC-… enviado ao cliente", com valor, quantidade de itens e usuário) e ao gerar o pedido (código do pedido, orçamento, valor e usuário). As notas ficam no histórico do **contato** (não no negócio). Se o Kommo estiver fora do ar, a nota fica na fila e é reenviada a cada sincronização.
 
 Sem as variáveis no `.env`, nada disso aparece e os orçamentos funcionam como antes.
 
