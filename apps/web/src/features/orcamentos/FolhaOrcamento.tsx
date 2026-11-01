@@ -8,12 +8,13 @@ const cinza = { fontSize: '.82rem', color: '#7A7167' } as const;
 /** Dados da folha: os do orçamento interno ou os da página do cliente (sem custos nem fornecedor). */
 export type DadosFolhaOrcamento = Pick<DadosFolha, 'id' | 'numero' | 'dataHora' | 'subtotal' | 'frete' | 'total' | 'observacao' | 'cliente'> & {
   itens: (Pick<ItemOrcamento, 'nome' | 'codigo' | 'qty' | 'preco' | 'imagem_url'> &
-    Partial<Pick<ItemOrcamento, 'fornecedor' | 'origem' | 'composicao'>> & { observacao?: string | null })[];
+    Partial<Pick<ItemOrcamento, 'fornecedor' | 'origem'>> & { observacao?: string | null })[];
 };
 
 /**
- * Folha timbrada do orçamento (a mesma impressa / salva em PDF).
- * Composição do preço e fornecedor só aparecem na tela interna: ficam fora da
+ * Folha timbrada do orçamento (a mesma impressa / salva em PDF), usada nos detalhes
+ * do orçamento e do pedido. A composição do preço não aparece em nenhuma delas
+ * (fica só na calculadora do carrinho); o fornecedor só na tela interna: fora da
  * impressão (classe "so-tela") e da página do cliente (publico).
  */
 export function FolhaOrcamento({
@@ -120,11 +121,6 @@ export function FolhaOrcamento({
                       )}
                     </div>
                     <div className="orc-prod-code">Cód: {item.codigo || '–'}</div>
-                    {!publico && item.composicao && (
-                      <div className="orc-prod-composicao so-tela">
-                        {item.composicao} = <b>{formatBRL(item.preco)}/un</b>
-                      </div>
-                    )}
                     {item.observacao && (
                       <div className="orc-prod-obs">
                         <span>Obs.:</span> {item.observacao}

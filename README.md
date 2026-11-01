@@ -175,7 +175,7 @@ O menu fica na **barra lateral** (pode ser recolhido para mostrar só os ícones
 - **Validade**: 7 dias a partir do envio. Vencido, a página continua visível, sem os botões. Orçamento que voltou para Aberto aparece como "em revisão"; ao reenviar, a validade recomeça.
 - **Proteções**: código inválido, revogado ou de orçamento não enviado recebe a mesma resposta ("link inválido"); 20 códigos inválidos seguidos bloqueiam o IP por 15 minutos; páginas fora dos buscadores (`noindex`) e sem `Referer`; fotos servidas pelo sistema (o endereço do fornecedor não aparece).
 - **Endereço do link**: `APP_URL_PUBLICA` no `.env`; sem ela, o endereço pelo qual a tela foi aberta (IP, domínio ou localhost). No Nginx não use senha (`auth_basic`), senão o cliente não abre o link: ver `deploy/nginx/raizes.conf`.
-- **Folha impressa** (botão *Imprimir / Salvar PDF* da tela interna): também sai sem composição do preço e sem fornecedor; essas informações continuam só na tela.
+- **Composição do preço** (custo, impostos, margem): não aparece nos detalhes do orçamento nem do pedido, na folha impressa ou na página do cliente; fica só na calculadora do carrinho. O **fornecedor** aparece só na tela interna (fora da impressão e da página do cliente).
 
 ### Clientes do Kommo
 
