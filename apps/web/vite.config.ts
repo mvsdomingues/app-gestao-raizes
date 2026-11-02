@@ -33,7 +33,7 @@ export default defineConfig({
     sourcemap: true,
     // Duas páginas: a aplicação interna e a página do cliente (link do orçamento)
     rollupOptions: {
-      input: { main: resolve(__dirname, 'index.html'), publico: resolve(__dirname, 'publico.html') },
+      input: { main: resolve(import.meta.dirname, 'index.html'), publico: resolve(import.meta.dirname, 'publico.html') },
     },
   },
 });
