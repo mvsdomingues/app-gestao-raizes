@@ -88,6 +88,17 @@ export function garantirEsquema(db: Database.Database): void {
       ON pedidos(orcamento_id) WHERE status <> 'CANCELADO';
     CREATE INDEX IF NOT EXISTS ix_pedidos_status ON pedidos(status);
 
+    -- Observações do pedido: histórico (só inclusão), com data/hora e autor
+    CREATE TABLE IF NOT EXISTS pedidos_observacoes (
+      id         INTEGER PRIMARY KEY AUTOINCREMENT,
+      pedido_id  INTEGER NOT NULL REFERENCES pedidos(id),
+      texto      TEXT NOT NULL,
+      data_hora  TEXT NOT NULL,
+      usuario_id INTEGER REFERENCES usuarios(id),
+      origem     TEXT NOT NULL DEFAULT 'USUARIO'
+    );
+    CREATE INDEX IF NOT EXISTS ix_pedidos_observacoes_pedido ON pedidos_observacoes(pedido_id);
+
     -- Checklist de fechamento: cadastro (Parâmetros) e cópia marcada em cada pedido
     CREATE TABLE IF NOT EXISTS checklist_fechamento (
       id         INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -272,6 +283,14 @@ function migrarColunas(db: Database.Database): void {
   if (!colunas(db, 'kommo_notas').includes('orcamento_id')) {
     db.exec(`ALTER TABLE kommo_notas ADD COLUMN orcamento_id INTEGER`);
   }
+  // Observação única do pedido (versão anterior) vira a primeira linha do histórico
+  db.exec(`
+    INSERT INTO pedidos_observacoes (pedido_id, texto, data_hora, usuario_id, origem)
+    SELECT p.id, TRIM(p.observacao), p.criado, p.usuario_id, 'USUARIO'
+      FROM pedidos p
+     WHERE TRIM(COALESCE(p.observacao, '')) <> ''
+       AND NOT EXISTS (SELECT 1 FROM pedidos_observacoes o WHERE o.pedido_id = p.id)
+  `);
   // Observações livres do orçamento (digitadas no carrinho)
   if (!colunas(db, 'orcamentos').includes('observacao')) {
     db.exec(`ALTER TABLE orcamentos ADD COLUMN observacao TEXT`);

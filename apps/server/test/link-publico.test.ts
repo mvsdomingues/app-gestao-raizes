@@ -223,6 +223,7 @@ describe('link do cliente', () => {
     const p = await req('GET', `/api/pedidos/${r.json.pedido}`);
     expect(p.json).toMatchObject({ status: 'CRIADO', observacao: 'Entregar na portaria', responsavel: { login: 'admin' } });
     expect(p.json.movimentos[0]).toMatchObject({ origem: 'CLIENTE', usuario: null });
+    expect(p.json.observacoes).toEqual([expect.objectContaining({ texto: 'Entregar na portaria', origem: 'CLIENTE', usuario: null })]);
     expect(p.json.movimentos[0].observacao).toMatch(/Aceito pelo cliente pelo link/);
     const o = await req('GET', `/api/orcamentos/${e.id}`);
     expect(o.json).toMatchObject({ status: 'PEDIDO_GERADO', resposta_cliente: { resposta: 'ACEITO' } });

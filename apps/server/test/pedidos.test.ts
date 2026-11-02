@@ -172,16 +172,23 @@ describe('pedidos', () => {
     expect(criado.pedidos.map((p: { codigo: string }) => p.codigo)).toEqual(['PED-000003']); // mais antigo na etapa primeiro
   });
 
-  it('observação do pedido editável em qualquer situação', async () => {
-    // PED-000001 está encerrado e PED-000002 cancelado
-    const enc = await req('PUT', '/api/pedidos/PED-000001/observacao', { observacao: 'Entregue na portaria' });
-    expect(enc.status).toBe(200);
+  it('observações: histórico só de inclusão, em qualquer situação, com data e autor', async () => {
+    // PED-000001 está encerrado e PED-000002 cancelado; PED-000001 nasceu com "Cliente X"
+    const inicial = (await req('GET', '/api/pedidos/PED-000001')).json;
+    expect(inicial.observacoes).toHaveLength(1);
+    expect(inicial.observacoes[0]).toMatchObject({ texto: 'Cliente X', origem: 'USUARIO', usuario: { login: 'admin' } });
+    const atualizadoAntes = inicial.atualizado;
+    const enc = await req('POST', '/api/pedidos/PED-000001/observacoes', { texto: 'Entregue na portaria' });
+    expect(enc.status).toBe(201);
     expect(enc.json).toMatchObject({ status: 'ENCERRADO', observacao: 'Entregue na portaria' });
-    const atualizadoAntes = enc.json.atualizado;
-    const canc = await req('PUT', '/api/pedidos/PED-000002/observacao', { observacao: 'Refeito no PED-000003' });
+    expect(enc.json.observacoes.map((o: { texto: string }) => o.texto)).toEqual(['Entregue na portaria', 'Cliente X']);
+    expect(enc.json.observacoes[0].data_hora).toMatch(/^\d{4}-\d\d-\d\dT/);
+    const canc = await req('POST', '/api/pedidos/PED-000002/observacoes', { texto: 'Refeito no PED-000003' });
     expect(canc.json).toMatchObject({ status: 'CANCELADO', observacao: 'Refeito no PED-000003' });
-    expect((await req('PUT', '/api/pedidos/PED-000001/observacao', { observacao: '  ' })).json.observacao).toBeNull();
+    expect((await req('POST', '/api/pedidos/PED-000001/observacoes', { texto: '  ' })).status).toBe(400);
     expect((await req('GET', '/api/pedidos/PED-000001')).json.atualizado).toBe(atualizadoAntes); // não mexe no fluxo
-    expect((await req('PUT', '/api/pedidos/PED-999999/observacao', { observacao: 'x' })).status).toBe(404);
+    expect((await req('POST', '/api/pedidos/PED-999999/observacoes', { texto: 'x' })).status).toBe(404);
+    // Não existe mais alteração da observação
+    expect((await req('PUT', '/api/pedidos/PED-000001/observacao', { observacao: 'x' })).status).toBe(404);
   });
 });

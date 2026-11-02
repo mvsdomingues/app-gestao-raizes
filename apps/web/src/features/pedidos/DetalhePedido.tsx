@@ -122,7 +122,6 @@ export function DetalhePedido() {
         <div className="pedido-cliente" id="pedido-cliente">
           <span>Cliente:</span> <ClienteVinculado cliente={p.cliente} vazio="sem cliente vinculado" />
         </div>
-        <ObservacaoPedido pedido={p} aoSalvar={atualizarPedidoAberto} />
         {cancelamento && (
           <div className="pedido-cancelado">
             Pedido cancelado em {formatarDataHora(cancelamento.data_hora)}
@@ -156,6 +155,7 @@ export function DetalhePedido() {
       </div>
 
       <ChecklistPedido pedido={p} aoAlterar={atualizarPedidoAberto} />
+      <ObservacoesPedido pedido={p} aoSalvar={atualizarPedidoAberto} />
 
       <h3 className="pedido-secao">Movimentações</h3>
       <table className="orc-table pedido-movimentos" id="tabela-movimentos">
@@ -210,71 +210,77 @@ export function DetalhePedido() {
   );
 }
 
-/** Observação do pedido: pode ser editada em qualquer situação (inclusive encerrado ou cancelado). */
-function ObservacaoPedido({ pedido, aoSalvar }: { pedido: Pedido; aoSalvar: (p: Pedido) => void }) {
-  const [editando, setEditando] = useState(false);
+/**
+ * Observações do pedido em forma de histórico: cada inclusão vira uma linha com data,
+ * hora e autor. Não há alteração nem exclusão; vale em qualquer situação.
+ */
+function ObservacoesPedido({ pedido, aoSalvar }: { pedido: Pedido; aoSalvar: (p: Pedido) => void }) {
   const [texto, setTexto] = useState('');
   const [salvando, setSalvando] = useState(false);
 
-  // Trocar de pedido fecha a edição
-  useEffect(() => setEditando(false), [pedido.codigo]);
+  // Trocar de pedido limpa o campo
+  useEffect(() => setTexto(''), [pedido.codigo]);
 
-  const salvar = async () => {
+  const adicionar = async () => {
+    if (!texto.trim()) return;
     setSalvando(true);
     try {
-      aoSalvar(await api.alterarObservacaoPedido(pedido.codigo, texto));
-      setEditando(false);
+      aoSalvar(await api.adicionarObservacaoPedido(pedido.codigo, texto));
+      setTexto('');
     } catch (e) {
-      void erroDe('Não foi possível salvar a observação.', e);
+      void erroDe('Não foi possível incluir a observação.', e);
     } finally {
       setSalvando(false);
     }
   };
 
-  if (editando) {
-    return (
-      <div className="pedido-obs editando">
-        <label className="custom-modal-label" htmlFor="pedido-obs-texto">
-          Observação do pedido
-        </label>
+  return (
+    <div className="pedido-observacoes" id="pedido-observacoes">
+      <div className="pedido-checklist-topo">
+        <h3 className="pedido-secao">Observações</h3>
+        {pedido.observacoes.length > 0 && (
+          <span className="pedido-obs-contagem">
+            {pedido.observacoes.length} {pedido.observacoes.length === 1 ? 'registro' : 'registros'}
+          </span>
+        )}
+      </div>
+      <div className="pedido-obs-nova">
         <textarea
           id="pedido-obs-texto"
           className="custom-input"
-          rows={3}
+          rows={2}
           maxLength={2000}
-          autoFocus
+          placeholder="Escreva uma observação… (Ctrl+Enter para incluir)"
           value={texto}
           onChange={(e) => setTexto(e.target.value)}
           onKeyDown={(e) => {
-            if (e.key === 'Escape') setEditando(false);
+            if (e.key === 'Enter' && (e.ctrlKey || e.metaKey)) {
+              e.preventDefault();
+              void adicionar();
+            }
           }}
         />
-        <div className="pedido-obs-acoes">
-          <button className="btn-back" onClick={() => setEditando(false)} disabled={salvando}>
-            Cancelar
-          </button>
-          <button className="btn-novo" id="btn-salvar-obs-pedido" onClick={() => void salvar()} disabled={salvando}>
-            {salvando ? 'Salvando…' : 'Salvar observação'}
-          </button>
-        </div>
+        <button className="btn-novo" id="btn-incluir-obs-pedido" onClick={() => void adicionar()} disabled={salvando || !texto.trim()}>
+          {salvando ? 'Incluindo…' : '+ Incluir observação'}
+        </button>
       </div>
-    );
-  }
-
-  return (
-    <div className="pedido-obs">
-      <span>Observação:</span>{' '}
-      {pedido.observacao ? <span className="pedido-obs-texto">{pedido.observacao}</span> : <i className="pedido-obs-vazia">nenhuma</i>}
-      <button
-        className="link-botao pedido-obs-editar"
-        id="btn-editar-obs-pedido"
-        onClick={() => {
-          setTexto(pedido.observacao ?? '');
-          setEditando(true);
-        }}
-      >
-        ✎ {pedido.observacao ? 'Editar' : 'Adicionar'}
-      </button>
+      {pedido.observacoes.length === 0 ? (
+        <p className="pedido-checklist-nota">Nenhuma observação registrada.</p>
+      ) : (
+        <ol className="pedido-obs-linha" id="pedido-obs-linha">
+          {pedido.observacoes.map((o) => (
+            <li key={o.id} className={o.origem === 'CLIENTE' ? 'cliente' : ''}>
+              <div className="pedido-obs-meta">
+                <span>{formatarDataHora(o.data_hora)}</span> ·{' '}
+                <b>
+                  <NomeUsuario usuario={o.usuario} origem={o.origem} />
+                </b>
+              </div>
+              <div className="pedido-obs-texto">{o.texto}</div>
+            </li>
+          ))}
+        </ol>
+      )}
     </div>
   );
 }

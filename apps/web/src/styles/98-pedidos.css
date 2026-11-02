@@ -352,3 +352,25 @@
 .kanban-checklist { font-size: .72rem; font-weight: 600; color: #A23B6E; margin-top: 3px; }
 .kanban-checklist.completo { color: var(--success); }
 @media print { .pedido-checklist { break-inside: avoid; } }
+
+/* ── Observações do pedido (histórico) ── */
+.pedido-observacoes { margin-top: 22px; padding: 16px 20px; border: 1px solid var(--border); border-radius: var(--radius-lg); background: var(--surface); }
+.pedido-observacoes .pedido-secao { margin: 0; }
+.pedido-obs-contagem { font-size: .76rem; color: var(--muted); }
+.pedido-obs-nova { display: flex; gap: 10px; align-items: flex-start; margin-top: 12px; }
+.pedido-obs-nova textarea { flex: 1; resize: vertical; font-family: var(--font-body); min-height: 44px; }
+.pedido-obs-nova .btn-novo { white-space: nowrap; }
+.pedido-obs-linha { list-style: none; margin: 16px 0 0 6px; padding-left: 18px; border-left: 2px solid #E5DCEB; }
+.pedido-obs-linha li { position: relative; padding: 0 0 14px; }
+.pedido-obs-linha li:last-child { padding-bottom: 2px; }
+.pedido-obs-linha li::before {
+  content: ''; position: absolute; left: -25px; top: 4px; width: 10px; height: 10px; border-radius: 50%;
+  background: var(--surface); border: 2px solid var(--uva);
+}
+.pedido-obs-linha li:first-child::before { background: var(--uva); }
+.pedido-obs-linha li.cliente::before { border-color: var(--success); }
+.pedido-obs-meta { font-size: .74rem; color: var(--muted); }
+.pedido-obs-meta b { color: var(--grafite); font-weight: 600; }
+.pedido-obs-linha .pedido-obs-texto { margin-top: 2px; font-size: .9rem; white-space: pre-wrap; overflow-wrap: anywhere; }
+@media (max-width: 640px) { .pedido-obs-nova { flex-direction: column; align-items: stretch; } }
+@media print { .pedido-obs-nova { display: none; } .pedido-observacoes { break-inside: avoid; } }

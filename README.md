@@ -151,7 +151,7 @@ O menu fica na **barra lateral** (pode ser recolhido para mostrar só os ícones
    - **Todos os pedidos**: lista paginada com tag da etapa e filtros por código, orçamento, situação (incluindo *Em andamento*) e período.
    - **Quadro**: kanban com uma coluna por etapa, nas mesmas cores das tags. Cada coluna mostra até 20 pedidos pela data/hora em que entraram na etapa (os que estão há mais tempo primeiro; em *Encerrado*, os mais recentes) e o total da etapa. O cartão pode ser arrastado, ou movido pelos botões ‹ ›, **apenas para a etapa anterior ou a próxima**; voltar uma etapa também fica registrado nas movimentações. Pedidos cancelados não aparecem no quadro.
    - **Checklist de fechamento**: ao entrar em **Em Fechamento**, o pedido recebe a lista cadastrada em *Parâmetros › Checklist de fechamento*; nos detalhes, cada item é marcado com caixa de seleção (grava data, hora e usuário). Só pode ser alterado nessa etapa (nas outras, fica visível só para consulta) e não trava o fluxo: o pedido avança com itens em aberto. Mudanças no cadastro valem para os próximos pedidos. O cartão do Quadro mostra o progresso (ex.: ☑ 2/3).
-   - **Observação** do pedido: editável a qualquer momento, em qualquer situação (inclusive encerrado ou cancelado), sem alterar o fluxo.
+   - **Observações** do pedido: histórico em linha do tempo (a mais recente no topo), com data, hora e autor de cada registro. Novas observações são **incluídas** a qualquer momento, em qualquer situação (inclusive encerrado ou cancelado), sem alterar o fluxo; as já registradas não são editadas nem apagadas. A observação dada ao gerar o pedido (ou pelo cliente, ao aceitar pelo link) é o primeiro registro.
    - **Detalhes**: etapas com data/hora, tempo total, histórico de movimentações com o tempo em cada etapa e os itens do orçamento.
    - Pedidos não são editados: se estiver errado, **Cancelar pedido** (com motivo). O orçamento fica livre para ser alterado ou usado em outro pedido. Nunca há dois pedidos ativos (não cancelados) para o mesmo orçamento; pedidos encerrados não podem ser cancelados.
 5. **Mockups**: aplique a logomarca sobre a foto dos produtos do carrinho e baixe o PNG.
@@ -235,5 +235,5 @@ Todas as rotas exigem login, exceto as de `/api/auth`. Cada rota também exige a
 | `GET /api/pedidos/quadro` | Quadro por etapa (`limite`, padrão 20; `meus=1`) → `{ limite, colunas: [{ status, total, pedidos }] }` |
 | `POST /api/pedidos/:codigo/avancar` · `POST /api/pedidos/:codigo/retroceder` | Próxima / etapa anterior (`{ status_atual }`, 409 se o pedido já mudou) |
 | `POST /api/pedidos/:codigo/cancelar` | Cancela (`{ motivo }`) |
-| `PUT /api/pedidos/:codigo/observacao` | Altera a observação (`{ observacao }`), em qualquer situação |
+| `POST /api/pedidos/:codigo/observacoes` | Inclui uma observação no histórico (`{ texto }`), em qualquer situação |
 | `POST /api/atualizar` · `GET /api/atualizar/status` | Atualização dos fornecedores |

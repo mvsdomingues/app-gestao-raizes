@@ -13,6 +13,7 @@ import {
   type ResumoPedido,
   type StatusPedido,
   type OrigemMovimento,
+  type ObservacaoPedido,
   ETAPA_CHECKLIST,
 } from '@raizes/shared';
 import { ErroHttp } from '../lib/http';
@@ -165,7 +166,7 @@ export function buscarPedido(db: Banco, codigo: string) {
     const usuario = extrairResponsavel(m, 'usr');
     return { ...m, usuario } as MovimentoPedido;
   });
-  return { ...resumo(l), movimentos, checklist: checklistDoPedido(db, l.id) };
+  return { ...resumo(l), movimentos, observacoes: observacoesDoPedido(db, l.id), checklist: checklistDoPedido(db, l.id) };
 }
 
 function registrarMovimento(
@@ -224,6 +225,7 @@ export function criarPedido(
        VALUES (?, ?, ?, 'CRIADO', ?, ?, ?, ?)`,
     ).run(id, codigo, orcamentoId, observacao, agora, agora, usuarioId);
     registrarMovimento(db, id, null, 'CRIADO', agora, opcoes.observacaoMovimento ?? observacao, quemMovimenta, origem);
+    if (observacao) inserirObservacao(db, id, observacao, agora, quemMovimenta, origem);
     // Situação do orçamento passa a "Pedido gerado"
     const anterior = (db.prepare('SELECT status FROM orcamentos WHERE id = ?').get(orcamentoId) as { status: 'ABERTO' | 'ENVIADO' })
       .status;
@@ -285,13 +287,47 @@ export function retrocederPedido(db: Banco, codigo: string, usuarioId: number, e
   })();
 }
 
+function inserirObservacao(
+  db: Banco,
+  pedidoId: number,
+  texto: string,
+  quando: string,
+  usuarioId: number | null,
+  origem: OrigemMovimento = 'USUARIO',
+): void {
+  db.prepare('INSERT INTO pedidos_observacoes (pedido_id, texto, data_hora, usuario_id, origem) VALUES (?, ?, ?, ?, ?)').run(
+    pedidoId,
+    texto,
+    quando,
+    usuarioId,
+    origem,
+  );
+  // Coluna "observacao" = a última incluída (lista e cartão do quadro)
+  db.prepare('UPDATE pedidos SET observacao = ? WHERE id = ?').run(texto, pedidoId);
+}
+
+/** Histórico de observações, da mais recente para a mais antiga. */
+export function observacoesDoPedido(db: Banco, pedidoId: number): ObservacaoPedido[] {
+  return (
+    db
+      .prepare(
+        `SELECT o.id, o.texto, o.data_hora, COALESCE(o.origem, 'USUARIO') AS origem, ${colunasResponsavel('u', 'usr')}
+           FROM pedidos_observacoes o LEFT JOIN usuarios u ON u.id = o.usuario_id
+          WHERE o.pedido_id = ? ORDER BY o.data_hora DESC, o.id DESC`,
+      )
+      .all(pedidoId) as Record<string, unknown>[]
+  ).map((o) => ({ ...(o as unknown as ObservacaoPedido), usuario: extrairResponsavel(o, 'usr') }));
+}
+
 /**
- * Altera a observação do pedido (permitido em qualquer situação, inclusive
- * encerrado ou cancelado). Não muda a etapa nem a data de atualização do fluxo.
+ * Inclui uma observação no histórico do pedido (em qualquer situação, inclusive
+ * encerrado ou cancelado). Observações não são alteradas nem apagadas.
+ * Não muda a etapa nem a data de atualização do fluxo.
  */
-export function alterarObservacaoPedido(db: Banco, codigo: string, observacao: string | null): void {
-  const r = db.prepare('UPDATE pedidos SET observacao = ? WHERE codigo = ? COLLATE NOCASE').run(observacao, codigo);
-  if (!r.changes) throw new ErroHttp(404, 'Pedido não encontrado');
+export function adicionarObservacaoPedido(db: Banco, codigo: string, texto: string, usuarioId: number): void {
+  const p = db.prepare('SELECT id FROM pedidos WHERE codigo = ? COLLATE NOCASE').get(codigo) as { id: number } | undefined;
+  if (!p) throw new ErroHttp(404, 'Pedido não encontrado');
+  inserirObservacao(db, p.id, texto, isoLocal(), usuarioId);
 }
 
 /** Cancela o pedido (libera o orçamento para um novo pedido). */

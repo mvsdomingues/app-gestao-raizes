@@ -105,12 +105,25 @@ export interface ItemChecklistPedido {
   usuario: UsuarioResumo | null;
 }
 
+/** Observação do pedido (histórico: só inclusão, nunca alteração). */
+export interface ObservacaoPedido {
+  id: number;
+  texto: string;
+  data_hora: string;
+  usuario: UsuarioResumo | null;
+  /** CLIENTE = escrita pelo cliente ao aceitar o orçamento pelo link */
+  origem: import('./orcamentos').OrigemMovimento;
+}
+
 /** Etapa em que o checklist pode ser marcado. */
 export const ETAPA_CHECKLIST: EtapaPedido = 'EM_FECHAMENTO';
 
 /** Pedido completo, com o histórico de movimentações e o orçamento de referência. */
 export interface Pedido extends ResumoPedido {
+  /** Última observação incluída (null = nenhuma) */
   observacao: string | null;
+  /** Histórico de observações, da mais recente para a mais antiga */
+  observacoes: ObservacaoPedido[];
   movimentos: MovimentoPedido[];
   orcamento: Orcamento;
   /** Checklist de fechamento (copiado do cadastro quando o pedido entra em "Em Fechamento") */

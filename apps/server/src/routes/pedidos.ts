@@ -8,7 +8,7 @@ import {
 } from '@raizes/shared';
 import type { Banco } from '../db/conexao';
 import {
-  alterarObservacaoPedido,
+  adicionarObservacaoPedido,
   avancarPedido,
   buscarPedido,
   cancelarPedido,
@@ -110,9 +110,12 @@ export function rotasPedidos(db: Banco, kommo: ServicoKommo | null = null): Rout
   });
 
   /** Observação do pedido: editável em qualquer situação */
-  r.put('/api/pedidos/:codigo/observacao', (req, res) => {
-    alterarObservacaoPedido(db, req.params.codigo, textoOpcional(corpoJson(req).observacao, 2000));
-    res.json(detalhe(req.params.codigo));
+  /** Inclui uma observação no histórico (qualquer situação): { texto } */
+  r.post('/api/pedidos/:codigo/observacoes', (req, res) => {
+    const texto = textoOpcional(corpoJson(req).texto, 2000);
+    if (!texto) throw new ErroHttp(400, 'Escreva a observação');
+    adicionarObservacaoPedido(db, String(req.params.codigo), texto, exigirUsuario(res).id);
+    res.status(201).json(detalhe(String(req.params.codigo)));
   });
 
   r.post('/api/pedidos/:codigo/cancelar', (req, res) => {
