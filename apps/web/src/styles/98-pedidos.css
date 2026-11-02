@@ -16,6 +16,7 @@
 }
 /* Cores de cada etapa — as mesmas nas tags, no fluxo e no quadro (kanban) */
 .s-CRIADO      { --st-fundo: #F0EAF6; --st-texto: var(--uva);       --st-borda: #DCCDEA; }
+.s-EM_FECHAMENTO { --st-fundo: #FCEAF2; --st-texto: #A23B6E;        --st-borda: #F0C6DA; }
 .s-EM_PRODUCAO { --st-fundo: #FFF3DC; --st-texto: #9A6200;          --st-borda: #F2D9A6; }
 .s-PRODUZIDO   { --st-fundo: #E8ECFB; --st-texto: #3F4BA8;          --st-borda: #C9CFF2; }
 .s-FATURADO    { --st-fundo: #E3F2F5; --st-texto: #1F6E7D;          --st-borda: #BCDDE3; }
@@ -92,7 +93,7 @@
 }
 
 /* Fluxo (stepper) */
-.pedido-fluxo { list-style: none; display: grid; grid-template-columns: repeat(6, 1fr); margin-top: 22px; }
+.pedido-fluxo { list-style: none; display: grid; grid-template-columns: repeat(7, 1fr); margin-top: 22px; }
 .pedido-etapa { position: relative; display: flex; flex-direction: column; align-items: center; text-align: center; gap: 6px; padding: 0 4px; }
 .pedido-etapa::before {
   content: '';
@@ -148,8 +149,8 @@
 .orc-wrap.pedidos-wrap-quadro { max-width: 1640px; }
 .kanban {
   display: grid;
-  grid-template-columns: repeat(6, minmax(160px, 1fr));
-  gap: 12px;
+  grid-template-columns: repeat(7, minmax(140px, 1fr));
+  gap: 10px;
   overflow-x: auto;
   padding-bottom: 8px;
   align-items: start;
@@ -313,7 +314,7 @@
 
 @media (max-width: 760px) {
   .pedido-fluxo { grid-template-columns: repeat(3, 1fr); row-gap: 18px; }
-  .pedido-etapa:nth-child(4)::before { display: none; }
+  .pedido-etapa:nth-child(3n + 1)::before { display: none; }
   .pedido-card-topo { flex-direction: column; }
   .pedido-card-dir { align-items: flex-start; }
 }
@@ -331,3 +332,23 @@
 .pedido-obs.editando { display: block; }
 .pedido-obs.editando textarea { width: 100%; margin-top: 5px; resize: vertical; font-family: var(--font-body); }
 .pedido-obs-acoes { display: flex; justify-content: flex-end; gap: 8px; margin-top: 8px; }
+
+/* ── Checklist de fechamento ── */
+.pedido-checklist { margin-top: 22px; padding: 16px 20px; border: 1px solid #F0C6DA; border-left: 4px solid #A23B6E; border-radius: var(--radius-lg); background: #FFFAFC; }
+.pedido-checklist.leitura { border-color: var(--border); border-left-color: var(--border2); background: var(--surface); }
+.pedido-checklist-topo { display: flex; justify-content: space-between; align-items: baseline; gap: 10px; }
+.pedido-checklist .pedido-secao { margin: 0; }
+.pedido-checklist-progresso { font-size: .78rem; font-weight: 600; color: #A23B6E; }
+.pedido-checklist-progresso.completo { color: var(--success); }
+.pedido-checklist-nota { font-size: .8rem; color: var(--muted); margin-top: 6px; }
+.pedido-checklist-lista { list-style: none; margin-top: 10px; display: flex; flex-direction: column; gap: 2px; }
+.pedido-checklist-lista li { display: flex; justify-content: space-between; align-items: center; gap: 12px; padding: 7px 4px; border-bottom: 1px solid #F3EEE8; }
+.pedido-checklist-lista li:last-child { border-bottom: none; }
+.pedido-checklist-lista label { display: flex; align-items: center; gap: 10px; cursor: pointer; font-size: .9rem; }
+.pedido-checklist.leitura .pedido-checklist-lista label { cursor: default; }
+.pedido-checklist-lista input { width: 17px; height: 17px; accent-color: #A23B6E; flex-shrink: 0; }
+.pedido-checklist-lista li.feito .pedido-checklist-texto { color: var(--muted); text-decoration: line-through; }
+.pedido-checklist-quem { font-size: .72rem; color: var(--muted); white-space: nowrap; }
+.kanban-checklist { font-size: .72rem; font-weight: 600; color: #A23B6E; margin-top: 3px; }
+.kanban-checklist.completo { color: var(--success); }
+@media print { .pedido-checklist { break-inside: avoid; } }

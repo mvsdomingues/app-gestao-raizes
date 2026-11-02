@@ -7,6 +7,7 @@ import { api } from '../../lib/api';
 import { erroDe } from '../../lib/dialogo';
 import { FolhaOrcamento } from '../orcamentos/FolhaOrcamento';
 import { ClienteVinculado } from '../clientes/ClienteVinculado';
+import { ChecklistPedido } from './ChecklistPedido';
 import { agoraLocal, duracao, formatarDataHora, TagStatusPedido, useAcoesPedido } from './comum';
 
 /** Aba "Detalhes": etapas do pedido, histórico de movimentações e o orçamento de origem. */
@@ -153,6 +154,8 @@ export function DetalhePedido() {
           <b>{duracao(p.criado, fimDoPedido)}</b>
         </div>
       </div>
+
+      <ChecklistPedido pedido={p} aoAlterar={atualizarPedidoAberto} />
 
       <h3 className="pedido-secao">Movimentações</h3>
       <table className="orc-table pedido-movimentos" id="tabela-movimentos">

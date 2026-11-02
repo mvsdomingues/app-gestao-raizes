@@ -147,9 +147,10 @@ O menu fica na **barra lateral** (pode ser recolhido para mostrar só os ícones
    *Gerar Orçamento* no carrinho grava o orçamento (numeração `ORC-0001`…), esvazia o carrinho e abre a aba **Detalhes**. Ao salvar uma alteração, o orçamento mantém o mesmo número e recebe a data da alteração; não há limite de alterações.
 4. **Pedidos**: tela com duas abas, no mesmo modelo de Orçamentos.
    - Todo pedido nasce de um orçamento (**+ Novo pedido** ou **Gerar pedido** na tela Orçamentos) e recebe o código `PED-000001`, `PED-000002`…; o pedido guarda a referência ao orçamento, que descreve o que será entregue.
-   - Fluxo: **Criado → Em Produção → Produzido → Faturado → Enviado → Encerrado**. O botão de ação (na lista ou nos detalhes) move o pedido para a etapa seguinte, e cada movimentação grava a data e a hora (base para controle de SLA).
+   - Fluxo: **Criado → Em Fechamento → Em Produção → Produzido → Faturado → Enviado → Encerrado**. O botão de ação (na lista ou nos detalhes) move o pedido para a etapa seguinte, e cada movimentação grava a data e a hora (base para controle de SLA).
    - **Todos os pedidos**: lista paginada com tag da etapa e filtros por código, orçamento, situação (incluindo *Em andamento*) e período.
    - **Quadro**: kanban com uma coluna por etapa, nas mesmas cores das tags. Cada coluna mostra até 20 pedidos pela data/hora em que entraram na etapa (os que estão há mais tempo primeiro; em *Encerrado*, os mais recentes) e o total da etapa. O cartão pode ser arrastado, ou movido pelos botões ‹ ›, **apenas para a etapa anterior ou a próxima**; voltar uma etapa também fica registrado nas movimentações. Pedidos cancelados não aparecem no quadro.
+   - **Checklist de fechamento**: ao entrar em **Em Fechamento**, o pedido recebe a lista cadastrada em *Parâmetros › Checklist de fechamento*; nos detalhes, cada item é marcado com caixa de seleção (grava data, hora e usuário). Só pode ser alterado nessa etapa (nas outras, fica visível só para consulta) e não trava o fluxo: o pedido avança com itens em aberto. Mudanças no cadastro valem para os próximos pedidos. O cartão do Quadro mostra o progresso (ex.: ☑ 2/3).
    - **Observação** do pedido: editável a qualquer momento, em qualquer situação (inclusive encerrado ou cancelado), sem alterar o fluxo.
    - **Detalhes**: etapas com data/hora, tempo total, histórico de movimentações com o tempo em cada etapa e os itens do orçamento.
    - Pedidos não são editados: se estiver errado, **Cancelar pedido** (com motivo). O orçamento fica livre para ser alterado ou usado em outro pedido. Nunca há dois pedidos ativos (não cancelados) para o mesmo orçamento; pedidos encerrados não podem ser cancelados.
@@ -160,6 +161,7 @@ O menu fica na **barra lateral** (pode ser recolhido para mostrar só os ícones
 6. **Produtos Próprios**: inclua, busque, altere e exclua produtos da própria empresa. Cada um recebe um código sequencial `PDP-000001`, `PDP-000002`… (códigos excluídos não são reutilizados). A foto pode ser enviada do computador ou informada por URL; os arquivos ficam em `data/imagens/proprios/`.
 7. **Parâmetros**: tela em abas.
    - **Precificação**: valores da calculadora (material, mão de obra, imposto de compra, designer, logística, imposto sobre venda e margem), com simulação de preço. Material, mão de obra, designer e logística são o ponto de partida de cada item novo; imposto de compra, imposto sobre venda e margem valem sempre para todos os itens do carrinho.
+   - **Checklist de fechamento**: itens da lista usada na etapa Em Fechamento dos pedidos (incluir, renomear, reordenar, remover).
    - **Sistema**: configurações gerais. **Enviar notas para o Kommo** (ativo por padrão): desligado, nenhuma nota é criada nem enviada ao Kommo (envio do orçamento, aceite, recusa e pedido gerado); as que já aguardavam reenvio ficam na fila até ser ligado de novo.
 
 **Sistema**
@@ -213,6 +215,8 @@ Todas as rotas exigem login, exceto as de `/api/auth`. Cada rota também exige a
 | `GET/POST /api/produtos-proprios` | Lista (`?q=` busca) / inclui produto próprio |
 | `GET/PUT/PATCH/DELETE /api/produtos-proprios/:codigo` | Consulta, substitui, altera campos ou exclui (`PDP-000001`) |
 | `GET/PUT /api/parametros` | Lê / grava os parâmetros da calculadora |
+| `GET/PUT /api/parametros/checklist` | Cadastro do checklist de fechamento (`{ itens: [{ id?, texto }] }`, na ordem) |
+| `PUT /api/pedidos/:codigo/checklist/:item` | Marca/desmarca um item (`{ feito }`; só na etapa Em Fechamento) |
 | `GET/PUT /api/parametros/sistema` | Parâmetros de sistema (`{ kommo_notas_ativo }`) |
 | `GET /api/orcamentos` | Lista paginada (`numero`, `produto`, `de`, `ate`, `min`, `max`, `status`, `pedido=com\|sem`, `meus=1`, `cliente`, `limit`, `offset`) → `{ total, orcamentos }` (cada um com `pedido` ativo ou `null`) |
 | `POST /api/orcamentos` · `GET/PUT /api/orcamentos/:id` | Grava, consulta (com `status`, `movimentos` e `cliente`) e altera (PUT mantém o número; 409 se não estiver Aberto). `cliente_kommo_id` vincula o cliente (400 se não estiver na base; ausente no PUT = mantém) |

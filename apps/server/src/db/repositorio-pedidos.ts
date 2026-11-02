@@ -13,12 +13,14 @@ import {
   type ResumoPedido,
   type StatusPedido,
   type OrigemMovimento,
+  ETAPA_CHECKLIST,
 } from '@raizes/shared';
 import { ErroHttp } from '../lib/http';
 import { registrarMovimentoOrcamento } from './repositorio-orcamentos';
 import { colunasResponsavel, extrairResponsavel } from './repositorio-usuarios';
 import { isoLocal } from '../lib/datas';
 import type { Banco } from './conexao';
+import { checklistDoPedido, copiarChecklistParaPedido } from './repositorio-checklist';
 
 interface LinhaPedido {
   id: number;
@@ -35,6 +37,8 @@ interface LinhaPedido {
 const SELECT_PEDIDO = `
   SELECT p.id, p.codigo, p.status, p.orcamento_id, p.observacao, p.criado, p.atualizado,
          o.total, o.qtd_itens, o.cliente_kommo_id, o.cliente_nome, o.cliente_telefone,
+         (SELECT COUNT(*) FROM pedidos_checklist c WHERE c.pedido_id = p.id) AS checklist_total,
+         (SELECT COUNT(*) FROM pedidos_checklist c WHERE c.pedido_id = p.id AND c.feito = 1) AS checklist_feitos,
          ${colunasResponsavel('ur', 'resp')}
     FROM pedidos p
     JOIN orcamentos o ON o.id = p.orcamento_id
@@ -161,7 +165,7 @@ export function buscarPedido(db: Banco, codigo: string) {
     const usuario = extrairResponsavel(m, 'usr');
     return { ...m, usuario } as MovimentoPedido;
   });
-  return { ...resumo(l), movimentos };
+  return { ...resumo(l), movimentos, checklist: checklistDoPedido(db, l.id) };
 }
 
 function registrarMovimento(
@@ -256,6 +260,7 @@ export function avancarPedido(db: Banco, codigo: string, usuarioId: number, espe
     const agora = isoLocal();
     db.prepare('UPDATE pedidos SET status = ?, atualizado = ? WHERE id = ?').run(prox, agora, p.id);
     registrarMovimento(db, p.id, p.status, prox, agora, null, usuarioId);
+    if (prox === ETAPA_CHECKLIST) copiarChecklistParaPedido(db, p.id);
   })();
 }
 
@@ -276,6 +281,7 @@ export function retrocederPedido(db: Banco, codigo: string, usuarioId: number, e
     const agora = isoLocal();
     db.prepare('UPDATE pedidos SET status = ?, atualizado = ? WHERE id = ?').run(ant, agora, p.id);
     registrarMovimento(db, p.id, p.status, ant, agora, null, usuarioId);
+    if (ant === ETAPA_CHECKLIST) copiarChecklistParaPedido(db, p.id);
   })();
 }
 

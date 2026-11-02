@@ -9,6 +9,8 @@ import type {
   ProdutoProprio,
   RespostaParametros,
   RespostaParametrosSistema,
+  RespostaChecklist,
+  ItemChecklist,
   ParametrosSistema,
   Orcamento,
   OrcamentoCriado,
@@ -200,6 +202,11 @@ export const api = {
   // ── Parâmetros da calculadora ──
   parametros: () => enviar<RespostaParametros>('GET', '/api/parametros'),
   salvarParametros: (valores: ParametrosCalculo) => enviar<RespostaParametros>('PUT', '/api/parametros', valores),
+  checklistFechamento: () => enviar<RespostaChecklist>('GET', '/api/parametros/checklist'),
+  salvarChecklistFechamento: (itens: ItemChecklist[]) => enviar<RespostaChecklist>('PUT', '/api/parametros/checklist', { itens }),
+  /** Marca/desmarca um item do checklist (só na etapa Em Fechamento) */
+  marcarChecklistPedido: (codigo: string, item: number, feito: boolean) =>
+    enviar<Pedido>('PUT', `/api/pedidos/${encodeURIComponent(codigo)}/checklist/${item}`, { feito }),
   parametrosSistema: () => enviar<RespostaParametrosSistema>('GET', '/api/parametros/sistema'),
   salvarParametrosSistema: (valores: Partial<ParametrosSistema>) =>
     enviar<RespostaParametrosSistema>('PUT', '/api/parametros/sistema', valores),

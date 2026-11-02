@@ -9,6 +9,7 @@ import type { Banco } from '../db/conexao';
 import { dataHoraLocal } from '../lib/datas';
 import { corpoJson, ErroHttp } from '../lib/http';
 import { gravarParametrosSistema, lerParametrosSistema } from '../db/repositorio-parametros';
+import { gravarChecklist, lerChecklist } from '../db/repositorio-checklist';
 
 const CHAVES = Object.keys(CALC_DEFAULTS) as (keyof ParametrosCalculo)[];
 
@@ -35,6 +36,15 @@ export function lerParametros(db: Banco): RespostaParametros {
 
 export function rotasParametros(db: Banco): Router {
   const r = Router();
+
+  // ── Checklist de fechamento dos pedidos ──
+  r.get('/api/parametros/checklist', (_req, res) => {
+    res.json(lerChecklist(db));
+  });
+
+  r.put('/api/parametros/checklist', (req, res) => {
+    res.json(gravarChecklist(db, corpoJson(req).itens));
+  });
 
   // ── Parâmetros de sistema (aba "Sistema") ──
   r.get('/api/parametros/sistema', (_req, res) => {

@@ -88,6 +88,24 @@ export function garantirEsquema(db: Database.Database): void {
       ON pedidos(orcamento_id) WHERE status <> 'CANCELADO';
     CREATE INDEX IF NOT EXISTS ix_pedidos_status ON pedidos(status);
 
+    -- Checklist de fechamento: cadastro (Parâmetros) e cópia marcada em cada pedido
+    CREATE TABLE IF NOT EXISTS checklist_fechamento (
+      id         INTEGER PRIMARY KEY AUTOINCREMENT,
+      texto      TEXT NOT NULL,
+      ordem      INTEGER NOT NULL,
+      atualizado TEXT NOT NULL
+    );
+    CREATE TABLE IF NOT EXISTS pedidos_checklist (
+      pedido_id  INTEGER NOT NULL REFERENCES pedidos(id),
+      item_id    INTEGER NOT NULL,
+      texto      TEXT NOT NULL,
+      ordem      INTEGER NOT NULL,
+      feito      INTEGER NOT NULL DEFAULT 0,
+      feito_em   TEXT,
+      usuario_id INTEGER REFERENCES usuarios(id),
+      PRIMARY KEY (pedido_id, item_id)
+    );
+
     -- Histórico de movimentações do fluxo (data/hora de cada etapa, para SLA)
     CREATE TABLE IF NOT EXISTS pedidos_movimentos (
       id              INTEGER PRIMARY KEY AUTOINCREMENT,

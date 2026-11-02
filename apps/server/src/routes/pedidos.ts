@@ -18,6 +18,7 @@ import {
   retrocederPedido,
 } from '../db/repositorio-pedidos';
 import { corpoJson, ErroHttp } from '../lib/http';
+import { marcarItemChecklist } from '../db/repositorio-checklist';
 import { exigirUsuario } from '../lib/sessao';
 import type { ServicoKommo } from '../kommo/servico';
 import { lerOrcamento } from './orcamentos';
@@ -118,6 +119,15 @@ export function rotasPedidos(db: Banco, kommo: ServicoKommo | null = null): Rout
     const corpo = corpoJson(req);
     cancelarPedido(db, req.params.codigo, textoOpcional(corpo.motivo), exigirUsuario(res).id);
     res.json(detalhe(req.params.codigo));
+  });
+
+  /** Marca/desmarca um item do checklist de fechamento: { feito: boolean } (só na etapa Em Fechamento). */
+  r.put('/api/pedidos/:codigo/checklist/:item', (req, res) => {
+    const item = Number(req.params.item);
+    const feito = corpoJson(req).feito;
+    if (!Number.isInteger(item) || typeof feito !== 'boolean') throw new ErroHttp(400, 'Envie { feito: true | false }');
+    marcarItemChecklist(db, String(req.params.codigo), item, feito, exigirUsuario(res).id);
+    res.json(detalhe(String(req.params.codigo)));
   });
 
   return r;

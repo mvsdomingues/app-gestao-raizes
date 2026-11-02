@@ -141,3 +141,19 @@
 .param-estado.ativo { background: #EAF5E8; color: var(--success); }
 .param-estado.inativo { background: #ECEAE6; color: #6B645C; }
 .param-sistema .param-nota { margin-top: 12px; }
+
+/* Cadastro do checklist de fechamento */
+.checklist-cadastro { list-style: none; margin-top: 14px; display: flex; flex-direction: column; gap: 6px; }
+.checklist-cadastro li { display: flex; align-items: center; gap: 6px; }
+.checklist-cadastro .custom-input { flex: 1; }
+.checklist-num { width: 22px; text-align: right; font-size: .78rem; color: var(--muted); flex-shrink: 0; }
+.checklist-acao {
+  width: 32px; height: 34px; border: 1px solid var(--border); border-radius: 6px; background: var(--surface);
+  color: var(--uva); cursor: pointer; font-size: .85rem; flex-shrink: 0;
+}
+.checklist-acao:hover:not(:disabled) { border-color: var(--uva); }
+.checklist-acao:disabled { opacity: .35; cursor: default; }
+.checklist-acao.perigo { color: var(--danger); }
+.checklist-acao.perigo:hover { border-color: var(--danger); }
+.checklist-novo { display: flex; gap: 8px; margin-top: 12px; padding-left: 28px; }
+.checklist-novo .custom-input { flex: 1; }

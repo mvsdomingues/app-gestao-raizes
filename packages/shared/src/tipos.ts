@@ -200,6 +200,19 @@ export const SISTEMA_DEFAULTS: ParametrosSistema = {
   kommo_notas_ativo: true,
 };
 
+/** Item do cadastro do checklist de fechamento (Parâmetros › Checklist de fechamento). */
+export interface ItemChecklist {
+  /** Gerado pelo servidor; itens novos vão sem id */
+  id?: number;
+  texto: string;
+}
+
+/** GET/PUT /api/parametros/checklist */
+export interface RespostaChecklist {
+  itens: (ItemChecklist & { id: number })[];
+  atualizado: string | null;
+}
+
 /** GET/PUT /api/parametros/sistema */
 export interface RespostaParametrosSistema {
   valores: ParametrosSistema;

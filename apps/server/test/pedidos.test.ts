@@ -108,7 +108,7 @@ describe('pedidos', () => {
     const c = await req('POST', '/api/pedidos/PED-000002/cancelar', { motivo: 'Quantidade errada' });
     expect(c.json.status).toBe('CANCELADO');
     expect(c.json.movimentos.at(-1)).toMatchObject({
-      status_anterior: 'EM_PRODUCAO',
+      status_anterior: 'EM_FECHAMENTO',
       status_novo: 'CANCELADO',
       observacao: 'Quantidade errada',
     });
@@ -137,6 +137,7 @@ describe('pedidos', () => {
     // PED-000003 (orçamento 2) está em Criado
     expect((await req('POST', '/api/pedidos/PED-000003/retroceder', { status_atual: 'CRIADO' })).status).toBe(409);
     await req('POST', '/api/pedidos/PED-000003/avancar', { status_atual: 'CRIADO' });
+    await req('POST', '/api/pedidos/PED-000003/avancar', { status_atual: 'EM_FECHAMENTO' });
     await req('POST', '/api/pedidos/PED-000003/avancar', { status_atual: 'EM_PRODUCAO' });
     const r = await req('POST', '/api/pedidos/PED-000003/retroceder', { status_atual: 'PRODUZIDO' });
     expect(r.status).toBe(200);
@@ -150,6 +151,7 @@ describe('pedidos', () => {
     await req('POST', '/api/pedidos/PED-000001/avancar', { status_atual: 'ENVIADO' });
     // devolve PED-000003 a Criado para os testes seguintes
     await req('POST', '/api/pedidos/PED-000003/retroceder', { status_atual: 'EM_PRODUCAO' });
+    await req('POST', '/api/pedidos/PED-000003/retroceder', { status_atual: 'EM_FECHAMENTO' });
   });
 
   it('quadro: colunas por etapa, sem cancelados, com limite', async () => {

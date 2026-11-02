@@ -224,6 +224,14 @@ export function QuadroPedidos({ ativo, versao, aoAlterar }: Props) {
                       <div className="kanban-ref">
                         {c.orcamento_numero} · {c.qtd_itens} {c.qtd_itens === 1 ? 'item' : 'itens'}
                       </div>
+                      {c.status === 'EM_FECHAMENTO' && !!c.checklist_total && (
+                        <div
+                          className={`kanban-checklist${c.checklist_feitos === c.checklist_total ? ' completo' : ''}`}
+                          title="Checklist de fechamento"
+                        >
+                          ☑ {c.checklist_feitos}/{c.checklist_total}
+                        </div>
+                      )}
                       {c.cliente && (
                         <div className="kanban-cliente" title={c.cliente.telefone ?? undefined}>
                           {c.cliente.nome || `#${c.cliente.id}`}

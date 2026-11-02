@@ -6,13 +6,14 @@ import type { ClienteVinculado } from './clientes';
 import type { Orcamento } from './tipos';
 
 /** Etapas do fluxo, na ordem. */
-export const FLUXO_PEDIDO = ['CRIADO', 'EM_PRODUCAO', 'PRODUZIDO', 'FATURADO', 'ENVIADO', 'ENCERRADO'] as const;
+export const FLUXO_PEDIDO = ['CRIADO', 'EM_FECHAMENTO', 'EM_PRODUCAO', 'PRODUZIDO', 'FATURADO', 'ENVIADO', 'ENCERRADO'] as const;
 export type EtapaPedido = (typeof FLUXO_PEDIDO)[number];
 /** Situação do pedido: uma etapa do fluxo ou cancelado. */
 export type StatusPedido = EtapaPedido | 'CANCELADO';
 
 export const ROTULOS_STATUS_PEDIDO: Record<StatusPedido, string> = {
   CRIADO: 'Criado',
+  EM_FECHAMENTO: 'Em Fechamento',
   EM_PRODUCAO: 'Em Produção',
   PRODUZIDO: 'Produzido',
   FATURADO: 'Faturado',
@@ -76,6 +77,9 @@ export interface ResumoPedido {
   responsavel: UsuarioResumo | null;
   /** Cliente do orçamento de origem */
   cliente: ClienteVinculado | null;
+  /** Checklist de fechamento: itens marcados / total (0/0 = sem checklist) */
+  checklist_feitos?: number;
+  checklist_total?: number;
 }
 
 /** Movimentação do fluxo (base para o controle de SLA). */
@@ -90,11 +94,27 @@ export interface MovimentoPedido {
   origem?: import('./orcamentos').OrigemMovimento;
 }
 
+/** Item do checklist de fechamento gravado no pedido. */
+export interface ItemChecklistPedido {
+  /** id do item no cadastro (Parâmetros › Checklist de fechamento) */
+  id: number;
+  texto: string;
+  feito: boolean;
+  /** Quando e quem marcou (null = não marcado) */
+  feito_em: string | null;
+  usuario: UsuarioResumo | null;
+}
+
+/** Etapa em que o checklist pode ser marcado. */
+export const ETAPA_CHECKLIST: EtapaPedido = 'EM_FECHAMENTO';
+
 /** Pedido completo, com o histórico de movimentações e o orçamento de referência. */
 export interface Pedido extends ResumoPedido {
   observacao: string | null;
   movimentos: MovimentoPedido[];
   orcamento: Orcamento;
+  /** Checklist de fechamento (copiado do cadastro quando o pedido entra em "Em Fechamento") */
+  checklist: ItemChecklistPedido[];
 }
 
 export interface RespostaPedidos {
