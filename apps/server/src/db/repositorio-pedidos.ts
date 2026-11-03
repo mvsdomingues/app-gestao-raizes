@@ -59,6 +59,34 @@ function resumo(l: LinhaPedido): ResumoPedido & { observacao: string | null } {
   return { ...linha, orcamento_numero: numeroOrcamento(l.orcamento_id), responsavel, cliente };
 }
 
+/**
+ * Calendário: pedidos com situação diferente de Encerrado, pela data prevista de
+ * entrega entre `de` e `ate` (inclusive), e os que ainda não têm data.
+ */
+export function calendarioPedidos(
+  db: Banco,
+  de: string,
+  ate: string,
+  somenteDoUsuario?: number,
+): { pedidos: ResumoPedido[]; sem_data: ResumoPedido[] } {
+  const doUsuario = somenteDoUsuario ? ' AND p.usuario_id = ?' : '';
+  const extra = somenteDoUsuario ? [somenteDoUsuario] : [];
+  const pedidos = (
+    db
+      .prepare(
+        `${SELECT_PEDIDO} WHERE p.status <> 'ENCERRADO' AND p.entrega_prevista BETWEEN ? AND ?${doUsuario}
+          ORDER BY p.entrega_prevista, p.id`,
+      )
+      .all(de, ate, ...extra) as LinhaPedido[]
+  ).map(resumo);
+  const sem_data = (
+    db
+      .prepare(`${SELECT_PEDIDO} WHERE p.status <> 'ENCERRADO' AND p.entrega_prevista IS NULL${doUsuario} ORDER BY p.id`)
+      .all(...extra) as LinhaPedido[]
+  ).map(resumo);
+  return { pedidos, sem_data };
+}
+
 /** Pedido ativo (não cancelado) de um orçamento, se existir. */
 export function pedidoAtivoDoOrcamento(db: Banco, orcamentoId: number): PedidoDoOrcamento | null {
   const row = db

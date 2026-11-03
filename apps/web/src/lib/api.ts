@@ -23,6 +23,7 @@ import type {
   RespostaOrcamentos,
   RespostaPedidos,
   RespostaQuadroPedidos,
+  RespostaCalendarioPedidos,
   StatusAtualizacao,
   StatusOrcamento,
   StatusOrcamentoManual,
@@ -165,6 +166,9 @@ export const api = {
     for (const [k, v] of Object.entries(filtros)) if (v && String(v).trim()) qs.set(k, String(v).trim());
     return enviar<RespostaPedidos>('GET', `/api/pedidos?${qs}`);
   },
+  /** Calendário: pedidos não encerrados por data prevista de entrega (só consulta) */
+  calendarioPedidos: (de: string, ate: string, meus = false) =>
+    enviar<RespostaCalendarioPedidos>('GET', `/api/pedidos/calendario?de=${de}&ate=${ate}${meus ? '&meus=1' : ''}`),
   quadroPedidos: (limite = 20, meus = false) =>
     enviar<RespostaQuadroPedidos>('GET', `/api/pedidos/quadro?limite=${limite}${meus ? '&meus=1' : ''}`),
   pedido: (codigo: string) => enviar<Pedido>('GET', `/api/pedidos/${encodeURIComponent(codigo)}`),

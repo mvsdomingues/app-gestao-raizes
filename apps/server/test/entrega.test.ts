@@ -95,3 +95,35 @@ describe('data prevista de entrega', () => {
     expect(fora.json.erro).toMatch(/Criado/);
   });
 });
+
+describe('calendário de pedidos', () => {
+  it('pedidos não encerrados por data de entrega no período, e os sem data', async () => {
+    const novo = async (entrega: string | null) => {
+      const o = await req('POST', '/api/orcamentos', { itens: [item], subtotal: 1, frete: 0, total: 1, entrega_prevista: entrega });
+      return (await req('POST', '/api/pedidos', { orcamento_id: o.json.id })).json.codigo as string;
+    };
+    const a = await novo('2030-03-05');
+    const b = await novo('2030-03-20');
+    const fora = await novo('2030-04-10');
+    const semData = await novo(null);
+    const encerrado = await novo('2030-03-06');
+    let atual = 'CRIADO';
+    for (const s of ['EM_FECHAMENTO', 'EM_PRODUCAO', 'PRODUZIDO', 'FATURADO', 'ENVIADO', 'ENCERRADO']) {
+      await req('POST', `/api/pedidos/${encerrado}/avancar`, { status_atual: atual });
+      atual = s;
+    }
+    const cancelado = await novo('2030-03-07');
+    await req('POST', `/api/pedidos/${cancelado}/cancelar`, { motivo: 'teste' });
+
+    const r = await req('GET', '/api/pedidos/calendario?de=2030-03-01&ate=2030-03-31');
+    expect(r.status).toBe(200);
+    expect(r.json.pedidos.map((p: { codigo: string }) => p.codigo)).toEqual([a, cancelado, b]);
+    expect(r.json.pedidos[0]).toMatchObject({ entrega_prevista: '2030-03-05', status: 'CRIADO' });
+    expect(r.json.pedidos.map((p: { codigo: string }) => p.codigo)).not.toContain(fora);
+    expect(r.json.sem_data.map((p: { codigo: string }) => p.codigo)).toContain(semData);
+    expect(r.json.sem_data.map((p: { codigo: string }) => p.codigo)).not.toContain(encerrado);
+    expect((await req('GET', '/api/pedidos/calendario?de=2030-03-01')).status).toBe(400);
+    expect((await req('GET', '/api/pedidos/calendario?de=2030-03-31&ate=2030-03-01')).status).toBe(400);
+    expect((await req('GET', '/api/pedidos/calendario?de=2030-01-01&ate=2030-06-01')).status).toBe(400);
+  });
+});

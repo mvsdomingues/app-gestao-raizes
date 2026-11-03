@@ -155,6 +155,16 @@ export interface ColunaQuadro {
   pedidos: CartaoPedido[];
 }
 
+/** Resposta de GET /api/pedidos/calendario: pedidos não encerrados pela data prevista de entrega. */
+export interface RespostaCalendarioPedidos {
+  de: string;
+  ate: string;
+  /** Com entrega prevista entre `de` e `ate` (inclusive), por data */
+  pedidos: ResumoPedido[];
+  /** Sem data prevista de entrega */
+  sem_data: ResumoPedido[];
+}
+
 /** Resposta de GET /api/pedidos/quadro */
 export interface RespostaQuadroPedidos {
   limite: number;

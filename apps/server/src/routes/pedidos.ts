@@ -6,6 +6,7 @@ import {
   type Pedido,
   type RespostaPedidos,
   type RespostaQuadroPedidos,
+  type RespostaCalendarioPedidos,
 } from '@raizes/shared';
 import type { Banco } from '../db/conexao';
 import {
@@ -17,6 +18,7 @@ import {
   criarPedido,
   listarPedidos,
   quadroPedidos,
+  calendarioPedidos,
   retrocederPedido,
 } from '../db/repositorio-pedidos';
 import { corpoJson, ErroHttp } from '../lib/http';
@@ -69,6 +71,17 @@ export function rotasPedidos(db: Banco, kommo: ServicoKommo | null = null): Rout
     const limite = Math.min(100, Math.max(1, Number.parseInt(bruto, 10) || 20));
     const meus = req.query.meus === '1' ? exigirUsuario(res).id : undefined;
     const corpo: RespostaQuadroPedidos = { limite, colunas: quadroPedidos(db, limite, meus) };
+    res.json(corpo);
+  });
+
+  /** Calendário (só consulta): ?de=AAAA-MM-DD&ate=AAAA-MM-DD (até 62 dias) &meus=1 */
+  r.get('/api/pedidos/calendario', (req, res) => {
+    const de = req.query.de;
+    const ate = req.query.ate;
+    if (!dataValida(de) || !dataValida(ate) || ate < de) throw new ErroHttp(400, 'Informe o período: de e ate (AAAA-MM-DD)');
+    if ((Date.parse(ate) - Date.parse(de)) / 864e5 > 62) throw new ErroHttp(400, 'Período máximo de 62 dias');
+    const meus = req.query.meus === '1' ? exigirUsuario(res).id : undefined;
+    const corpo: RespostaCalendarioPedidos = { de, ate, ...calendarioPedidos(db, de, ate, meus) };
     res.json(corpo);
   });
 

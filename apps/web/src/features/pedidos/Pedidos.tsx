@@ -3,10 +3,12 @@ import { useApp, type AbaPedidos } from '../../app/contexto';
 import { DetalhePedido } from './DetalhePedido';
 import { ListaPedidos } from './ListaPedidos';
 import { QuadroPedidos } from './QuadroPedidos';
+import { CalendarioPedidos } from './CalendarioPedidos';
 
 const ABAS: { id: AbaPedidos; rotulo: string }[] = [
   { id: 'lista', rotulo: 'Todos os pedidos' },
   { id: 'quadro', rotulo: 'Quadro' },
+  { id: 'calendario', rotulo: 'Calendário' },
   { id: 'detalhe', rotulo: 'Detalhes' },
 ];
 
@@ -22,7 +24,7 @@ export function Pedidos() {
 
   return (
     <div id="view-pedidos" className="view-cadastro" style={{ display: tela === 'pedidos' ? 'block' : 'none' }}>
-      <div className={`orc-wrap${abaPedidos === 'quadro' ? ' pedidos-wrap-quadro' : ''}`}>
+      <div className={`orc-wrap${abaPedidos === 'quadro' || abaPedidos === 'calendario' ? ' pedidos-wrap-quadro' : ''}`}>
         <div className="orc-cabecalho">
           <h2 className="carrinho-page-title">Pedidos</h2>
           <p className="carrinho-page-sub">
@@ -51,6 +53,9 @@ export function Pedidos() {
         </div>
         <div style={{ display: abaPedidos === 'quadro' ? 'block' : 'none' }}>
           <QuadroPedidos ativo={tela === 'pedidos' && abaPedidos === 'quadro'} versao={versao} aoAlterar={alterou} />
+        </div>
+        <div style={{ display: abaPedidos === 'calendario' ? 'block' : 'none' }}>
+          <CalendarioPedidos ativo={tela === 'pedidos' && abaPedidos === 'calendario'} versao={versao} />
         </div>
         <div style={{ display: abaPedidos === 'detalhe' ? 'block' : 'none' }}>
           <DetalhePedido />

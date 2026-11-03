@@ -382,3 +382,76 @@
 .pedido-entrega .btn-back, .pedido-entrega .btn-novo { padding: 6px 12px; font-size: .8rem; }
 .pedido-entrega-nota { font-size: .74rem; color: var(--muted); }
 .kanban-entrega { font-size: .72rem; color: var(--grafite); margin-top: 3px; }
+
+/* ── Calendário de pedidos (só consulta) ── */
+.calendario { margin-top: 4px; }
+.cal-barra { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; }
+.cal-modo { display: inline-flex; border: 1.5px solid var(--border); border-radius: var(--radius); overflow: hidden; }
+.cal-modo button { border: 0; background: var(--surface); padding: 7px 16px; font: inherit; font-size: .84rem; color: var(--muted); cursor: pointer; }
+.cal-modo button + button { border-left: 1.5px solid var(--border); }
+.cal-modo button.ativo { background: var(--uva); color: #fff; font-weight: 600; }
+.cal-navegacao { display: flex; align-items: center; gap: 6px; flex-wrap: wrap; }
+.cal-navegacao .btn-back { padding: 7px 12px; }
+.cal-select { width: auto; padding: 7px 10px; }
+.cal-barra .filtro-meus { margin-left: auto; }
+.cal-titulo { display: flex; align-items: baseline; gap: 14px; flex-wrap: wrap; margin: 16px 0 10px; }
+.cal-titulo h3 { font-family: var(--font-display); font-size: 1.5rem; color: var(--berinjela); }
+.cal-resumo { font-size: .82rem; color: var(--muted); }
+.cal-atrasados { color: var(--danger); }
+
+.cal-grade {
+  display: grid; grid-template-columns: repeat(7, minmax(0, 1fr));
+  border: 1px solid var(--border); border-radius: var(--radius-lg); overflow: hidden; background: var(--border);
+  gap: 1px;
+}
+.cal-cabecalho { background: var(--berinjela); color: #fff; font-size: .7rem; font-weight: 600; letter-spacing: 1px; text-transform: uppercase; text-align: center; padding: 8px 4px; }
+.cal-dia { background: var(--surface); padding: 6px; display: flex; flex-direction: column; gap: 4px; min-width: 0; }
+.cal-mes .cal-dia { min-height: clamp(84px, calc((100vh - 380px) / 6), 150px); }
+.cal-semana .cal-dia { min-height: clamp(220px, calc(100vh - 360px), 640px); }
+.cal-dia.fora { background: #FAF8F4; }
+.cal-dia.fora .cal-dia-num { color: var(--border2); }
+.cal-dia.passado:not(.hoje) { background: #FBFAF7; }
+.cal-dia.hoje { box-shadow: inset 0 0 0 2px var(--uva); }
+.cal-dia-num { font-size: .78rem; font-weight: 600; color: var(--grafite); display: flex; align-items: center; gap: 2px; }
+.cal-dia.hoje .cal-dia-num { color: var(--uva); }
+.cal-dia-semana, .cal-dia-mes { display: none; }
+.cal-dia-qtd { margin-left: auto; font-size: .66rem; font-weight: 600; background: var(--creme2); color: var(--muted); border-radius: 10px; padding: 1px 7px; }
+.cal-dia-cartoes { display: flex; flex-direction: column; gap: 4px; min-width: 0; }
+.cal-mais { border: 0; background: none; font: inherit; font-size: .74rem; font-weight: 600; color: var(--uva); cursor: pointer; text-align: left; padding: 2px 4px; }
+
+.cal-cartao {
+  display: flex; flex-direction: column; align-items: flex-start; gap: 2px; width: 100%; min-width: 0;
+  text-align: left; font: inherit; cursor: pointer;
+  background: var(--st-fundo, var(--creme)); border: 1px solid var(--st-borda, var(--border));
+  border-left: 3px solid var(--st-texto, var(--uva)); border-radius: 6px; padding: 4px 7px;
+}
+.cal-cartao:hover { box-shadow: var(--shadow-sm); }
+.cal-cartao.s-ENCERRADO { color: #fff; }
+.cal-cartao.s-CANCELADO { opacity: .6; }
+.cal-cartao.s-CANCELADO .cal-cartao-codigo { text-decoration: line-through; }
+.cal-cartao.atrasado { border-left-color: var(--danger); }
+.cal-cartao-topo { display: flex; align-items: center; justify-content: space-between; gap: 2px 4px; width: 100%; flex-wrap: wrap; }
+.cal-cartao-codigo { font-size: .76rem; font-weight: 700; color: var(--berinjela); white-space: nowrap; }
+.cal-cartao-atraso { font-size: .6rem; font-weight: 700; text-transform: uppercase; color: var(--danger); }
+.cal-cartao-cliente { font-size: .74rem; color: var(--grafite); width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.cal-cartao .tag-pedido { font-size: .58rem; padding: 1px 6px; background: var(--surface) !important; }
+
+.cal-sem-data { margin-top: 22px; }
+.cal-sem-data .pedido-secao { display: flex; align-items: center; gap: 8px; }
+.cal-sem-data .cal-dia-qtd { margin-left: 0; }
+.cal-sem-data-lista { display: grid; grid-template-columns: repeat(auto-fill, minmax(170px, 1fr)); gap: 8px; margin-top: 8px; }
+
+/* Telas estreitas: vira agenda (só os dias com pedidos, um embaixo do outro) */
+@media (max-width: 900px) {
+  .cal-grade { grid-template-columns: 1fr; background: none; border: 0; gap: 8px; }
+  .cal-cabecalho, .cal-dia.vazio { display: none; }
+  .cal-dia { border: 1px solid var(--border); border-radius: var(--radius); min-height: 0 !important; }
+  .cal-dia-semana, .cal-dia-mes { display: inline; }
+  .cal-dia-cartoes { display: grid; grid-template-columns: repeat(auto-fill, minmax(160px, 1fr)); }
+  .cal-barra .filtro-meus { margin-left: 0; }
+}
+@media (max-width: 900px) {
+  /* Abas com muitas opções: rolam na horizontal em vez de cortar */
+  .subabas { overflow-x: auto; scrollbar-width: none; }
+  .subaba { white-space: nowrap; flex-shrink: 0; }
+}
