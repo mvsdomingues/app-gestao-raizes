@@ -315,3 +315,7 @@ table.orc-table { width: 100%; border-collapse: collapse; margin-bottom: 28px; f
   margin: 0;
 }
 
+
+/* Data prevista de entrega na folha do orçamento */
+.orc-entrega { font-size: .78rem; color: var(--grafite); margin-top: 6px; }
+.orc-entrega b { color: var(--berinjela); }

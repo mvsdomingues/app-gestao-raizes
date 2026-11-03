@@ -283,6 +283,9 @@ function migrarColunas(db: Database.Database): void {
   if (!colunas(db, 'kommo_notas').includes('orcamento_id')) {
     db.exec(`ALTER TABLE kommo_notas ADD COLUMN orcamento_id INTEGER`);
   }
+  // Data prevista de entrega: no orçamento e copiada para o pedido (alterável na etapa Criado)
+  if (!colunas(db, 'orcamentos').includes('entrega_prevista')) db.exec('ALTER TABLE orcamentos ADD COLUMN entrega_prevista TEXT');
+  if (!colunas(db, 'pedidos').includes('entrega_prevista')) db.exec('ALTER TABLE pedidos ADD COLUMN entrega_prevista TEXT');
   // Observação única do pedido (versão anterior) vira a primeira linha do histórico
   db.exec(`
     INSERT INTO pedidos_observacoes (pedido_id, texto, data_hora, usuario_id, origem)

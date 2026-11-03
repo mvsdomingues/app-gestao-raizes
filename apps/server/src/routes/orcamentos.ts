@@ -1,6 +1,7 @@
 import { Router, type Request } from 'express';
 import {
   isStatusOrcamento,
+  dataValida,
   isStatusOrcamentoManual,
   motivoBloqueioAlteracao,
   numeroOrcamento,
@@ -68,7 +69,8 @@ export function lerOrcamento(db: Banco, id: number, base = ''): Orcamento | unde
   const row = db
     .prepare(
       `SELECT orcamentos.id, orcamentos.data_hora, orcamentos.subtotal, orcamentos.frete, orcamentos.total,
-              orcamentos.qtd_itens, orcamentos.itens_json, orcamentos.observacao, ${SQL_STATUS_ORCAMENTO} AS status,
+              orcamentos.qtd_itens, orcamentos.itens_json, orcamentos.observacao, orcamentos.entrega_prevista,
+              ${SQL_STATUS_ORCAMENTO} AS status,
               ${COLUNAS_CLIENTE}, ${COLUNAS_LINK},
               ${colunasResponsavel('ur', 'resp')}, ${colunasResponsavel('ua', 'alt')}
          FROM orcamentos ${JOIN_RESPONSAVEIS} WHERE orcamentos.id = ?`,
@@ -179,7 +181,7 @@ export function rotasOrcamentos(db: Banco, opcoes: OpcoesOrcamentos = {}): Route
     const rows = db
       .prepare(
         `SELECT orcamentos.id, orcamentos.data_hora, orcamentos.subtotal, orcamentos.frete, orcamentos.total,
-                orcamentos.qtd_itens, ${SQL_STATUS_ORCAMENTO} AS status,
+                orcamentos.qtd_itens, orcamentos.entrega_prevista, ${SQL_STATUS_ORCAMENTO} AS status,
                 (${SQL_PEDIDO_ATIVO.replace('{campo}', 'codigo')}) AS pedido_codigo,
                 (${SQL_PEDIDO_ATIVO.replace('{campo}', 'status')}) AS pedido_status,
                 ${COLUNAS_CLIENTE}, orcamentos.resposta,
@@ -221,10 +223,15 @@ export function rotasOrcamentos(db: Banco, opcoes: OpcoesOrcamentos = {}): Route
     observacao: string | null;
     /** undefined = não informado; null = sem cliente */
     clienteId: number | null | undefined;
+    /** undefined = não informada (mantém); null = sem data */
+    entrega: string | null | undefined;
   } {
     const data = corpoJson(req);
     const itens = data.itens ?? [];
     if (!Array.isArray(itens) || itens.length === 0) throw new ErroHttp(400, 'itens vazio');
+    const e = data.entrega_prevista;
+    const entrega = e === undefined ? undefined : e === null || e === '' ? null : dataValida(e) ? e : false;
+    if (entrega === false) throw new ErroHttp(400, 'Data prevista de entrega inválida (use AAAA-MM-DD)');
     try {
       const num = (v: unknown) => (falsyPython(v) ? 0 : floatPython(v));
       const obs = typeof data.observacao === 'string' ? data.observacao.trim().slice(0, 2000) : '';
@@ -239,6 +246,7 @@ export function rotasOrcamentos(db: Banco, opcoes: OpcoesOrcamentos = {}): Route
         total: num(data.total),
         observacao: obs || null,
         clienteId,
+        entrega,
       };
     } catch {
       throw new ErroHttp(400, 'valores inválidos');
@@ -263,16 +271,16 @@ export function rotasOrcamentos(db: Banco, opcoes: OpcoesOrcamentos = {}): Route
 
   r.post('/api/orcamentos', (req, res) => {
     const eu = exigirUsuario(res);
-    const { itens, subtotal, frete, total, observacao, clienteId } = lerCorpo(req);
+    const { itens, subtotal, frete, total, observacao, clienteId, entrega } = lerCorpo(req);
     const [cid, cnome, ctel] = dadosDoCliente(clienteId);
     const dataHora = isoLocal();
     const info = db
       .prepare(
         `INSERT INTO orcamentos (data_hora, subtotal, frete, total, qtd_itens, itens_json, usuario_id, observacao,
-                                 cliente_kommo_id, cliente_nome, cliente_telefone)
-         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+                                 cliente_kommo_id, cliente_nome, cliente_telefone, entrega_prevista)
+         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
       )
-      .run(dataHora, subtotal, frete, total, itens.length, JSON.stringify(itens), eu.id, observacao, cid, cnome, ctel);
+      .run(dataHora, subtotal, frete, total, itens.length, JSON.stringify(itens), eu.id, observacao, cid, cnome, ctel, entrega ?? null);
     const id = Number(info.lastInsertRowid);
     registrarMovimentoOrcamento(db, id, null, 'ABERTO', eu.id, null, dataHora);
     const corpo: OrcamentoCriado = { id, numero: numeroOrcamento(id), data_hora: dataHora };
@@ -283,7 +291,7 @@ export function rotasOrcamentos(db: Banco, opcoes: OpcoesOrcamentos = {}): Route
   r.put('/api/orcamentos/:oid', (req, res, next) => {
     if (!/^\d+$/.test(req.params.oid)) return next();
     const id = Number(req.params.oid);
-    const { itens, subtotal, frete, total, observacao, clienteId } = lerCorpo(req);
+    const { itens, subtotal, frete, total, observacao, clienteId, entrega } = lerCorpo(req);
     // Só orçamento "Aberto" pode ser alterado (enviado: voltar para Aberto antes; com pedido: nunca)
     if (!db.prepare('SELECT 1 FROM orcamentos WHERE id = ?').get(id)) throw new ErroHttp(404, 'não encontrado');
     const situacao = statusDoOrcamento(db, id);
@@ -291,8 +299,13 @@ export function rotasOrcamentos(db: Banco, opcoes: OpcoesOrcamentos = {}): Route
     if (bloqueio) throw new ErroHttp(409, bloqueio);
     const eu = exigirUsuario(res);
     const atual = db
-      .prepare('SELECT cliente_kommo_id, cliente_nome, cliente_telefone FROM orcamentos WHERE id = ?')
-      .get(id) as { cliente_kommo_id: number | null; cliente_nome: string | null; cliente_telefone: string | null };
+      .prepare('SELECT cliente_kommo_id, cliente_nome, cliente_telefone, entrega_prevista FROM orcamentos WHERE id = ?')
+      .get(id) as {
+      cliente_kommo_id: number | null;
+      cliente_nome: string | null;
+      cliente_telefone: string | null;
+      entrega_prevista: string | null;
+    };
     // Cliente não informado = mantém o atual
     const [cid, cnome, ctel] =
       clienteId === undefined ? [atual.cliente_kommo_id, atual.cliente_nome, atual.cliente_telefone] : dadosDoCliente(clienteId, atual);
@@ -300,9 +313,24 @@ export function rotasOrcamentos(db: Banco, opcoes: OpcoesOrcamentos = {}): Route
     const info = db
       .prepare(
         `UPDATE orcamentos SET data_hora = ?, subtotal = ?, frete = ?, total = ?, qtd_itens = ?, itens_json = ?,
-                alterado_por = ?, observacao = ?, cliente_kommo_id = ?, cliente_nome = ?, cliente_telefone = ? WHERE id = ?`,
+                alterado_por = ?, observacao = ?, cliente_kommo_id = ?, cliente_nome = ?, cliente_telefone = ?,
+                entrega_prevista = ? WHERE id = ?`,
       )
-      .run(dataHora, subtotal, frete, total, itens.length, JSON.stringify(itens), eu.id, observacao, cid, cnome, ctel, id);
+      .run(
+        dataHora,
+        subtotal,
+        frete,
+        total,
+        itens.length,
+        JSON.stringify(itens),
+        eu.id,
+        observacao,
+        cid,
+        cnome,
+        ctel,
+        entrega === undefined ? atual.entrega_prevista : entrega,
+        id,
+      );
     if (!info.changes) throw new ErroHttp(404, 'não encontrado');
     const corpo: OrcamentoCriado = { id, numero: numeroOrcamento(id), data_hora: dataHora };
     res.json(corpo);

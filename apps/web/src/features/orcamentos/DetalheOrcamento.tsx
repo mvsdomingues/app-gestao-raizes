@@ -273,7 +273,7 @@ export function DetalheOrcamento() {
 
       <div className="orcamento-sheet-full" id="orcamento-sheet">
         {folha ? (
-          <FolhaOrcamento folha={{ ...folha, cliente }} />
+          <FolhaOrcamento folha={{ ...folha, cliente, entregaPrevista: info ? (info.entrega_prevista ?? null) : folha.entregaPrevista }} />
         ) : (
           <div className="orc-empty-state">
             <div className="orc-empty-icon">📄</div>

@@ -140,6 +140,7 @@ O menu fica na **barra lateral** (pode ser recolhido para mostrar só os ícones
    - Cada mudança de situação fica no histórico (data, hora e usuário), visível nos detalhes junto com as etapas.
    - Só orçamento **Aberto** pode ser alterado. Se estiver **Enviado**, o sistema avisa que ele precisa voltar para Aberto antes (botão *↩ Voltar para aberto* nos detalhes); com **pedido gerado**, nunca. O botão **📦 Gerar pedido** vale para Aberto e Enviado.
 
+   - **Previsão de entrega**: campo de data no resumo do carrinho, gravado com o orçamento. Aparece na folha (impressa e na página do cliente) e passa para o pedido.
    - **Cliente** (com a integração do Kommo ligada): veja *Clientes do Kommo* abaixo.
    - **Cancelado**: *✕ Cancelar orçamento* (Aberto ou Enviado, sempre com motivo) ou recusa do cliente pelo link. Cancelado não é alterado nem vira pedido; *↺ Reabrir* volta para Aberto. Orçamento com pedido ativo não é cancelado (cancela-se o pedido).
    - **Link para o cliente**: veja *Link do orçamento* abaixo.
@@ -150,6 +151,7 @@ O menu fica na **barra lateral** (pode ser recolhido para mostrar só os ícones
    - Fluxo: **Criado → Em Fechamento → Em Produção → Produzido → Faturado → Enviado → Encerrado**. O botão de ação (na lista ou nos detalhes) move o pedido para a etapa seguinte, e cada movimentação grava a data e a hora (base para controle de SLA).
    - **Todos os pedidos**: lista paginada com tag da etapa e filtros por código, orçamento, situação (incluindo *Em andamento*) e período.
    - **Quadro**: kanban com uma coluna por etapa, nas mesmas cores das tags. Cada coluna mostra até 20 pedidos pela data/hora em que entraram na etapa (os que estão há mais tempo primeiro; em *Encerrado*, os mais recentes) e o total da etapa. O cartão pode ser arrastado, ou movido pelos botões ‹ ›, **apenas para a etapa anterior ou a próxima**; voltar uma etapa também fica registrado nas movimentações. Pedidos cancelados não aparecem no quadro.
+   - **Entrega prevista**: vem do orçamento e aparece nos detalhes, na lista, no cartão do Quadro e na folha do pedido. Pode ser alterada (ou informada) só com o pedido na etapa **Criado**; cada mudança grava uma observação no histórico ("Data prevista de entrega alterada de … para …").
    - **Checklist de fechamento**: ao entrar em **Em Fechamento**, o pedido recebe a lista cadastrada em *Parâmetros › Checklist de fechamento*; nos detalhes, cada item é marcado com caixa de seleção (grava data, hora e usuário). Só pode ser alterado nessa etapa (nas outras, fica visível só para consulta) e não trava o fluxo: o pedido avança com itens em aberto. Mudanças no cadastro valem para os próximos pedidos. O cartão do Quadro mostra o progresso (ex.: ☑ 2/3).
    - **Observações** do pedido: histórico em linha do tempo (a mais recente no topo), com data, hora e autor de cada registro. Novas observações são **incluídas** a qualquer momento, em qualquer situação (inclusive encerrado ou cancelado), sem alterar o fluxo; as já registradas não são editadas nem apagadas. A observação dada ao gerar o pedido (ou pelo cliente, ao aceitar pelo link) é o primeiro registro.
    - **Detalhes**: etapas com data/hora, tempo total, histórico de movimentações com o tempo em cada etapa e os itens do orçamento.
@@ -219,7 +221,7 @@ Todas as rotas exigem login, exceto as de `/api/auth`. Cada rota também exige a
 | `PUT /api/pedidos/:codigo/checklist/:item` | Marca/desmarca um item (`{ feito }`; só na etapa Em Fechamento) |
 | `GET/PUT /api/parametros/sistema` | Parâmetros de sistema (`{ kommo_notas_ativo }`) |
 | `GET /api/orcamentos` | Lista paginada (`numero`, `produto`, `de`, `ate`, `min`, `max`, `status`, `pedido=com\|sem`, `meus=1`, `cliente`, `limit`, `offset`) → `{ total, orcamentos }` (cada um com `pedido` ativo ou `null`) |
-| `POST /api/orcamentos` · `GET/PUT /api/orcamentos/:id` | Grava, consulta (com `status`, `movimentos` e `cliente`) e altera (PUT mantém o número; 409 se não estiver Aberto). `cliente_kommo_id` vincula o cliente (400 se não estiver na base; ausente no PUT = mantém) |
+| `POST /api/orcamentos` · `GET/PUT /api/orcamentos/:id` | Grava, consulta (com `status`, `movimentos` e `cliente`) e altera (PUT mantém o número; 409 se não estiver Aberto). `entrega_prevista` (AAAA-MM-DD) grava a previsão de entrega; `cliente_kommo_id` vincula o cliente (400 se não estiver na base; ausente no PUT = mantém) |
 | `POST /api/orcamentos/:id/status` | Situação manual `{ status: 'ABERTO' \| 'ENVIADO' \| 'CANCELADO', status_atual, motivo? }` (Cancelado exige motivo; Aberto a partir de Cancelado = reabrir) (409 com pedido gerado ou, com o Kommo ligado, ao enviar sem cliente) |
 | `POST /api/orcamentos/:id/link` | Gera um novo link do cliente (o anterior deixa de funcionar) |
 | `GET /api/publico/orcamentos/:codigo` | **Sem login** · orçamento para a página do cliente (sem custos nem fornecedor) |
@@ -235,5 +237,6 @@ Todas as rotas exigem login, exceto as de `/api/auth`. Cada rota também exige a
 | `GET /api/pedidos/quadro` | Quadro por etapa (`limite`, padrão 20; `meus=1`) → `{ limite, colunas: [{ status, total, pedidos }] }` |
 | `POST /api/pedidos/:codigo/avancar` · `POST /api/pedidos/:codigo/retroceder` | Próxima / etapa anterior (`{ status_atual }`, 409 se o pedido já mudou) |
 | `POST /api/pedidos/:codigo/cancelar` | Cancela (`{ motivo }`) |
+| `PUT /api/pedidos/:codigo/entrega` | Data prevista de entrega (`{ entrega_prevista: 'AAAA-MM-DD' \| null }`; só na etapa Criado, registra observação) |
 | `POST /api/pedidos/:codigo/observacoes` | Inclui uma observação no histórico (`{ texto }`), em qualquer situação |
 | `POST /api/atualizar` · `GET /api/atualizar/status` | Atualização dos fornecedores |

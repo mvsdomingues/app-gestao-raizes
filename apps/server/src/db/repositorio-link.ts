@@ -123,6 +123,7 @@ interface LinhaPublica extends LinhaLink {
   frete: number;
   total: number;
   observacao: string | null;
+  entrega_prevista: string | null;
   cliente_nome: string | null;
   cliente_telefone: string | null;
   usuario_id: number | null;
@@ -133,7 +134,7 @@ function porCodigo(db: Banco, codigo: string): LinhaPublica {
   const l = codigoLinkValido(codigo)
     ? (db
         .prepare(
-          `SELECT id, data_hora, itens_json, subtotal, frete, total, observacao, cliente_nome, cliente_telefone, usuario_id,
+          `SELECT id, data_hora, itens_json, subtotal, frete, total, observacao, entrega_prevista, cliente_nome, cliente_telefone, usuario_id,
                   ${COLUNAS_LINK}, ${SQL_STATUS_ORCAMENTO} AS situacao
              FROM orcamentos WHERE link_codigo = ?`,
         )
@@ -191,6 +192,7 @@ export function orcamentoPublico(db: Banco, codigo: string): OrcamentoPublico {
     frete: l.frete,
     total: l.total,
     observacao: l.observacao?.trim() || null,
+    entrega_prevista: l.entrega_prevista,
     pedido,
     resposta:
       l.resposta && l.resposta_em && (situacao === 'ACEITO' || situacao === 'RECUSADO')

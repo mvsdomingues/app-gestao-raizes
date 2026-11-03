@@ -7,6 +7,7 @@ import {
   type CartaoPedido,
   type EtapaPedido,
   type RespostaQuadroPedidos,
+  formatarDataBr,
 } from '@raizes/shared';
 import { useApp } from '../../app/contexto';
 import { Carregando } from '../../components/Carregando';
@@ -224,6 +225,11 @@ export function QuadroPedidos({ ativo, versao, aoAlterar }: Props) {
                       <div className="kanban-ref">
                         {c.orcamento_numero} · {c.qtd_itens} {c.qtd_itens === 1 ? 'item' : 'itens'}
                       </div>
+                      {c.entrega_prevista && (
+                        <div className="kanban-entrega" title="Entrega prevista">
+                          🚚 {formatarDataBr(c.entrega_prevista)}
+                        </div>
+                      )}
                       {c.status === 'EM_FECHAMENTO' && !!c.checklist_total && (
                         <div
                           className={`kanban-checklist${c.checklist_feitos === c.checklist_total ? ' completo' : ''}`}

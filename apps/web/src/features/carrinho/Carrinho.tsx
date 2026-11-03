@@ -12,8 +12,8 @@ import { SeletorCliente } from '../clientes/SeletorCliente';
 export function Carrinho() {
   const { tela, visitas, irPara, mostrarOrcamento, parametros } = useApp();
   const { pode, usuario } = useSessao();
-  const { estado, limpar, redesenhar, definirFrete, definirObservacao, definirCliente } = useCarrinho();
-  const { frete, edicao, observacao, cliente } = estado;
+  const { estado, limpar, redesenhar, definirFrete, definirObservacao, definirCliente, definirEntregaPrevista } = useCarrinho();
+  const { frete, edicao, observacao, cliente, entregaPrevista } = estado;
   const kommo = useConfigClientes();
   const [gerando, setGerando] = useState(false);
 
@@ -64,6 +64,7 @@ export function Carrinho() {
       total: tot,
       observacao: observacao.trim(),
       cliente_kommo_id: cliente?.id ?? null,
+      entrega_prevista: entregaPrevista || null,
     };
     try {
       // Alteração de orçamento salvo: mesmo número, data atualizada
@@ -104,6 +105,7 @@ export function Carrinho() {
       total: tot,
       observacao: observacao.trim() || null,
       cliente,
+      entregaPrevista: entregaPrevista || null,
       // Alteração: o criador original aparece ao reabrir o orçamento pela lista
       ...(edicao ? { alteradoPor: eu } : { responsavel: eu, alteradoPor: null }),
     });
@@ -197,6 +199,20 @@ export function Carrinho() {
                       placeholder="0,00"
                       value={frete}
                       onChange={(e) => definirFrete(e.target.value)}
+                    />
+                  </div>
+                </div>
+                <div className="cart-field-row">
+                  <label className="cart-field-label" htmlFor="campo-entrega">
+                    Previsão de entrega
+                  </label>
+                  <div className="cart-field-input-wrap">
+                    <input
+                      className="cart-field-input cart-field-data"
+                      id="campo-entrega"
+                      type="date"
+                      value={entregaPrevista}
+                      onChange={(e) => definirEntregaPrevista(e.target.value)}
                     />
                   </div>
                 </div>

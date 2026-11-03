@@ -42,6 +42,21 @@ export function podeGerarPedido(status: StatusOrcamento): boolean {
   return status === 'ABERTO' || status === 'ENVIADO';
 }
 
+/** Data no formato AAAA-MM-DD válida no calendário (ex.: rejeita 2026-02-30). */
+export function dataValida(v: unknown): v is string {
+  if (typeof v !== 'string' || !/^\d{4}-\d{2}-\d{2}$/.test(v)) return false;
+  const [a, m, d] = v.split('-').map(Number) as [number, number, number];
+  const dt = new Date(Date.UTC(a, m - 1, d));
+  return dt.getUTCFullYear() === a && dt.getUTCMonth() === m - 1 && dt.getUTCDate() === d;
+}
+
+/** AAAA-MM-DD → DD/MM/AAAA (vazio quando não há data). */
+export function formatarDataBr(v: string | null | undefined): string {
+  if (!v) return '';
+  const m = /^(\d{4})-(\d{2})-(\d{2})/.exec(v);
+  return m ? `${m[3]}/${m[2]}/${m[1]}` : v;
+}
+
 /** Validade do link enviado ao cliente (igual ao texto "Válido por 7 dias" da folha). */
 export const DIAS_VALIDADE_LINK = 7;
 
@@ -94,6 +109,8 @@ export interface OrcamentoPublico {
   frete: number;
   total: number;
   observacao: string | null;
+  /** Data prevista de entrega (AAAA-MM-DD) */
+  entrega_prevista: string | null;
   /** Aceite: código do pedido gerado */
   pedido: string | null;
   resposta: { resposta: RespostaCliente; em: string; observacao: string | null } | null;

@@ -1,4 +1,4 @@
-import { formatarTelefone, formatBRL, type ItemOrcamento } from '@raizes/shared';
+import { formatarDataBr, formatarTelefone, formatBRL, type ItemOrcamento } from '@raizes/shared';
 import type { FolhaOrcamento as DadosFolha } from '../../app/contexto';
 import { ImagemProduto } from '../../components/ImagemProduto';
 import { classeFornecedor } from '../../lib/fornecedor';
@@ -6,7 +6,7 @@ import { classeFornecedor } from '../../lib/fornecedor';
 const cinza = { fontSize: '.82rem', color: '#7A7167' } as const;
 
 /** Dados da folha: os do orçamento interno ou os da página do cliente (sem custos nem fornecedor). */
-export type DadosFolhaOrcamento = Pick<DadosFolha, 'id' | 'numero' | 'dataHora' | 'subtotal' | 'frete' | 'total' | 'observacao' | 'cliente'> & {
+export type DadosFolhaOrcamento = Pick<DadosFolha, 'id' | 'numero' | 'dataHora' | 'subtotal' | 'frete' | 'total' | 'observacao' | 'cliente' | 'entregaPrevista'> & {
   itens: (Pick<ItemOrcamento, 'nome' | 'codigo' | 'qty' | 'preco' | 'imagem_url'> &
     Partial<Pick<ItemOrcamento, 'fornecedor' | 'origem'>> & { observacao?: string | null })[];
 };
@@ -52,6 +52,11 @@ export function FolhaOrcamento({
           <div className="orc-date">
             {itens.length} produto{itens.length > 1 ? 's' : ''}
           </div>
+          {folha.entregaPrevista && (
+            <div className="orc-entrega">
+              Entrega prevista: <b>{formatarDataBr(folha.entregaPrevista)}</b>
+            </div>
+          )}
         </div>
       </div>
 

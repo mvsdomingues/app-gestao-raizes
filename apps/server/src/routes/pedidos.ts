@@ -1,6 +1,7 @@
 import { Router } from 'express';
 import {
   numeroOrcamento,
+  dataValida,
   type FiltrosPedidos,
   type Pedido,
   type RespostaPedidos,
@@ -9,6 +10,7 @@ import {
 import type { Banco } from '../db/conexao';
 import {
   adicionarObservacaoPedido,
+  alterarEntregaPedido,
   avancarPedido,
   buscarPedido,
   cancelarPedido,
@@ -110,6 +112,15 @@ export function rotasPedidos(db: Banco, kommo: ServicoKommo | null = null): Rout
   });
 
   /** Observação do pedido: editável em qualquer situação */
+  /** Data prevista de entrega: { entrega_prevista: 'AAAA-MM-DD' | null } (só na etapa Criado). */
+  r.put('/api/pedidos/:codigo/entrega', (req, res) => {
+    const v = corpoJson(req).entrega_prevista;
+    const data = v === null || v === '' ? null : dataValida(v) ? v : undefined;
+    if (data === undefined) throw new ErroHttp(400, 'Data prevista de entrega inválida (use AAAA-MM-DD)');
+    alterarEntregaPedido(db, String(req.params.codigo), data, exigirUsuario(res).id);
+    res.json(detalhe(String(req.params.codigo)));
+  });
+
   /** Inclui uma observação no histórico (qualquer situação): { texto } */
   r.post('/api/pedidos/:codigo/observacoes', (req, res) => {
     const texto = textoOpcional(corpoJson(req).texto, 2000);

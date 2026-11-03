@@ -15,6 +15,8 @@ import {
   type OrigemMovimento,
   type ObservacaoPedido,
   ETAPA_CHECKLIST,
+  ETAPA_ALTERA_ENTREGA,
+  formatarDataBr,
 } from '@raizes/shared';
 import { ErroHttp } from '../lib/http';
 import { registrarMovimentoOrcamento } from './repositorio-orcamentos';
@@ -33,10 +35,11 @@ interface LinhaPedido {
   qtd_itens: number;
   criado: string;
   atualizado: string;
+  entrega_prevista: string | null;
 }
 
 const SELECT_PEDIDO = `
-  SELECT p.id, p.codigo, p.status, p.orcamento_id, p.observacao, p.criado, p.atualizado,
+  SELECT p.id, p.codigo, p.status, p.orcamento_id, p.observacao, p.criado, p.atualizado, p.entrega_prevista,
          o.total, o.qtd_itens, o.cliente_kommo_id, o.cliente_nome, o.cliente_telefone,
          (SELECT COUNT(*) FROM pedidos_checklist c WHERE c.pedido_id = p.id) AS checklist_total,
          (SELECT COUNT(*) FROM pedidos_checklist c WHERE c.pedido_id = p.id AND c.feito = 1) AS checklist_feitos,
@@ -204,7 +207,9 @@ export function criarPedido(
   // Movimentação feita pelo cliente não tem usuário
   const quemMovimenta = origem === 'CLIENTE' ? null : usuarioId;
   return db.transaction(() => {
-    const existe = db.prepare('SELECT status FROM orcamentos WHERE id = ?').get(orcamentoId) as { status: string } | undefined;
+    const existe = db.prepare('SELECT status, entrega_prevista FROM orcamentos WHERE id = ?').get(orcamentoId) as
+      | { status: string; entrega_prevista: string | null }
+      | undefined;
     if (!existe) throw new ErroHttp(404, `Orçamento ${numeroOrcamento(orcamentoId)} não encontrado`);
     const ativo = pedidoAtivoDoOrcamento(db, orcamentoId);
     if (ativo) {
@@ -221,9 +226,9 @@ export function criarPedido(
     const codigo = codigoPedido(id);
     const agora = isoLocal();
     db.prepare(
-      `INSERT INTO pedidos (id, codigo, orcamento_id, status, observacao, criado, atualizado, usuario_id)
-       VALUES (?, ?, ?, 'CRIADO', ?, ?, ?, ?)`,
-    ).run(id, codigo, orcamentoId, observacao, agora, agora, usuarioId);
+      `INSERT INTO pedidos (id, codigo, orcamento_id, status, observacao, criado, atualizado, usuario_id, entrega_prevista)
+       VALUES (?, ?, ?, 'CRIADO', ?, ?, ?, ?, ?)`,
+    ).run(id, codigo, orcamentoId, observacao, agora, agora, usuarioId, existe.entrega_prevista);
     registrarMovimento(db, id, null, 'CRIADO', agora, opcoes.observacaoMovimento ?? observacao, quemMovimenta, origem);
     if (observacao) inserirObservacao(db, id, observacao, agora, quemMovimenta, origem);
     // Situação do orçamento passa a "Pedido gerado"
@@ -317,6 +322,28 @@ export function observacoesDoPedido(db: Banco, pedidoId: number): ObservacaoPedi
       )
       .all(pedidoId) as Record<string, unknown>[]
   ).map((o) => ({ ...(o as unknown as ObservacaoPedido), usuario: extrairResponsavel(o, 'usr') }));
+}
+
+/**
+ * Altera a data prevista de entrega (só na etapa Criado) e registra a mudança
+ * no histórico de observações. Devolve false quando a data não mudou.
+ */
+export function alterarEntregaPedido(db: Banco, codigo: string, data: string | null, usuarioId: number): boolean {
+  return db.transaction(() => {
+    const p = db.prepare('SELECT id, status, entrega_prevista FROM pedidos WHERE codigo = ? COLLATE NOCASE').get(codigo) as
+      | { id: number; status: StatusPedido; entrega_prevista: string | null }
+      | undefined;
+    if (!p) throw new ErroHttp(404, 'Pedido não encontrado');
+    if (p.status !== ETAPA_ALTERA_ENTREGA) {
+      throw new ErroHttp(409, 'A data de entrega só pode ser alterada com o pedido na etapa "Criado".');
+    }
+    if ((p.entrega_prevista ?? null) === data) return false;
+    db.prepare('UPDATE pedidos SET entrega_prevista = ? WHERE id = ?').run(data, p.id);
+    const de = p.entrega_prevista ? formatarDataBr(p.entrega_prevista) : 'sem data';
+    const para = data ? formatarDataBr(data) : 'sem data';
+    inserirObservacao(db, p.id, `Data prevista de entrega alterada de ${de} para ${para}.`, isoLocal(), usuarioId);
+    return true;
+  })();
 }
 
 /**

@@ -109,6 +109,7 @@ export function PaginaPublica() {
             frete: o.frete,
             total: o.total,
             observacao: o.observacao,
+            entregaPrevista: o.entrega_prevista,
             cliente: o.cliente ? { id: 0, nome: o.cliente.nome, telefone: o.cliente.telefone } : null,
             itens: o.itens.map((i) => ({ ...i, imagem_url: i.imagem ?? '' })),
           }}

@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useRef, useState, type FormEvent } from 'react';
 import {
+  formatarDataBr,
   formatBRL,
   FLUXO_PEDIDO,
   proximoStatus,
@@ -210,6 +211,7 @@ export function ListaPedidos({ versao, aoAlterar }: Props) {
               <th style={{ width: 130 }}>Pedido</th>
               <th style={{ width: 110 }}>Orçamento</th>
               <th>Criado em</th>
+              <th style={{ width: 110 }}>Entrega</th>
               {kommo.ativo && <th>Cliente</th>}
               <th style={{ width: 150 }}>Responsável</th>
               <th className="num" style={{ width: 70 }}>
@@ -232,6 +234,7 @@ export function ListaPedidos({ versao, aoAlterar }: Props) {
                   </td>
                   <td className="pedido-ref-orc">{p.orcamento_numero}</td>
                   <td>{formatarDataHora(p.criado)}</td>
+                  <td>{p.entrega_prevista ? formatarDataBr(p.entrega_prevista) : '—'}</td>
                   {kommo.ativo && (
                     <td className="col-cliente">
                       <ClienteVinculado cliente={p.cliente} link={false} />

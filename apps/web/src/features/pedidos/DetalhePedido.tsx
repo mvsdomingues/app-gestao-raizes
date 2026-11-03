@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { formatBRL, FLUXO_PEDIDO, podeCancelar, proximoStatus, ROTULOS_STATUS_PEDIDO, type Pedido, type StatusPedido } from '@raizes/shared';
+import { ETAPA_ALTERA_ENTREGA, formatarDataBr, formatBRL, FLUXO_PEDIDO, podeCancelar, proximoStatus, ROTULOS_STATUS_PEDIDO, type Pedido, type StatusPedido } from '@raizes/shared';
 import { useApp } from '../../app/contexto';
 import { NomeUsuario } from '../../components/NomeUsuario';
 import { useSessao } from '../../app/sessao';
@@ -68,6 +68,7 @@ export function DetalhePedido() {
       responsavel: p.orcamento.responsavel ?? null,
       alteradoPor: p.orcamento.alterado_por ?? null,
       cliente: p.orcamento.cliente ?? null,
+      entregaPrevista: p.orcamento.entrega_prevista ?? null,
     });
 
   return (
@@ -119,6 +120,7 @@ export function DetalhePedido() {
             <div className="pedido-total">{formatBRL(p.total)}</div>
           </div>
         </div>
+        <EntregaPedido pedido={p} aoSalvar={atualizarPedidoAberto} />
         <div className="pedido-cliente" id="pedido-cliente">
           <span>Cliente:</span> <ClienteVinculado cliente={p.cliente} vazio="sem cliente vinculado" />
         </div>
@@ -203,6 +205,7 @@ export function DetalhePedido() {
             total: p.orcamento.total,
             observacao: p.orcamento.observacao ?? null,
             cliente: p.cliente,
+            entregaPrevista: p.entrega_prevista,
           }}
         />
       </div>
@@ -280,6 +283,81 @@ function ObservacoesPedido({ pedido, aoSalvar }: { pedido: Pedido; aoSalvar: (p:
             </li>
           ))}
         </ol>
+      )}
+    </div>
+  );
+}
+
+/** Data prevista de entrega: alterável só na etapa Criado; cada mudança vira uma observação. */
+function EntregaPedido({ pedido: p, aoSalvar }: { pedido: Pedido; aoSalvar: (p: Pedido) => void }) {
+  const [editando, setEditando] = useState(false);
+  const [data, setData] = useState('');
+  const [salvando, setSalvando] = useState(false);
+  const podeAlterar = p.status === ETAPA_ALTERA_ENTREGA;
+
+  // Trocar de pedido (ou de etapa) fecha a edição
+  useEffect(() => setEditando(false), [p.codigo, p.status]);
+
+  const salvar = async () => {
+    setSalvando(true);
+    try {
+      aoSalvar(await api.alterarEntregaPedido(p.codigo, data || null));
+      setEditando(false);
+    } catch (e) {
+      void erroDe('Não foi possível alterar a data de entrega.', e);
+    } finally {
+      setSalvando(false);
+    }
+  };
+
+  return (
+    <div className="pedido-entrega" id="pedido-entrega">
+      <span>Entrega prevista:</span>{' '}
+      {editando ? (
+        <>
+          <input
+            type="date"
+            className="custom-input pedido-entrega-input"
+            id="pedido-entrega-data"
+            value={data}
+            autoFocus
+            onChange={(e) => setData(e.target.value)}
+            onKeyDown={(e) => {
+              if (e.key === 'Escape') setEditando(false);
+              if (e.key === 'Enter') void salvar();
+            }}
+          />
+          <button className="btn-back" onClick={() => setEditando(false)} disabled={salvando}>
+            Cancelar
+          </button>
+          <button className="btn-novo" id="btn-salvar-entrega" onClick={() => void salvar()} disabled={salvando}>
+            {salvando ? 'Salvando…' : 'Salvar data'}
+          </button>
+        </>
+      ) : (
+        <>
+          {p.entrega_prevista ? (
+            <b id="pedido-entrega-valor">{formatarDataBr(p.entrega_prevista)}</b>
+          ) : (
+            <i className="pedido-obs-vazia">não informada</i>
+          )}
+          {podeAlterar ? (
+            <button
+              className="link-botao pedido-obs-editar"
+              id="btn-alterar-entrega"
+              onClick={() => {
+                setData(p.entrega_prevista ?? '');
+                setEditando(true);
+              }}
+            >
+              ✎ {p.entrega_prevista ? 'Alterar' : 'Informar'}
+            </button>
+          ) : (
+            <span className="pedido-entrega-nota" title="A data só pode ser alterada com o pedido na etapa Criado">
+              (alterável só na etapa Criado)
+            </span>
+          )}
+        </>
       )}
     </div>
   );

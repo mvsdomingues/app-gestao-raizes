@@ -139,6 +139,7 @@ export function ListaOrcamentos() {
         responsavel: o.responsavel ?? null,
         alteradoPor: o.alterado_por ?? null,
         cliente: o.cliente ?? null,
+        entregaPrevista: o.entrega_prevista ?? null,
       });
     } catch (e) {
       console.error(e);

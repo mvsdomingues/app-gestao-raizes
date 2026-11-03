@@ -374,3 +374,11 @@
 .pedido-obs-linha .pedido-obs-texto { margin-top: 2px; font-size: .9rem; white-space: pre-wrap; overflow-wrap: anywhere; }
 @media (max-width: 640px) { .pedido-obs-nova { flex-direction: column; align-items: stretch; } }
 @media print { .pedido-obs-nova { display: none; } .pedido-observacoes { break-inside: avoid; } }
+
+/* ── Data prevista de entrega ── */
+.pedido-entrega { margin-top: 12px; font-size: .88rem; display: flex; align-items: center; gap: 6px; flex-wrap: wrap; }
+.pedido-entrega > span:first-child { font-weight: 600; color: var(--muted); }
+.pedido-entrega-input { width: auto; padding: 5px 8px; }
+.pedido-entrega .btn-back, .pedido-entrega .btn-novo { padding: 6px 12px; font-size: .8rem; }
+.pedido-entrega-nota { font-size: .74rem; color: var(--muted); }
+.kanban-entrega { font-size: .72rem; color: var(--grafite); margin-top: 3px; }

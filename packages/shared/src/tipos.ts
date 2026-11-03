@@ -73,6 +73,8 @@ export interface ResumoOrcamento {
   cliente?: import('./clientes').ClienteVinculado | null;
   /** Resposta do cliente pelo link (null = sem resposta) */
   resposta?: import('./orcamentos').RespostaCliente | null;
+  /** Data prevista de entrega (AAAA-MM-DD; null = não informada) */
+  entrega_prevista?: string | null;
   /** O cliente já abriu o link */
   visto?: boolean;
 }
@@ -126,6 +128,8 @@ export interface NovoOrcamento {
   observacao?: string;
   /** Código do contato do Kommo (null = sem cliente) */
   cliente_kommo_id?: number | null;
+  /** Data prevista de entrega (AAAA-MM-DD); null/vazio = sem data */
+  entrega_prevista?: string | null;
 }
 
 /** Resposta de POST /api/orcamentos */

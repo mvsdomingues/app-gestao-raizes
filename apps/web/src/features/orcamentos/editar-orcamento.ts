@@ -133,6 +133,7 @@ export function useEditarOrcamento() {
         },
         o.observacao ?? '',
         o.cliente ?? null,
+        o.entrega_prevista ?? null,
       );
       irPara('carrinho');
     } catch (e) {

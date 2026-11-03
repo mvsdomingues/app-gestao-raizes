@@ -166,6 +166,9 @@ export const api = {
     enviar<Pedido>('POST', `/api/pedidos/${encodeURIComponent(codigo)}/avancar`, { status_atual: statusAtual }),
   retrocederPedido: (codigo: string, statusAtual: string) =>
     enviar<Pedido>('POST', `/api/pedidos/${encodeURIComponent(codigo)}/retroceder`, { status_atual: statusAtual }),
+  /** Data prevista de entrega do pedido (só na etapa Criado; a mudança vira uma observação) */
+  alterarEntregaPedido: (codigo: string, data: string | null) =>
+    enviar<Pedido>('PUT', `/api/pedidos/${encodeURIComponent(codigo)}/entrega`, { entrega_prevista: data }),
   /** Inclui uma observação no histórico do pedido (qualquer situação; não há alteração). */
   adicionarObservacaoPedido: (codigo: string, texto: string) =>
     enviar<Pedido>('POST', `/api/pedidos/${encodeURIComponent(codigo)}/observacoes`, { texto }),

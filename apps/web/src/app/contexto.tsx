@@ -53,6 +53,8 @@ export interface FolhaOrcamento {
   alteradoPor?: UsuarioResumo | null;
   /** Cliente do Kommo vinculado (null = sem cliente) */
   cliente?: ClienteVinculado | null;
+  /** Data prevista de entrega (AAAA-MM-DD) */
+  entregaPrevista?: string | null;
 }
 
 interface ContextoApp {

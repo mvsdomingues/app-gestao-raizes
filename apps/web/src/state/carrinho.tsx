@@ -55,6 +55,8 @@ export interface EstadoCarrinho {
   edicao: EdicaoOrcamento | null;
   /** Cliente do Kommo vinculado ao orçamento (opcional ao gerar; obrigatório ao enviar). */
   cliente: ClienteVinculado | null;
+  /** Data prevista de entrega (AAAA-MM-DD; '' = sem data) */
+  entregaPrevista: string;
 }
 
 /** Orçamento do histórico carregado no carrinho para alteração. */
@@ -76,7 +78,16 @@ type Acao =
   | { tipo: 'redesenhar' }
   | { tipo: 'frete'; valor: string }
   | { tipo: 'observacao'; valor: string }
-  | { tipo: 'carregarOrcamento'; itens: Itens; frete: string; observacao: string; edicao: EdicaoOrcamento; cliente: ClienteVinculado | null }
+  | {
+      tipo: 'carregarOrcamento';
+      itens: Itens;
+      frete: string;
+      observacao: string;
+      edicao: EdicaoOrcamento;
+      cliente: ClienteVinculado | null;
+      entregaPrevista: string;
+    }
+  | { tipo: 'entregaPrevista'; valor: string }
   | { tipo: 'cliente'; cliente: ClienteVinculado | null }
   | { tipo: 'edicao'; edicao: EdicaoOrcamento | null };
 
@@ -101,7 +112,7 @@ function redutor(estado: EstadoCarrinho, acao: Acao): EstadoCarrinho {
       return { ...estado, ...redesenho, itens: semItem(itens, acao.id) };
     case 'limpar':
       // Esvaziar o carrinho também encerra a alteração de um orçamento salvo
-      return { ...estado, ...redesenho, itens: {}, edicao: null, observacao: '', cliente: null };
+      return { ...estado, ...redesenho, itens: {}, edicao: null, observacao: '', cliente: null, entregaPrevista: '' };
     case 'qtd': {
       const item = itens[acao.id];
       if (!item) return estado;
@@ -141,7 +152,10 @@ function redutor(estado: EstadoCarrinho, acao: Acao): EstadoCarrinho {
         observacao: acao.observacao,
         edicao: acao.edicao,
         cliente: acao.cliente,
+        entregaPrevista: acao.entregaPrevista,
       };
+    case 'entregaPrevista':
+      return { ...estado, entregaPrevista: acao.valor };
     case 'cliente':
       return { ...estado, cliente: acao.cliente };
     case 'edicao':
@@ -168,8 +182,10 @@ interface ContextoCarrinho {
     edicao: EdicaoOrcamento,
     observacao?: string,
     cliente?: ClienteVinculado | null,
+    entregaPrevista?: string | null,
   ) => void;
   definirCliente: (cliente: ClienteVinculado | null) => void;
+  definirEntregaPrevista: (valor: string) => void;
   definirEdicao: (edicao: EdicaoOrcamento | null) => void;
 }
 
@@ -183,6 +199,7 @@ export function ProvedorCarrinho({ children }: { children: ReactNode }) {
     observacao: '',
     edicao: null,
     cliente: null,
+    entregaPrevista: '',
   });
   const valor = useMemo<ContextoCarrinho>(
     () => ({
@@ -197,8 +214,9 @@ export function ProvedorCarrinho({ children }: { children: ReactNode }) {
       redesenhar: () => despachar({ tipo: 'redesenhar' }),
       definirFrete: (valor) => despachar({ tipo: 'frete', valor }),
       definirObservacao: (valor) => despachar({ tipo: 'observacao', valor }),
-      carregarOrcamento: (itens, frete, edicao, observacao = '', cliente = null) =>
-        despachar({ tipo: 'carregarOrcamento', itens, frete, observacao, edicao, cliente }),
+      carregarOrcamento: (itens, frete, edicao, observacao = '', cliente = null, entregaPrevista = null) =>
+        despachar({ tipo: 'carregarOrcamento', itens, frete, observacao, edicao, cliente, entregaPrevista: entregaPrevista ?? '' }),
+      definirEntregaPrevista: (valor) => despachar({ tipo: 'entregaPrevista', valor }),
       definirCliente: (cliente) => despachar({ tipo: 'cliente', cliente }),
       definirEdicao: (edicao) => despachar({ tipo: 'edicao', edicao }),
     }),

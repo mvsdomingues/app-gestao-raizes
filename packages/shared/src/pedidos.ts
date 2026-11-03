@@ -77,6 +77,8 @@ export interface ResumoPedido {
   responsavel: UsuarioResumo | null;
   /** Cliente do orçamento de origem */
   cliente: ClienteVinculado | null;
+  /** Data prevista de entrega (AAAA-MM-DD), vinda do orçamento; alterável na etapa Criado */
+  entrega_prevista: string | null;
   /** Checklist de fechamento: itens marcados / total (0/0 = sem checklist) */
   checklist_feitos?: number;
   checklist_total?: number;
@@ -114,6 +116,9 @@ export interface ObservacaoPedido {
   /** CLIENTE = escrita pelo cliente ao aceitar o orçamento pelo link */
   origem: import('./orcamentos').OrigemMovimento;
 }
+
+/** Etapa em que a data prevista de entrega do pedido pode ser alterada. */
+export const ETAPA_ALTERA_ENTREGA: EtapaPedido = 'CRIADO';
 
 /** Etapa em que o checklist pode ser marcado. */
 export const ETAPA_CHECKLIST: EtapaPedido = 'EM_FECHAMENTO';
