@@ -305,3 +305,9 @@
 }
 .page-btn:disabled { opacity: .35; cursor: default; }
 
+
+/* Ordenação e faixa de preço */
+.filtro-preco-faixa { display: inline-flex; align-items: center; gap: 6px; font-size: .8rem; color: var(--muted); }
+.filtro-preco { width: 100px; cursor: text; }
+.filtro-preco-limpar { font-size: .78rem; }
+.products-grid.lista-unica, .products-list.lista-unica { margin-top: 14px; }

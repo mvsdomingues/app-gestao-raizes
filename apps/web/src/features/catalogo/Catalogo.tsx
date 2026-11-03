@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useRef, useState, type ReactNode } from 'react';
-import type { Produto } from '@raizes/shared';
+import { FAIXAS_PRECO, ORDENS_CATALOGO, type OrdemCatalogo, type Produto } from '@raizes/shared';
 import { useApp } from '../../app/contexto';
 import { Aviso, Carregando } from '../../components/Carregando';
 import { api } from '../../lib/api';
@@ -13,7 +13,17 @@ export const TAMANHO_PAGINA = 80;
 type Conteudo =
   | { tipo: 'carregando'; texto: string }
   | { tipo: 'erro' }
-  | { tipo: 'produtos'; produtos: Produto[] };
+  | { tipo: 'produtos'; produtos: Produto[]; agrupar: boolean };
+
+/** Limites da faixa escolhida (faixa pronta ou valores digitados). */
+function limitesPreco(faixa: string, min: string, max: string): { min: number | null; max: number | null } {
+  if (faixa === 'personalizada') {
+    const n = (v: string) => (v.trim() === '' || !Number.isFinite(Number(v)) ? null : Math.max(0, Number(v)));
+    return { min: n(min), max: n(max) };
+  }
+  const f = FAIXAS_PRECO.find((x) => x.id === faixa);
+  return f ? { min: f.min, max: f.max } : { min: null, max: null };
+}
 
 export function Catalogo() {
   const { tela, fornecedores, carregarFornecedores, carregarStatus, parametros, versaoCatalogo } = useApp();
@@ -22,6 +32,11 @@ export function Catalogo() {
   const [busca, setBusca] = useState('');
   const [fornecedor, setFornecedor] = useState('');
   const [somenteEstoque, setSomenteEstoque] = useState(false);
+  const [ordem, setOrdem] = useState<OrdemCatalogo>('padrao');
+  /** '' = todas; id de FAIXAS_PRECO; 'personalizada' = min/max digitados */
+  const [faixa, setFaixa] = useState('');
+  const [precoMin, setPrecoMin] = useState('');
+  const [precoMax, setPrecoMax] = useState('');
   const [modo, setModo] = useState<'grid' | 'list'>('grid');
   const [conteudo, setConteudo] = useState<Conteudo>({ tipo: 'carregando', texto: 'Carregando produtos…' });
   const [total, setTotal] = useState<number | null>(null);
@@ -29,8 +44,8 @@ export function Catalogo() {
   const scrollRef = useRef<HTMLDivElement>(null);
 
   // Valores atuais dos filtros (lidos no momento da busca, como na versão anterior)
-  const filtros = useRef({ busca, fornecedor, somenteEstoque, pagina });
-  filtros.current = { busca, fornecedor, somenteEstoque, pagina };
+  const filtros = useRef({ busca, fornecedor, somenteEstoque, pagina, ordem, faixa, precoMin, precoMax });
+  filtros.current = { busca, fornecedor, somenteEstoque, pagina, ordem, faixa, precoMin, precoMax };
   const ultimaBusca = useRef(0);
   const debounce = useRef<ReturnType<typeof setTimeout> | null>(null);
 
@@ -42,16 +57,20 @@ export function Catalogo() {
     const seq = ++ultimaBusca.current;
     setConteudo({ tipo: 'carregando', texto: 'Buscando…' });
     try {
+      const { min, max } = limitesPreco(f.faixa, f.precoMin, f.precoMax);
       const data = await api.produtos({
         q: f.busca.trim(),
         fornecedor: f.fornecedor,
         estoque: f.somenteEstoque,
+        ordem: f.ordem,
+        min,
+        max,
         limit: TAMANHO_PAGINA,
         offset: (pag - 1) * TAMANHO_PAGINA,
       });
       if (seq !== ultimaBusca.current) return;
       setTotal(data.total);
-      setConteudo({ tipo: 'produtos', produtos: data.produtos });
+      setConteudo({ tipo: 'produtos', produtos: data.produtos, agrupar: f.ordem === 'padrao' });
     } catch {
       if (seq !== ultimaBusca.current) return;
       setConteudo({ tipo: 'erro' });
@@ -77,6 +96,23 @@ export function Catalogo() {
     filtros.current.busca = valor;
     if (debounce.current) clearTimeout(debounce.current);
     debounce.current = setTimeout(() => void buscar(1), 300);
+  };
+
+  const digitarPreco = (campo: 'precoMin' | 'precoMax', valor: string) => {
+    (campo === 'precoMin' ? setPrecoMin : setPrecoMax)(valor);
+    filtros.current[campo] = valor;
+    if (debounce.current) clearTimeout(debounce.current);
+    debounce.current = setTimeout(() => void buscar(1), 500);
+  };
+
+  const filtrosPrecoAtivos = ordem !== 'padrao' || faixa !== '';
+  const limparPreco = () => {
+    setOrdem('padrao');
+    setFaixa('');
+    setPrecoMin('');
+    setPrecoMax('');
+    Object.assign(filtros.current, { ordem: 'padrao', faixa: '', precoMin: '', precoMax: '' });
+    void buscar(1);
   };
 
   const irParaPagina = (p: number) => {
@@ -147,6 +183,73 @@ export function Catalogo() {
               />
               Somente com estoque
             </label>
+            <select
+              className="filter-select"
+              id="filter-ordem"
+              title="Ordenar por"
+              value={ordem}
+              onChange={(e) => {
+                const v = e.target.value as OrdemCatalogo;
+                setOrdem(v);
+                filtros.current.ordem = v;
+                void buscar(1);
+              }}
+            >
+              {(Object.keys(ORDENS_CATALOGO) as OrdemCatalogo[]).map((o) => (
+                <option key={o} value={o}>
+                  Ordenar: {ORDENS_CATALOGO[o]}
+                </option>
+              ))}
+            </select>
+            <select
+              className="filter-select"
+              id="filter-faixa"
+              title="Faixa de preço"
+              value={faixa}
+              onChange={(e) => {
+                setFaixa(e.target.value);
+                filtros.current.faixa = e.target.value;
+                void buscar(1);
+              }}
+            >
+              <option value="">Todos os preços</option>
+              {FAIXAS_PRECO.map((f) => (
+                <option key={f.id} value={f.id}>
+                  {f.rotulo}
+                </option>
+              ))}
+              <option value="personalizada">Faixa personalizada…</option>
+            </select>
+            {faixa === 'personalizada' && (
+              <span className="filtro-preco-faixa">
+                <input
+                  className="filter-select filtro-preco"
+                  id="filter-preco-min"
+                  type="number"
+                  min="0"
+                  step="0.01"
+                  placeholder="R$ mín."
+                  value={precoMin}
+                  onChange={(e) => digitarPreco('precoMin', e.target.value)}
+                />
+                <span>a</span>
+                <input
+                  className="filter-select filtro-preco"
+                  id="filter-preco-max"
+                  type="number"
+                  min="0"
+                  step="0.01"
+                  placeholder="R$ máx."
+                  value={precoMax}
+                  onChange={(e) => digitarPreco('precoMax', e.target.value)}
+                />
+              </span>
+            )}
+            {filtrosPrecoAtivos && (
+              <button type="button" className="link-botao filtro-preco-limpar" onClick={limparPreco} title="Voltar à ordem padrão e a todos os preços">
+                Limpar
+              </button>
+            )}
             <span className="result-info" id="result-info">
               {total === null
                 ? ''
@@ -183,6 +286,7 @@ export function Catalogo() {
           ) : (
             <ListaProdutos
               produtos={conteudo.produtos}
+              agrupar={conteudo.agrupar}
               modo={modo}
               noCarrinho={(id) => !!estado.itens[id]}
               alternar={(id) => void alternarCarrinho(id)}
@@ -209,17 +313,35 @@ export function Catalogo() {
 
 interface PropsLista {
   produtos: Produto[];
+  /** Agrupa por fornecedor (ordem padrão); ordenado por preço ou nome, é uma lista única */
+  agrupar: boolean;
   modo: 'grid' | 'list';
   noCarrinho: (id: number) => boolean;
   alternar: (id: number) => void;
 }
 
-function ListaProdutos({ produtos, modo, noCarrinho, alternar }: PropsLista) {
+function ListaProdutos({ produtos, agrupar, modo, noCarrinho, alternar }: PropsLista) {
   if (!produtos.length) {
     return (
       <Aviso>
         <span style={{ fontStyle: 'italic', color: 'var(--muted)' }}>Nenhum produto encontrado.</span>
       </Aviso>
+    );
+  }
+  // Ordenado por preço ou nome: lista única, na ordem do servidor (cada item mostra o fornecedor)
+  if (!agrupar) {
+    return modo === 'grid' ? (
+      <div className="products-grid lista-unica">
+        {produtos.map((p) => (
+          <CartaoProduto key={p.id} p={p} noCarrinho={noCarrinho(p.id)} alternar={alternar} />
+        ))}
+      </div>
+    ) : (
+      <div className="products-list lista-unica">
+        {produtos.map((p) => (
+          <LinhaProduto key={p.id} p={p} noCarrinho={noCarrinho(p.id)} alternar={alternar} />
+        ))}
+      </div>
     );
   }
   // Agrupa por fornecedor, na ordem em que aparecem

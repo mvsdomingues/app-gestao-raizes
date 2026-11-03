@@ -1,7 +1,15 @@
 import { Router } from 'express';
-import type { Produto, RespostaProdutos, StatusFornecedor } from '@raizes/shared';
+import { isOrdemCatalogo, type OrdemCatalogo, type Produto, type RespostaProdutos, type StatusFornecedor } from '@raizes/shared';
 import type { Banco } from '../db/conexao';
 import { inteiroPython } from '../lib/http';
+
+/** ORDER BY de cada ordenação (sem preço ou R$ 0,00 vai para o fim; empate desempata pelo nome). */
+const ORDENACAO: Record<OrdemCatalogo, string> = {
+  padrao: 'fornecedor, nome',
+  preco_asc: 'COALESCE(preco, 0) <= 0, preco ASC, nome COLLATE NOCASE',
+  preco_desc: 'COALESCE(preco, 0) <= 0, preco DESC, nome COLLATE NOCASE',
+  nome: 'nome COLLATE NOCASE, fornecedor',
+};
 
 export function rotasCatalogo(db: Banco): Router {
   const r = Router();
@@ -31,6 +39,8 @@ export function rotasCatalogo(db: Banco): Router {
     const apenasEstoque = (q('estoque') ?? '0') === '1';
     const limit = inteiroPython(q('limit') ?? '80');
     const offset = inteiroPython(q('offset') ?? '0');
+    const o = q('ordem');
+    const ordem: OrdemCatalogo = isOrdemCatalogo(o) ? o : 'padrao';
 
     const wheres: string[] = [];
     const params: unknown[] = [];
@@ -45,13 +55,29 @@ export function rotasCatalogo(db: Banco): Router {
     if (apenasEstoque) {
       wheres.push('qtd_estoque > 0');
     }
+    // Faixa de preço: min (inclusive) e max (exclusive); produtos sem preço (ou R$ 0,00) ficam de fora
+    const valor = (k: string) => {
+      const v = Number((q(k) ?? '').replace(',', '.'));
+      return (q(k) ?? '').trim() !== '' && Number.isFinite(v) && v >= 0 ? v : null;
+    };
+    const min = valor('min');
+    const max = valor('max');
+    if (min !== null || max !== null) wheres.push('preco > 0');
+    if (min !== null) {
+      wheres.push('preco >= ?');
+      params.push(min);
+    }
+    if (max !== null) {
+      wheres.push('preco < ?');
+      params.push(max);
+    }
     const whereSql = wheres.length ? 'WHERE ' + wheres.join(' AND ') : '';
 
     const { c: total } = db
       .prepare(`SELECT COUNT(*) as c FROM catalogo ${whereSql}`)
       .get(...params) as { c: number };
     const produtos = db
-      .prepare(`SELECT * FROM catalogo ${whereSql} ORDER BY fornecedor, nome LIMIT ? OFFSET ?`)
+      .prepare(`SELECT * FROM catalogo ${whereSql} ORDER BY ${ORDENACAO[ordem]} LIMIT ? OFFSET ?`)
       .all(...params, limit, offset) as Produto[];
     const corpo: RespostaProdutos = { total, produtos };
     res.json(corpo);

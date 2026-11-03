@@ -27,6 +27,7 @@ import type {
   StatusOrcamento,
   StatusOrcamentoManual,
   StatusFornecedor,
+  OrdemCatalogo,
   ClienteKommo,
   ConfigClientes,
   RespostaBuscaClientes,
@@ -84,6 +85,10 @@ export interface FiltrosProdutos {
   q: string;
   fornecedor: string;
   estoque: boolean;
+  ordem?: OrdemCatalogo;
+  /** Faixa de preço (R$): min inclusive, max exclusive */
+  min?: number | null;
+  max?: number | null;
   limit: number;
   offset: number;
 }
@@ -96,7 +101,10 @@ export const api = {
   produtos: (f: FiltrosProdutos) =>
     getJson<RespostaProdutos>(
       `/api/produtos?q=${encodeURIComponent(f.q)}&fornecedor=${encodeURIComponent(f.fornecedor)}` +
-        `&estoque=${f.estoque ? 1 : 0}&limit=${f.limit}&offset=${f.offset}`,
+        `&estoque=${f.estoque ? 1 : 0}&limit=${f.limit}&offset=${f.offset}` +
+        (f.ordem && f.ordem !== 'padrao' ? `&ordem=${f.ordem}` : '') +
+        (f.min != null ? `&min=${f.min}` : '') +
+        (f.max != null ? `&max=${f.max}` : ''),
     ),
 
   produto: (id: number) => getJson<Produto>(`/api/produto/${id}`),

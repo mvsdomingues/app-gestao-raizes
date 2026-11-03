@@ -6,3 +6,4 @@ export * from './pedidos';
 export * from './acesso';
 export * from './orcamentos';
 export * from './clientes';
+export * from './catalogo';
