@@ -37,3 +37,6 @@ ssh_*
 *.pem
 id_rsa*
 id_ed25519*
+
+# Saída do scripts/analise-fornecedores.mjs (dados de fornecedores)
+analise-fornecedores/
