@@ -112,6 +112,12 @@ describe('detalhes coletados (amostras reais)', () => {
     expect(d.personalizacao).toBe('Bateria portátil - Frente (Laser - 35 x 25)');
     expect(d.fotos.length).toBe(4);
     expect(d.fotos[0]).toBe(linhas.SPOT![1]!.imagem_url);
+    expect(d.fotos).toEqual([
+      'https://www.spotgifts.com.br/fotos/produtos/11104_105.jpg',
+      'https://www.spotgifts.com.br/fotos/produtos/11104_105-b.jpg',
+      'https://www.spotgifts.com.br/fotos/produtos/11104_105-c.jpg',
+      'https://www.spotgifts.com.br/fotos/produtos/11104_105-d.jpg',
+    ]);
     expect(d.ficha).toEqual(expect.arrayContaining([{ rotulo: 'Tipos de gravação', valor: 'Laser, Tampografia, Silk Screen' }]));
   });
 

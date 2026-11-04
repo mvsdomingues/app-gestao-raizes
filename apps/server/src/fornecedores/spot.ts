@@ -6,22 +6,19 @@ import type { Coletor, LinhaFornecedor } from './tipos';
 import type { DetalhesProduto } from '@raizes/shared';
 
 const BASE = 'https://ws.spotgifts.com.br/downloads/v1SSL/file';
-/** Fotos publicadas no site da SPOT: /fotos/produtos/11112_104-c_1.jpg */
+/** Fotos publicadas no site da SPOT, com o mesmo nome do arquivo do CSV: /fotos/produtos/11112_104.jpg */
 export const BASE_FOTOS_SPOT = 'https://www.spotgifts.com.br/fotos/produtos/';
 
 /**
- * URL da foto principal do produto. Usa o nome do arquivo da coluna "Image"
- * do CSV (11112_104.jpg) e, sem ele, o Sku (11112-104, 11112-104-GG → 11112_104).
+ * URL de uma foto do produto. Usa o nome do arquivo informado no CSV (11112_104.jpg,
+ * 57904_set.jpg…) exatamente como vem e, sem ele, o Sku (11112-104, 11112-104-GG → 11112_104.jpg).
+ * Obs.: a variante "-c_1" (11112_104-c_1.jpg) só existe no site para algumas fotos — não usar.
  */
 export function urlFotoSpot(sku: unknown, imagem: unknown): string | null {
   const arquivo = typeof imagem === 'string' ? imagem.trim() : '';
-  const m = /^([\w-]+?)\.(jpe?g|png|webp)$/i.exec(arquivo);
-  let base = m ? m[1]! : '';
-  if (!base) {
-    const s = /^(\d+)-(\d+)/.exec(String(sku ?? '').trim());
-    if (s) base = `${s[1]}_${s[2]}`;
-  }
-  return base ? `${BASE_FOTOS_SPOT}${encodeURIComponent(base)}-c_1.jpg` : null;
+  if (/^[\w-]+\.(jpe?g|png|webp|gif)$/i.test(arquivo)) return `${BASE_FOTOS_SPOT}${encodeURIComponent(arquivo)}`;
+  const s = /^(\d+)-(\d+)/.exec(String(sku ?? '').trim());
+  return s ? `${BASE_FOTOS_SPOT}${s[1]}_${s[2]}.jpg` : null;
 }
 
 /** Coluna do CSV (ausente = null). */

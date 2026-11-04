@@ -108,7 +108,7 @@ A SM também informa o **preço por quantidade** (`grade_preco_*`): fica gravado
 
 ### Imagens da SPOT
 
-A SPOT envia no CSV só o nome do arquivo da foto. Na atualização, cada produto passa a apontar para a foto publicada no site: `https://www.spotgifts.com.br/fotos/produtos/11112_104-c_1.jpg` (montada pela coluna `Image` ou pelo Sku; códigos com tamanho, como `11112-104-GG`, usam a foto do produto base). Não é preciso navegador automatizado nem baixar arquivos; produto sem foto nesse endereço mostra o placeholder.
+A SPOT envia no CSV só o nome do arquivo da foto. Na atualização, cada produto passa a apontar para a foto publicada no site, com o nome exato do arquivo do CSV: `https://www.spotgifts.com.br/fotos/produtos/11112_104.jpg` (pela coluna da foto ou, sem ela, pelo Sku; a variante `-c_1` só existe para algumas fotos e não é usada; códigos com tamanho, como `11112-104-GG`, usam a foto do produto base). Não é preciso navegador automatizado nem baixar arquivos; produto sem foto nesse endereço mostra o placeholder.
 
 O comando antigo de download com Playwright continua disponível, mas só é necessário em casos pontuais:
 
