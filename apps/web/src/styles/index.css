@@ -18,6 +18,7 @@
 @import './99b-dialogos.css';
 @import './99c-clientes.css';
 @import './99d-link-publico.css';
+@import './99e-detalhe-produto.css';
 
 /* O React monta a aplicação dentro de #root; "display: contents" mantém
    header, telas e rodapé como filhos diretos do layout flex do <body>. */

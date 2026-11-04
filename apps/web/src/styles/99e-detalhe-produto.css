@@ -1,0 +1,165 @@
+/* ══════════════════════════════════
+   DETALHES DO PRODUTO (catálogo)
+══════════════════════════════════ */
+
+/* Botão "i" do cartão e da linha */
+.info-btn {
+  position: absolute;
+  top: 9px;
+  left: 9px;
+  width: 26px;
+  height: 26px;
+  border-radius: 50%;
+  border: 1.5px solid rgba(255,255,255,.5);
+  background: rgba(246,244,239,.85);
+  backdrop-filter: blur(6px);
+  color: var(--muted);
+  font: italic 600 .9rem var(--font-display);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  z-index: 2;
+  opacity: .85;
+  transition: all .2s;
+}
+.product-card:hover .info-btn { opacity: 1; border-color: var(--uva); color: var(--uva); background: #fff; }
+.row-info-btn {
+  width: 26px; height: 26px; border-radius: 50%;
+  border: 1.5px solid var(--border);
+  background: var(--creme);
+  color: var(--muted);
+  font: italic 600 .9rem var(--font-display);
+  display: flex; align-items: center; justify-content: center;
+  cursor: pointer; flex-shrink: 0; margin-right: 6px;
+  transition: all .2s;
+}
+.product-row:hover .row-info-btn { border-color: var(--uva); color: var(--uva); background: #fff; }
+
+/* Etiquetas (categoria e cor) */
+.tags-produto { display: flex; flex-wrap: wrap; gap: 4px; min-width: 0; }
+.tag-produto {
+  display: inline-block;
+  max-width: 100%;
+  font-size: .63rem;
+  line-height: 1.3;
+  padding: 2px 7px;
+  border-radius: 999px;
+  border: 1px solid var(--border);
+  background: var(--creme);
+  color: var(--muted);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  font-family: var(--font-body);
+}
+.tag-produto.tag-cor { background: #fff; }
+button.tag-produto { cursor: pointer; transition: all .15s; }
+button.tag-produto:hover { border-color: var(--uva); color: var(--uva); }
+.row-meta .tags-produto { flex-wrap: nowrap; overflow: hidden; }
+.row-meta .tag-produto { max-width: 160px; }
+
+.filtro-categoria { max-width: 230px; }
+
+/* Painel */
+.detalhe-produto-card { max-width: 920px; }
+.detalhe-produto-topo { display: flex; align-items: center; gap: 10px; }
+.detalhe-produto-corpo {
+  display: grid;
+  grid-template-columns: minmax(0, 5fr) minmax(0, 6fr);
+  gap: 22px;
+  margin-top: 10px;
+}
+.detalhe-produto-galeria { display: flex; flex-direction: column; gap: 8px; min-width: 0; }
+.detalhe-produto-foto {
+  aspect-ratio: 1 / 1;
+  background: var(--creme);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  overflow: hidden;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.detalhe-produto-foto img { width: 100%; height: 100%; object-fit: contain; display: block; background: #fff; }
+.detalhe-produto-foto .card-no-img { width: 100%; height: 100%; }
+.detalhe-produto-miniaturas { display: flex; gap: 6px; overflow-x: auto; padding-bottom: 2px; }
+.detalhe-produto-mini {
+  flex: 0 0 56px;
+  height: 56px;
+  padding: 0;
+  border: 1.5px solid var(--border);
+  border-radius: 6px;
+  overflow: hidden;
+  background: #fff;
+  cursor: pointer;
+}
+.detalhe-produto-mini.ativa { border-color: var(--uva); box-shadow: 0 0 0 1px var(--uva); }
+.detalhe-produto-mini img { width: 100%; height: 100%; object-fit: cover; display: block; }
+
+.detalhe-produto-info { min-width: 0; display: flex; flex-direction: column; gap: 10px; }
+.detalhe-produto-nome { font-size: 1.35rem; line-height: 1.2; }
+.detalhe-produto-preco { display: flex; align-items: baseline; gap: 12px; flex-wrap: wrap; }
+.detalhe-produto-preco .product-price { font-size: 1.25rem; }
+.detalhe-produto-tags { display: flex; flex-wrap: wrap; gap: 5px; }
+.detalhe-produto-tags .tag-produto { font-size: .72rem; padding: 3px 9px; }
+.detalhe-produto-descricao {
+  white-space: pre-line;
+  font-size: .86rem;
+  line-height: 1.55;
+  color: var(--text);
+  margin: 0;
+}
+.detalhe-produto-subtitulo {
+  font-family: var(--font-display);
+  font-size: 1.05rem;
+  font-weight: 600;
+  color: var(--berinjela);
+  margin: 6px 0 0;
+}
+.detalhe-produto-ficha { margin: 0; border: 1px solid var(--border); border-radius: var(--radius); overflow: hidden; }
+.detalhe-produto-ficha > div {
+  display: grid;
+  grid-template-columns: minmax(110px, 38%) 1fr;
+  gap: 10px;
+  padding: 6px 10px;
+  font-size: .8rem;
+}
+.detalhe-produto-ficha > div:nth-child(odd) { background: var(--creme); }
+.detalhe-produto-ficha dt { color: var(--muted); }
+.detalhe-produto-ficha dd { margin: 0; color: var(--text); overflow-wrap: anywhere; }
+
+.detalhe-produto-video { grid-column: 1 / -1; aspect-ratio: 16 / 9; border-radius: var(--radius); overflow: hidden; background: #000; }
+.detalhe-produto-video iframe { width: 100%; height: 100%; border: 0; display: block; }
+
+@media (max-width: 760px) {
+  .detalhe-produto-corpo { grid-template-columns: 1fr; }
+  .detalhe-produto-card { padding: 18px 16px; }
+}
+
+/* Cadastro de produtos próprios: bloco de detalhes */
+.detalhes-proprio .link-botao { font-size: .82rem; }
+.detalhes-proprio-campos {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 0 12px;
+  margin-top: 10px;
+}
+.detalhes-proprio-campos .campo-descricao,
+.detalhes-proprio-campos .campo-personalizacao,
+.detalhes-proprio-campos .campo-video,
+.detalhes-proprio-dica { grid-column: 1 / -1; }
+.detalhes-proprio-campos textarea { resize: vertical; min-height: 80px; font-family: inherit; }
+.detalhes-proprio-dica { font-size: .74rem; color: var(--muted); font-style: italic; margin: 0; }
+@media (max-width: 520px) {
+  .detalhes-proprio-campos { grid-template-columns: 1fr; }
+}
+
+/* Estúdio de mockups: outras fotos do produto */
+.mockup-fotos-produto { display: flex; gap: 6px; overflow-x: auto; margin-bottom: 10px; padding-bottom: 2px; align-items: center; }
+.mockup-fotos-produto > span { font-size: .72rem; color: var(--muted); white-space: nowrap; margin-right: 2px; }
+
+/* Folha do orçamento / página do cliente: resumo do produto */
+.orc-prod-desc { margin-top: 3px; font-size: .72rem; color: #5b544c; line-height: 1.4; max-width: 520px; }
+.orc-prod-ficha { margin-top: 2px; font-size: .7rem; color: var(--muted); display: flex; flex-wrap: wrap; gap: 2px 12px; }
+.orc-prod-ficha b { font-weight: 600; color: #5b544c; }

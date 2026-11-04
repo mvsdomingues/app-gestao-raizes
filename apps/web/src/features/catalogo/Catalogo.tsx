@@ -5,6 +5,7 @@ import { Aviso, Carregando } from '../../components/Carregando';
 import { api } from '../../lib/api';
 import { classeFornecedor } from '../../lib/fornecedor';
 import { useCarrinho } from '../../state/carrinho';
+import { DetalheProduto } from './DetalheProduto';
 import { CartaoProduto, LinhaProduto } from './ItemProduto';
 import { Paginacao } from './Paginacao';
 
@@ -37,6 +38,9 @@ export function Catalogo() {
   const [faixa, setFaixa] = useState('');
   const [precoMin, setPrecoMin] = useState('');
   const [precoMax, setPrecoMax] = useState('');
+  const [categoria, setCategoria] = useState('');
+  const [categorias, setCategorias] = useState<{ nome: string; total: number }[]>([]);
+  const [detalhe, setDetalhe] = useState<number | null>(null);
   const [modo, setModo] = useState<'grid' | 'list'>('grid');
   const [conteudo, setConteudo] = useState<Conteudo>({ tipo: 'carregando', texto: 'Carregando produtos…' });
   const [total, setTotal] = useState<number | null>(null);
@@ -44,8 +48,8 @@ export function Catalogo() {
   const scrollRef = useRef<HTMLDivElement>(null);
 
   // Valores atuais dos filtros (lidos no momento da busca, como na versão anterior)
-  const filtros = useRef({ busca, fornecedor, somenteEstoque, pagina, ordem, faixa, precoMin, precoMax });
-  filtros.current = { busca, fornecedor, somenteEstoque, pagina, ordem, faixa, precoMin, precoMax };
+  const filtros = useRef({ busca, fornecedor, somenteEstoque, pagina, ordem, faixa, precoMin, precoMax, categoria });
+  filtros.current = { busca, fornecedor, somenteEstoque, pagina, ordem, faixa, precoMin, precoMax, categoria };
   const ultimaBusca = useRef(0);
   const debounce = useRef<ReturnType<typeof setTimeout> | null>(null);
 
@@ -65,6 +69,7 @@ export function Catalogo() {
         ordem: f.ordem,
         min,
         max,
+        categoria: f.categoria,
         limit: TAMANHO_PAGINA,
         offset: (pag - 1) * TAMANHO_PAGINA,
       });
@@ -85,6 +90,24 @@ export function Catalogo() {
       await carregarStatus();
     })();
   }, [carregarFornecedores, buscar, carregarStatus]);
+
+  // Categorias do fornecedor escolhido (ou de todos)
+  useEffect(() => {
+    let ativo = true;
+    api
+      .categorias(fornecedor)
+      .then((c) => ativo && setCategorias(c))
+      .catch(() => ativo && setCategorias([]));
+    return () => {
+      ativo = false;
+    };
+  }, [fornecedor, versaoCatalogo]);
+
+  const escolherCategoria = (c: string) => {
+    setCategoria(c);
+    filtros.current.categoria = c;
+    void buscar(1);
+  };
 
   // Produtos próprios incluídos/alterados/excluídos: recarrega a página atual
   useEffect(() => {
@@ -146,7 +169,7 @@ export function Catalogo() {
                 className="search-input"
                 id="search-input"
                 type="text"
-                placeholder="Buscar produto por nome ou código…"
+                placeholder="Buscar por nome, código ou descrição…"
                 value={busca}
                 onChange={(e) => aoDigitar(e.target.value)}
               />
@@ -160,6 +183,9 @@ export function Catalogo() {
               onChange={(e) => {
                 setFornecedor(e.target.value);
                 filtros.current.fornecedor = e.target.value;
+                // A categoria pode não existir no outro fornecedor
+                setCategoria('');
+                filtros.current.categoria = '';
                 void buscar(1);
               }}
             >
@@ -167,6 +193,21 @@ export function Catalogo() {
               {fornecedores.map((s) => (
                 <option key={s} value={s}>
                   {s}
+                </option>
+              ))}
+            </select>
+            <select
+              className="filter-select filtro-categoria"
+              id="filter-categoria"
+              title="Categoria"
+              value={categoria}
+              onChange={(e) => escolherCategoria(e.target.value)}
+            >
+              <option value="">Todas as categorias</option>
+              {categoria && !categorias.some((c) => c.nome === categoria) && <option value={categoria}>{categoria}</option>}
+              {categorias.map((c) => (
+                <option key={c.nome} value={c.nome}>
+                  {c.nome} ({c.total.toLocaleString('pt-BR')})
                 </option>
               ))}
             </select>
@@ -290,9 +331,20 @@ export function Catalogo() {
               modo={modo}
               noCarrinho={(id) => !!estado.itens[id]}
               alternar={(id) => void alternarCarrinho(id)}
+              verDetalhes={setDetalhe}
             />
           )}
         </div>
+        <DetalheProduto
+          id={detalhe}
+          fechar={() => setDetalhe(null)}
+          noCarrinho={detalhe !== null && !!estado.itens[detalhe]}
+          alternar={(id) => void alternarCarrinho(id)}
+          filtrarCategoria={(c) => {
+            setDetalhe(null);
+            escolherCategoria(c);
+          }}
+        />
 
         <div
           id="pagination-bar"
@@ -318,9 +370,10 @@ interface PropsLista {
   modo: 'grid' | 'list';
   noCarrinho: (id: number) => boolean;
   alternar: (id: number) => void;
+  verDetalhes: (id: number) => void;
 }
 
-function ListaProdutos({ produtos, agrupar, modo, noCarrinho, alternar }: PropsLista) {
+function ListaProdutos({ produtos, agrupar, modo, noCarrinho, alternar, verDetalhes }: PropsLista) {
   if (!produtos.length) {
     return (
       <Aviso>
@@ -333,13 +386,13 @@ function ListaProdutos({ produtos, agrupar, modo, noCarrinho, alternar }: PropsL
     return modo === 'grid' ? (
       <div className="products-grid lista-unica">
         {produtos.map((p) => (
-          <CartaoProduto key={p.id} p={p} noCarrinho={noCarrinho(p.id)} alternar={alternar} />
+          <CartaoProduto key={p.id} p={p} noCarrinho={noCarrinho(p.id)} alternar={alternar} verDetalhes={verDetalhes} />
         ))}
       </div>
     ) : (
       <div className="products-list lista-unica">
         {produtos.map((p) => (
-          <LinhaProduto key={p.id} p={p} noCarrinho={noCarrinho(p.id)} alternar={alternar} />
+          <LinhaProduto key={p.id} p={p} noCarrinho={noCarrinho(p.id)} alternar={alternar} verDetalhes={verDetalhes} />
         ))}
       </div>
     );
@@ -358,13 +411,13 @@ function ListaProdutos({ produtos, agrupar, modo, noCarrinho, alternar }: PropsL
           {modo === 'grid' ? (
             <div className="products-grid">
               {prods.map((p) => (
-                <CartaoProduto key={p.id} p={p} noCarrinho={noCarrinho(p.id)} alternar={alternar} />
+                <CartaoProduto key={p.id} p={p} noCarrinho={noCarrinho(p.id)} alternar={alternar} verDetalhes={verDetalhes} />
               ))}
             </div>
           ) : (
             <div className="products-list">
               {prods.map((p) => (
-                <LinhaProduto key={p.id} p={p} noCarrinho={noCarrinho(p.id)} alternar={alternar} />
+                <LinhaProduto key={p.id} p={p} noCarrinho={noCarrinho(p.id)} alternar={alternar} verDetalhes={verDetalhes} />
               ))}
             </div>
           )}

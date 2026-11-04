@@ -56,7 +56,7 @@ describe('produtos próprios', () => {
   });
 
   it('valida os campos', async () => {
-    expect((await req('POST', '/api/produtos-proprios', { preco: 1 })).json.erro).toMatch(/Descrição/);
+    expect((await req('POST', '/api/produtos-proprios', { preco: 1 })).json.erro).toMatch(/Nome do produto/);
     expect((await req('POST', '/api/produtos-proprios', { nome: 'X' })).json.erro).toMatch(/Custo/);
     expect((await req('POST', '/api/produtos-proprios', { nome: 'X', preco: -1 })).status).toBe(400);
     expect((await req('POST', '/api/produtos-proprios', { nome: 'X', preco: 1, fornecedor: 'asia' })).json.erro).toMatch(
@@ -107,6 +107,23 @@ describe('produtos próprios', () => {
     expect(proprio).toMatchObject({ id: -1, codigo: 'PDP-000001', fornecedor: 'PRÓPRIO' });
     expect((await req('GET', '/api/produto/-1')).json.codigo).toBe('PDP-000001');
     expect((await req('GET', '/api/fornecedores')).json).toEqual(['LOCAL', 'PRÓPRIO', 'XBZ']);
+  });
+
+  it('grava os detalhes (descrição, material, medidas…) e mostra no catálogo', async () => {
+    const d = await req('PATCH', '/api/produtos-proprios/PDP-000001', {
+      descricao: 'Caneca de cerâmica\r\n\r\n\r\ncom alça',
+      material: 'Cerâmica',
+      medidas: '9 x 8 cm',
+      categoria: 'Canecas',
+      video: 'https://youtu.be/abcdef123',
+    });
+    expect(d.json).toMatchObject({ descricao: 'Caneca de cerâmica\n\ncom alça', material: 'Cerâmica', medidas: '9 x 8 cm' });
+    // PATCH sem os campos mantém; vídeo inválido é recusado
+    expect((await req('PATCH', '/api/produtos-proprios/PDP-000001', { qtd_estoque: 3 })).json.material).toBe('Cerâmica');
+    expect((await req('PATCH', '/api/produtos-proprios/PDP-000001', { video: 'https://exemplo.com/v' })).status).toBe(400);
+    const det = (await req('GET', '/api/produto/-1')).json;
+    expect(det).toMatchObject({ material: 'Cerâmica', categoria: 'Canecas', fotos: [], ficha: [] });
+    expect((await req('GET', '/api/produtos?q=alça')).json.total).toBe(1);
   });
 
   it('exclui sem reutilizar o código', async () => {

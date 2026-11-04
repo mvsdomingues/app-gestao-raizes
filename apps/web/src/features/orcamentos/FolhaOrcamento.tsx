@@ -1,4 +1,4 @@
-import { formatarDataBr, formatarTelefone, formatBRL, type ItemOrcamento } from '@raizes/shared';
+import { formatarDataBr, formatarTelefone, formatBRL, resumoDescricao, type ItemOrcamento } from '@raizes/shared';
 import type { FolhaOrcamento as DadosFolha } from '../../app/contexto';
 import { ImagemProduto } from '../../components/ImagemProduto';
 import { classeFornecedor } from '../../lib/fornecedor';
@@ -8,7 +8,12 @@ const cinza = { fontSize: '.82rem', color: '#7A7167' } as const;
 /** Dados da folha: os do orçamento interno ou os da página do cliente (sem custos nem fornecedor). */
 export type DadosFolhaOrcamento = Pick<DadosFolha, 'id' | 'numero' | 'dataHora' | 'subtotal' | 'frete' | 'total' | 'observacao' | 'cliente' | 'entregaPrevista'> & {
   itens: (Pick<ItemOrcamento, 'nome' | 'codigo' | 'qty' | 'preco' | 'imagem_url'> &
-    Partial<Pick<ItemOrcamento, 'fornecedor' | 'origem'>> & { observacao?: string | null })[];
+    Partial<Pick<ItemOrcamento, 'fornecedor' | 'origem'>> & {
+      observacao?: string | null;
+      descricao?: string | null;
+      medidas?: string | null;
+      material?: string | null;
+    })[];
 };
 
 /**
@@ -126,6 +131,21 @@ export function FolhaOrcamento({
                       )}
                     </div>
                     <div className="orc-prod-code">Cód: {item.codigo || '–'}</div>
+                    {item.descricao && <div className="orc-prod-desc">{resumoDescricao(item.descricao)}</div>}
+                    {(item.medidas || item.material) && (
+                      <div className="orc-prod-ficha">
+                        {item.medidas && (
+                          <span>
+                            <b>Medidas:</b> {item.medidas}
+                          </span>
+                        )}
+                        {item.material && (
+                          <span>
+                            <b>Material:</b> {item.material}
+                          </span>
+                        )}
+                      </div>
+                    )}
                     {item.observacao && (
                       <div className="orc-prod-obs">
                         <span>Obs.:</span> {item.observacao}

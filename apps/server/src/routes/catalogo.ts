@@ -1,5 +1,14 @@
 import { Router } from 'express';
-import { isOrdemCatalogo, type OrdemCatalogo, type Produto, type RespostaProdutos, type StatusFornecedor } from '@raizes/shared';
+import {
+  categoriasDe,
+  isOrdemCatalogo,
+  SEPARADOR_CATEGORIA,
+  type OrdemCatalogo,
+  type Produto,
+  type ProdutoDetalhado,
+  type RespostaProdutos,
+  type StatusFornecedor,
+} from '@raizes/shared';
 import type { Banco } from '../db/conexao';
 import { inteiroPython } from '../lib/http';
 
@@ -11,6 +20,32 @@ const ORDENACAO: Record<OrdemCatalogo, string> = {
   nome: 'nome COLLATE NOCASE, fornecedor',
 };
 
+/** Colunas da listagem (os detalhes completos vêm em GET /api/produto/:id). */
+const COLUNAS_LISTA =
+  'id, fornecedor, codigo, nome, preco, qtd_estoque, atualizado, imagem_url, origem, material, medidas, cor, categoria, ' +
+  // Só o começo da descrição (o resumo do item do orçamento usa até ~200 caracteres)
+  'substr(descricao, 1, 400) AS descricao';
+
+const lerJson = <T>(s: unknown, padrao: T): T => {
+  if (typeof s !== 'string' || !s) return padrao;
+  try {
+    const v = JSON.parse(s) as unknown;
+    return Array.isArray(v) ? (v as T) : padrao;
+  } catch {
+    return padrao;
+  }
+};
+
+/** Linha da visão catalogo → produto com os detalhes já convertidos. */
+export function produtoDetalhado(row: Record<string, unknown>): ProdutoDetalhado {
+  return {
+    ...(row as unknown as ProdutoDetalhado),
+    fotos: [...new Set([row.imagem_url, ...lerJson<string[]>(row.fotos, [])].filter((u): u is string => typeof u === 'string' && !!u))],
+    ficha: lerJson(row.ficha, []),
+    faixas_preco: lerJson(row.faixas_preco, []),
+  };
+}
+
 export function rotasCatalogo(db: Banco): Router {
   const r = Router();
 
@@ -19,6 +54,27 @@ export function rotasCatalogo(db: Banco): Router {
       .prepare('SELECT DISTINCT fornecedor FROM catalogo ORDER BY fornecedor')
       .all() as { fornecedor: string }[];
     res.json(rows.map((x) => x.fornecedor));
+  });
+
+  // Categorias existentes (de um fornecedor ou de todos), com a quantidade de produtos
+  r.get('/api/categorias', (req, res) => {
+    const fornecedor = typeof req.query.fornecedor === 'string' ? req.query.fornecedor.trim() : '';
+    const rows = db
+      .prepare(
+        `SELECT categoria, COUNT(*) AS n FROM catalogo
+          WHERE categoria IS NOT NULL AND categoria <> '' ${fornecedor ? 'AND fornecedor = ?' : ''}
+          GROUP BY categoria`,
+      )
+      .all(...(fornecedor ? [fornecedor] : [])) as { categoria: string; n: number }[];
+    const contagem = new Map<string, number>();
+    for (const { categoria, n } of rows) {
+      for (const c of categoriasDe(categoria)) contagem.set(c, (contagem.get(c) ?? 0) + n);
+    }
+    res.json(
+      [...contagem]
+        .sort((a, b) => a[0].localeCompare(b[0], 'pt-BR'))
+        .map(([nome, total]) => ({ nome, total })),
+    );
   });
 
   r.get('/api/status', (_req, res) => {
@@ -36,6 +92,7 @@ export function rotasCatalogo(db: Banco): Router {
     const q = (k: string) => (typeof req.query[k] === 'string' ? (req.query[k] as string) : undefined);
     const busca = (q('q') ?? '').trim();
     const fornecedor = (q('fornecedor') ?? '').trim();
+    const categoria = (q('categoria') ?? '').trim();
     const apenasEstoque = (q('estoque') ?? '0') === '1';
     const limit = inteiroPython(q('limit') ?? '80');
     const offset = inteiroPython(q('offset') ?? '0');
@@ -45,8 +102,15 @@ export function rotasCatalogo(db: Banco): Router {
     const wheres: string[] = [];
     const params: unknown[] = [];
     if (busca) {
-      wheres.push('(nome LIKE ? OR codigo LIKE ?)');
-      params.push(`%${busca}%`, `%${busca}%`);
+      // Cada palavra precisa aparecer no nome, código ou descrição
+      for (const termo of busca.split(/\s+/).filter(Boolean).slice(0, 8)) {
+        wheres.push('(nome LIKE ? OR codigo LIKE ? OR descricao LIKE ?)');
+        params.push(`%${termo}%`, `%${termo}%`, `%${termo}%`);
+      }
+    }
+    if (categoria) {
+      wheres.push(`('${SEPARADOR_CATEGORIA}' || categoria || '${SEPARADOR_CATEGORIA}') LIKE ?`);
+      params.push(`%${SEPARADOR_CATEGORIA}${categoria}${SEPARADOR_CATEGORIA}%`);
     }
     if (fornecedor) {
       wheres.push('fornecedor = ?');
@@ -77,7 +141,7 @@ export function rotasCatalogo(db: Banco): Router {
       .prepare(`SELECT COUNT(*) as c FROM catalogo ${whereSql}`)
       .get(...params) as { c: number };
     const produtos = db
-      .prepare(`SELECT * FROM catalogo ${whereSql} ORDER BY ${ORDENACAO[ordem]} LIMIT ? OFFSET ?`)
+      .prepare(`SELECT ${COLUNAS_LISTA} FROM catalogo ${whereSql} ORDER BY ${ORDENACAO[ordem]} LIMIT ? OFFSET ?`)
       .all(...params, limit, offset) as Produto[];
     const corpo: RespostaProdutos = { total, produtos };
     res.json(corpo);
@@ -86,12 +150,14 @@ export function rotasCatalogo(db: Banco): Router {
   r.get('/api/produto/:pid', (req, res, next) => {
     // ids negativos = produtos próprios (visão catalogo)
     if (!/^-?\d+$/.test(req.params.pid)) return next();
-    const row = db.prepare('SELECT * FROM catalogo WHERE id = ?').get(Number(req.params.pid));
+    const row = db.prepare('SELECT * FROM catalogo WHERE id = ?').get(Number(req.params.pid)) as
+      | Record<string, unknown>
+      | undefined;
     if (!row) {
       res.status(404).json({ erro: 'não encontrado' });
       return;
     }
-    res.json(row);
+    res.json(produtoDetalhado(row));
   });
 
   return r;

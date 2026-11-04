@@ -20,6 +20,11 @@ export interface ProdutoCarrinho {
   imagem_url: string | null;
   qtd_estoque?: number | null;
   atualizado?: string | null;
+  /** Detalhes (quando vieram do catálogo ou do orçamento salvo) */
+  descricao?: string | null;
+  medidas?: string | null;
+  material?: string | null;
+  fotos?: string[];
 }
 
 export interface ItemCarrinho {

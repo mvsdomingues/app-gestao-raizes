@@ -54,7 +54,7 @@ async function req(metodo: string, url: string, corpo?: unknown, comLogin = true
 
 /** Cria um orçamento com cliente e envia; devolve id, número e código do link. */
 async function enviado(total = 200) {
-  const c = await req('POST', '/api/orcamentos', { itens: [item(1), item(2)], subtotal: total, frete: 15, total: total + 15, cliente_kommo_id: 7 });
+  const c = await req('POST', '/api/orcamentos', { itens: [item(1), { ...item(2), descricao: 'Caneca de cerâmica com alça', medidas: '9 x 8 cm', material: 'Cerâmica' }], subtotal: total, frete: 15, total: total + 15, cliente_kommo_id: 7 });
   const o = await req('POST', `/api/orcamentos/${c.json.id}/status`, { status: 'ENVIADO' });
   expect(o.status).toBe(200);
   const codigo = (o.json.link.url as string).split('/o/')[1]!;
@@ -158,8 +158,13 @@ describe('link do cliente', () => {
       qty: 10,
       preco: 20,
       observacao: 'logo frente',
+      descricao: null,
+      medidas: null,
+      material: null,
       imagem: `/api/publico/orcamentos/${e.codigo}/imagem/0`,
     });
+    // Resumo do produto (descrição curta, medidas e material) vai para o cliente
+    expect(r.json.itens[1]).toMatchObject({ descricao: 'Caneca de cerâmica com alça', medidas: '9 x 8 cm', material: 'Cerâmica' });
     for (const proibido of ['XBZ', 'custo', 'composicao', 'margem', 'fornecedor', 'usuario', 'responsavel', 'cliente_kommo_id', '"id"']) {
       expect(r.texto).not.toContain(proibido);
     }

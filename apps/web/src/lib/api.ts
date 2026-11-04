@@ -15,6 +15,7 @@ import type {
   Orcamento,
   OrcamentoCriado,
   Produto,
+  ProdutoDetalhado,
   RespostaAtualizar,
   RespostaProdutos,
   FiltrosOrcamentos,
@@ -90,6 +91,8 @@ export interface FiltrosProdutos {
   /** Faixa de preço (R$): min inclusive, max exclusive */
   min?: number | null;
   max?: number | null;
+  /** Categoria exata (como vem do fornecedor) */
+  categoria?: string;
   limit: number;
   offset: number;
 }
@@ -105,10 +108,16 @@ export const api = {
         `&estoque=${f.estoque ? 1 : 0}&limit=${f.limit}&offset=${f.offset}` +
         (f.ordem && f.ordem !== 'padrao' ? `&ordem=${f.ordem}` : '') +
         (f.min != null ? `&min=${f.min}` : '') +
-        (f.max != null ? `&max=${f.max}` : ''),
+        (f.max != null ? `&max=${f.max}` : '') +
+        (f.categoria ? `&categoria=${encodeURIComponent(f.categoria)}` : ''),
     ),
 
-  produto: (id: number) => getJson<Produto>(`/api/produto/${id}`),
+  produto: (id: number) => getJson<ProdutoDetalhado>(`/api/produto/${id}`),
+
+  categorias: (fornecedor: string) =>
+    getJson<{ nome: string; total: number }[]>(
+      `/api/categorias${fornecedor ? `?fornecedor=${encodeURIComponent(fornecedor)}` : ''}`,
+    ),
 
   async criarOrcamento(dados: NovoOrcamento): Promise<OrcamentoCriado> {
     const resp = await postJson('/api/orcamentos', dados);

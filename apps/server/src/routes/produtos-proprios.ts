@@ -1,6 +1,9 @@
 import { Router } from 'express';
 import {
+  DETALHES_PRODUTO_PROPRIO,
   FORNECEDOR_PROPRIO,
+  urlVideoIncorporado,
+  type CampoDetalheProprio,
   NOMES_FORNECEDORES_INTEGRADOS,
   type ProdutoProprio,
 } from '@raizes/shared';
@@ -51,9 +54,9 @@ function urlImagem(v: unknown, atual: string | null): string | null {
 function montarCampos(corpo: Record<string, unknown>, atual?: ProdutoProprio): CamposProdutoProprio {
   const tem = (k: string) => Object.hasOwn(corpo, k);
 
-  const nome = tem('nome') || !atual ? texto(corpo.nome, 'Descrição') : atual.nome;
-  if (!nome) throw new ErroHttp(400, 'Descrição: campo obrigatório');
-  if (nome.length > MAX_NOME) throw new ErroHttp(400, `Descrição: máximo de ${MAX_NOME} caracteres`);
+  const nome = tem('nome') || !atual ? texto(corpo.nome, 'Nome do produto') : atual.nome;
+  if (!nome) throw new ErroHttp(400, 'Nome do produto: campo obrigatório');
+  if (nome.length > MAX_NOME) throw new ErroHttp(400, `Nome do produto: máximo de ${MAX_NOME} caracteres`);
 
   let fornecedor = tem('fornecedor') || !atual ? texto(corpo.fornecedor, 'Fornecedor') : atual.fornecedor;
   fornecedor = (fornecedor || FORNECEDOR_PROPRIO).toUpperCase();
@@ -71,7 +74,24 @@ function montarCampos(corpo: Record<string, unknown>, atual?: ProdutoProprio): C
   const imagemAtual = atual?.imagem_url ?? null;
   const imagem = tem('imagem_url') ? urlImagem(corpo.imagem_url, imagemAtual) : imagemAtual;
 
-  return { fornecedor, nome, preco, qtd_estoque: qtd, imagem_url: imagem };
+  // Detalhes: no PUT/POST os ausentes ficam vazios; no PATCH, mantidos
+  const detalhes: Partial<Record<CampoDetalheProprio, string | null>> = {};
+  for (const [campo, { rotulo, max }] of Object.entries(DETALHES_PRODUTO_PROPRIO) as [
+    CampoDetalheProprio,
+    { rotulo: string; max: number },
+  ][]) {
+    if (!tem(campo) && atual) continue;
+    const bruto = campo === 'descricao'
+      ? texto(corpo[campo], rotulo).replace(/\r\n?/g, '\n').replace(/\n{3,}/g, '\n\n')
+      : texto(corpo[campo], rotulo).replace(/\s+/g, ' ');
+    if (bruto.length > max) throw new ErroHttp(400, `${rotulo}: máximo de ${max} caracteres`);
+    if (campo === 'video' && bruto && !urlVideoIncorporado(bruto)) {
+      throw new ErroHttp(400, `${rotulo}: informe um link do YouTube ou do Vimeo`);
+    }
+    detalhes[campo] = bruto || null;
+  }
+
+  return { fornecedor, nome, preco, qtd_estoque: qtd, imagem_url: imagem, detalhes };
 }
 
 export function rotasProdutosProprios(db: Banco, imagensDir: string): Router {

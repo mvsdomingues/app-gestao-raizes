@@ -1,3 +1,4 @@
+import { resumoDescricao } from './catalogo';
 // ══════════════════════════════════════════════════════════
 // CALCULADORA DE PREÇO — lógica da planilha Simulador_2026
 // Custo do produto (com imposto de compra opcional) → entra na fórmula:
@@ -157,6 +158,9 @@ export interface ProdutoCalculavel {
   imagem_url: string | null;
   preco: number | null;
   origem?: OrigemProduto;
+  descricao?: string | null;
+  medidas?: string | null;
+  material?: string | null;
 }
 
 /** Gera o snapshot de um item do carrinho, como salvo no histórico. */
@@ -178,7 +182,24 @@ export function montarItemOrcamento(
     produto_id: p.id,
     custo: p.preco as number,
     calc: { ...calc },
+    ...resumoProdutoItem(p),
   };
+}
+
+/** Resumo do produto guardado no item (descrição curta, medidas e material), sem campos vazios. */
+export function resumoProdutoItem(p: Pick<ProdutoCalculavel, 'descricao' | 'medidas' | 'material'>): {
+  descricao?: string;
+  medidas?: string;
+  material?: string;
+} {
+  const r: { descricao?: string; medidas?: string; material?: string } = {};
+  const descricao = resumoDescricao(p.descricao);
+  if (descricao) r.descricao = descricao;
+  const medidas = p.medidas?.trim();
+  if (medidas) r.medidas = medidas.slice(0, 120);
+  const material = p.material?.trim();
+  if (material) r.material = material.slice(0, 120);
+  return r;
 }
 
 /** Rótulos e unidades dos parâmetros (usados na tela de cadastro e nas mensagens). */

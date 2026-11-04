@@ -31,3 +31,76 @@ export const FAIXAS_PRECO: readonly FaixaPreco[] = [
   { id: '100-200', rotulo: 'R$ 100 a R$ 200', min: 100, max: 200 },
   { id: 'acima-200', rotulo: 'Acima de R$ 200', min: 200, max: null },
 ];
+
+// ══════════════════════════════════════════════════════════
+// DETALHES DO PRODUTO — dados ricos vindos dos fornecedores (ou do cadastro próprio)
+// ══════════════════════════════════════════════════════════
+
+/** Linha da ficha técnica (ex.: "Embalagem" → "Caixa preta"). */
+export interface ItemFicha {
+  rotulo: string;
+  valor: string;
+}
+
+/** Preço do fornecedor por quantidade (hoje só a SM informa; guardado para uso futuro). */
+export interface FaixaPrecoFornecedor {
+  qtd: number;
+  preco: number;
+}
+
+/** Campos de texto do detalhe (todos opcionais; null = não informado). */
+export const CAMPOS_DETALHE = [
+  'descricao',
+  'material',
+  'medidas',
+  'peso',
+  'capacidade',
+  'cor',
+  'categoria',
+  'personalizacao',
+  'video',
+] as const;
+export type CampoDetalhe = (typeof CAMPOS_DETALHE)[number];
+
+/** Detalhes completos de um produto (GET /api/produto/:id). */
+export type DetalhesProduto = { [K in CampoDetalhe]: string | null } & {
+  /** URLs das fotos (a principal primeiro), sem repetição. */
+  fotos: string[];
+  ficha: ItemFicha[];
+  faixas_preco: FaixaPrecoFornecedor[];
+};
+
+/** As categorias são gravadas como vêm do fornecedor, separadas por "|". */
+export const SEPARADOR_CATEGORIA = '|';
+
+export function categoriasDe(categoria: string | null | undefined): string[] {
+  return (categoria ?? '')
+    .split(SEPARADOR_CATEGORIA)
+    .map((c) => c.trim())
+    .filter(Boolean);
+}
+
+/**
+ * Resumo da descrição para a folha / página do cliente: até `max` caracteres,
+ * cortado no fim de uma palavra, numa linha só.
+ */
+export function resumoDescricao(texto: string | null | undefined, max = 200): string {
+  const t = (texto ?? '').replace(/\s+/g, ' ').trim();
+  if (t.length <= max) return t;
+  const corte = t.slice(0, max + 1);
+  const ultimoEspaco = corte.lastIndexOf(' ');
+  const base = (ultimoEspaco > max * 0.6 ? corte.slice(0, ultimoEspaco) : t.slice(0, max)).replace(/[\s,;:.–-]+$/, '');
+  return `${base}…`;
+}
+
+/** Endereço de vídeo que pode ser incorporado (YouTube / Vimeo); null se não reconhecido. */
+export function urlVideoIncorporado(url: string | null | undefined): string | null {
+  const u = (url ?? '').trim();
+  if (!u) return null;
+  const yt =
+    /(?:youtube\.com\/(?:embed\/|watch\?(?:.*&)?v=|shorts\/)|youtu\.be\/)([\w-]{6,})/i.exec(u);
+  if (yt) return `https://www.youtube.com/embed/${yt[1]}`;
+  const vimeo = /vimeo\.com\/(?:video\/)?(\d+)/i.exec(u);
+  if (vimeo) return `https://player.vimeo.com/video/${vimeo[1]}`;
+  return null;
+}

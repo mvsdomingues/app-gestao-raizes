@@ -55,6 +55,9 @@ async function montarItensCarrinho(
         codigo: item.codigo,
         imagem_url: item.imagem_url,
         preco: custo, // custo gravado no orçamento (não o custo atual do fornecedor)
+        descricao: item.descricao ?? null,
+        medidas: item.medidas ?? null,
+        material: item.material ?? null,
       },
       qty: item.qty,
       calc: { ...parametros, ...(item.calc ?? {}) },

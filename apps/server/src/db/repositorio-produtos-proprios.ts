@@ -1,4 +1,4 @@
-import { codigoProdutoProprio, type ProdutoProprio } from '@raizes/shared';
+import { codigoProdutoProprio, DETALHES_PRODUTO_PROPRIO, type CampoDetalheProprio, type ProdutoProprio } from '@raizes/shared';
 import { dataHoraLocal } from '../lib/datas';
 import type { Banco } from './conexao';
 
@@ -9,9 +9,21 @@ export interface CamposProdutoProprio {
   preco: number;
   qtd_estoque: number;
   imagem_url: string | null;
+  /** Detalhes (descrição, material, medidas…); ausente = mantém / vazio. */
+  detalhes?: Partial<Record<CampoDetalheProprio, string | null>>;
 }
 
-const COLUNAS = 'id, codigo, fornecedor, nome, preco, qtd_estoque, imagem_url, criado, atualizado';
+const CAMPOS_DETALHE = Object.keys(DETALHES_PRODUTO_PROPRIO) as CampoDetalheProprio[];
+const COLUNAS = `id, codigo, fornecedor, nome, preco, qtd_estoque, imagem_url, criado, atualizado, ${CAMPOS_DETALHE.join(', ')}`;
+
+/** Grava os detalhes informados (só os presentes em `detalhes`). */
+function gravarDetalhes(db: Banco, codigo: string, detalhes: CamposProdutoProprio['detalhes']): void {
+  const campos = CAMPOS_DETALHE.filter((c) => detalhes && Object.hasOwn(detalhes, c));
+  if (!campos.length) return;
+  db.prepare(
+    `UPDATE produtos_proprios SET ${campos.map((c) => `${c} = ?`).join(', ')} WHERE codigo = ? COLLATE NOCASE`,
+  ).run(...campos.map((c) => detalhes![c] ?? null), codigo);
+}
 
 export function listarProdutosProprios(db: Banco, busca = ''): ProdutoProprio[] {
   const termo = busca.trim();
@@ -22,10 +34,10 @@ export function listarProdutosProprios(db: Banco, busca = ''): ProdutoProprio[] 
   return db
     .prepare(
       `SELECT ${COLUNAS} FROM produtos_proprios
-        WHERE nome LIKE ? OR codigo LIKE ? OR fornecedor LIKE ?
+        WHERE nome LIKE ? OR codigo LIKE ? OR fornecedor LIKE ? OR descricao LIKE ?
         ORDER BY id DESC`,
     )
-    .all(like, like, like) as ProdutoProprio[];
+    .all(like, like, like, like) as ProdutoProprio[];
 }
 
 export function buscarProdutoProprio(db: Banco, codigo: string): ProdutoProprio | undefined {
@@ -52,6 +64,7 @@ export function criarProdutoProprio(db: Banco, campos: CamposProdutoProprio): Pr
       `INSERT INTO produtos_proprios (id, codigo, fornecedor, nome, preco, qtd_estoque, imagem_url, criado, atualizado)
        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
     ).run(id, codigo, campos.fornecedor, campos.nome, campos.preco, campos.qtd_estoque, campos.imagem_url, agora, agora);
+    gravarDetalhes(db, codigo, campos.detalhes);
     return codigo;
   });
   return buscarProdutoProprio(db, inserir())!;
@@ -62,13 +75,17 @@ export function atualizarProdutoProprio(
   codigo: string,
   campos: CamposProdutoProprio,
 ): ProdutoProprio | undefined {
-  const info = db
-    .prepare(
-      `UPDATE produtos_proprios
-          SET fornecedor = ?, nome = ?, preco = ?, qtd_estoque = ?, imagem_url = ?, atualizado = ?
-        WHERE codigo = ? COLLATE NOCASE`,
-    )
-    .run(campos.fornecedor, campos.nome, campos.preco, campos.qtd_estoque, campos.imagem_url, dataHoraLocal(), codigo);
+  const info = db.transaction(() => {
+    const r = db
+      .prepare(
+        `UPDATE produtos_proprios
+            SET fornecedor = ?, nome = ?, preco = ?, qtd_estoque = ?, imagem_url = ?, atualizado = ?
+          WHERE codigo = ? COLLATE NOCASE`,
+      )
+      .run(campos.fornecedor, campos.nome, campos.preco, campos.qtd_estoque, campos.imagem_url, dataHoraLocal(), codigo);
+    if (r.changes) gravarDetalhes(db, codigo, campos.detalhes);
+    return r;
+  })();
   return info.changes ? buscarProdutoProprio(db, codigo) : undefined;
 }
 

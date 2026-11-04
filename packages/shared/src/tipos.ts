@@ -15,7 +15,16 @@ export interface Produto {
   qtd_estoque: number | null;
   atualizado: string | null;
   imagem_url: string | null;
+  /** Dados extras (presentes na listagem do catálogo; null = não informado). */
+  descricao?: string | null;
+  material?: string | null;
+  medidas?: string | null;
+  cor?: string | null;
+  categoria?: string | null;
 }
+
+/** Produto com todos os detalhes (GET /api/produto/:id). */
+export type ProdutoDetalhado = Produto & import('./catalogo').DetalhesProduto;
 
 /** Resposta de GET /api/produtos */
 export interface RespostaProdutos {
@@ -50,6 +59,10 @@ export interface ItemOrcamento {
   calc?: import('./calculadora').ParametrosCalculo;
   /** Observação específica deste produto (cor, gravação, posição do logo…). */
   observacao?: string;
+  /** Resumo da descrição (até ~200 caracteres), mostrado na folha e na página do cliente. */
+  descricao?: string;
+  medidas?: string;
+  material?: string;
 }
 
 /** Linha do histórico (GET /api/orcamentos). */
@@ -172,20 +185,43 @@ export interface ProdutoProprio {
   imagem_url: string | null;
   criado: string;
   atualizado: string;
+  descricao: string | null;
+  material: string | null;
+  medidas: string | null;
+  peso: string | null;
+  capacidade: string | null;
+  cor: string | null;
+  categoria: string | null;
+  personalizacao: string | null;
+  video: string | null;
 }
+
+/** Campos de detalhe editáveis no cadastro de produtos próprios (rótulo e limite). */
+export const DETALHES_PRODUTO_PROPRIO = {
+  descricao: { rotulo: 'Descrição detalhada', max: 2000 },
+  material: { rotulo: 'Material', max: 200 },
+  medidas: { rotulo: 'Medidas', max: 200 },
+  peso: { rotulo: 'Peso', max: 60 },
+  capacidade: { rotulo: 'Capacidade', max: 60 },
+  cor: { rotulo: 'Cor', max: 60 },
+  categoria: { rotulo: 'Categoria', max: 200 },
+  personalizacao: { rotulo: 'Personalização', max: 300 },
+  video: { rotulo: 'Vídeo (link do YouTube ou Vimeo)', max: 300 },
+} as const;
+export type CampoDetalheProprio = keyof typeof DETALHES_PRODUTO_PROPRIO;
 
 /**
  * Dados enviados ao criar/alterar um produto próprio.
  * `imagem_upload` (data URL) substitui `imagem_url` quando enviado.
  */
-export interface DadosProdutoProprio {
+export type DadosProdutoProprio = {
   fornecedor?: string;
   nome?: string;
   preco?: number;
   qtd_estoque?: number;
   imagem_url?: string | null;
   imagem_upload?: string;
-}
+} & { [K in CampoDetalheProprio]?: string | null };
 
 /** Resposta de GET/PUT /api/parametros */
 export interface RespostaParametros {

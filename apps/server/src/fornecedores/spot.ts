@@ -1,7 +1,9 @@
 import { exigirEnv } from '../config';
 import { comTimeout, verificarStatus } from './http';
 import { lerCsv, type Registro } from './tabela';
+import { detalhesVazios, juntarCategorias, limparTexto, montarFicha, numeroBr, numeroPositivo, semPrefixoCodigo, urlsUnicas } from './texto';
 import type { Coletor, LinhaFornecedor } from './tipos';
+import type { DetalhesProduto } from '@raizes/shared';
 
 const BASE = 'https://ws.spotgifts.com.br/downloads/v1SSL/file';
 /** Fotos publicadas no site da SPOT: /fotos/produtos/11112_104-c_1.jpg */
@@ -20,6 +22,51 @@ export function urlFotoSpot(sku: unknown, imagem: unknown): string | null {
     if (s) base = `${s[1]}_${s[2]}`;
   }
   return base ? `${BASE_FOTOS_SPOT}${encodeURIComponent(base)}-c_1.jpg` : null;
+}
+
+/** Coluna do CSV (ausente = null). */
+const col = (r: Registro, c: string): unknown => (Object.hasOwn(r, c) ? r[c] : null);
+
+/** Nome curto do produto: coluna Name sem o "11104. " do começo; sem ela, a Description. */
+export function nomeSpot(r: Registro): unknown {
+  const nome = semPrefixoCodigo(limparTexto(col(r, 'Name')));
+  return nome ?? col(r, 'Description');
+}
+
+/** Detalhes de uma linha do arquivo optionalscomplete. */
+export function detalhesSpot(r: Registro): DetalhesProduto {
+  const d = detalhesVazios();
+  const t = (c: string) => limparTexto(col(r, c));
+  if (t('Name')) d.descricao = limparTexto(col(r, 'Description'), true);
+  d.material = t('Materials');
+  d.medidas = t('CombinedSizes') ?? t('Size');
+  d.capacidade = t('Capacity');
+  const gramas = numeroPositivo(col(r, 'WeightGr'));
+  if (gramas) d.peso = `${numeroBr(gramas)} g`;
+  d.cor = t('ColorDesc1');
+  d.categoria = juntarCategorias([[t('Type'), t('SubType')].filter(Boolean).join(' › ')]);
+  d.personalizacao = t('DefaultCustomization') ?? t('CustomizationDefault');
+  d.video = t('VideoLink') ?? t('VideoLinkVimeo');
+  const arquivos = [col(r, 'OptionalImage1'), col(r, 'OptionalImage2'), col(r, 'MainImage')];
+  const todas = typeof col(r, 'AllImageList') === 'string' ? (col(r, 'AllImageList') as string).split(',') : [];
+  d.fotos = urlsUnicas([...arquivos, ...todas].map((a) => (typeof a === 'string' && a.trim() ? urlFotoSpot(null, a) : null)));
+  const caixa = [
+    t('BoxQuantity') ? `${t('BoxQuantity')} un.` : null,
+    t('BoxSizeM') ? `${t('BoxSizeM')} m` : null,
+    t('BoxWeightKG') ? `${t('BoxWeightKG')} kg` : null,
+  ].filter(Boolean);
+  d.ficha = montarFicha([
+    ['Tipos de gravação', col(r, 'CustomizationTypes')],
+    ['Características', col(r, 'Properties')],
+    ['Composição', col(r, 'Composition')],
+    ['Cor da tinta', col(r, 'InkColor')],
+    ['Marca', col(r, 'Brand')],
+    ['Origem', col(r, 'CountryOfOrigin')],
+    ['Certificados', col(r, 'Certificates')],
+    ['Caixa', caixa.join(' · ')],
+    ['NCM', col(r, 'Taric')],
+  ]);
+  return d;
 }
 
 function exigirColunas(linhas: Registro[], colunas: string[]): void {
@@ -69,10 +116,11 @@ export const spot: Coletor = {
       for (const q of quantidades) {
         lista.push({
           codigo: p.Sku,
-          nome: p.Description,
+          nome: nomeSpot(p),
           preco: p.Price1,
           qtd_estoque: q,
-          imagem_url: urlFotoSpot(p.Sku, p.Image),
+          imagem_url: urlFotoSpot(p.Sku, p.Image ?? p.OptionalImage1 ?? p.MainImage),
+          detalhes: detalhesSpot(p),
         });
       }
     }

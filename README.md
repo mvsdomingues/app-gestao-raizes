@@ -89,6 +89,23 @@ Fornecedores disponíveis: `asia`, `sm`, `spot`, `xbz`.
 | SPOT   | Spot Gifts  | Download de CSV          | `SPOT_ACCESS_KEY`                |
 | XBZ    | Minha XBZ   | REST API                 | `XBZ_CNPJ`, `XBZ_TOKEN`          |
 
+### Detalhes dos produtos
+
+Além de código, nome, preço, estoque e foto, cada atualização grava os **detalhes** que o fornecedor informa (textos limpos: sem `&amp;`, marcações HTML ou espaços repetidos):
+
+| Campo | ASIA | SM | SPOT | XBZ |
+|---|---|---|---|---|
+| Nome | `nome` + cor da variação | `titulo` | `Name` sem o código do começo (`11104. …`) | `Nome` + cor |
+| Descrição | `descricao` do produto pai | `descricao` | `Description` | `Descricao` |
+| Medidas / peso / capacidade | propriedades do produto | `dimensoes_do_produto` | `CombinedSizes`, `WeightGr`, `Capacity` | `Peso`; medidas só quando informadas |
+| Material / cor | — / cor da variação | — | `Materials` / `ColorDesc1` | — / `CorWebPrincipal` |
+| Categoria (como vem) | `categorias` | `matriz_de_categorias` | `Type › SubType` | `WebTipo › WebSubTipo` |
+| Personalização | — | `tipo_gravacao` | `DefaultCustomization` | — |
+| Fotos / vídeo | `imagem` + `galeria` / `video` | `url_foto` + `matriz_de_fotos_adicionais` | `AllImageList` / `VideoLink` | `ImageLink` |
+| Ficha técnica | demais propriedades (caixa, embalagem, NCM…) | embalagem, garantia, qtd. mínima, NCM | tipos de gravação, características, marca, origem, caixa, NCM | cor secundária, NCM |
+
+A SM também informa o **preço por quantidade** (`grade_preco_*`): fica gravado (`faixas_preco`) e aparece só no painel interno do produto. Depois de instalar esta versão, rode a atualização de produtos uma vez para preencher os detalhes.
+
 ### Imagens da SPOT
 
 A SPOT envia no CSV só o nome do arquivo da foto. Na atualização, cada produto passa a apontar para a foto publicada no site: `https://www.spotgifts.com.br/fotos/produtos/11112_104-c_1.jpg` (montada pela coluna `Image` ou pelo Sku; códigos com tamanho, como `11112-104-GG`, usam a foto do produto base). Não é preciso navegador automatizado nem baixar arquivos; produto sem foto nesse endereço mostra o placeholder.
@@ -131,7 +148,7 @@ O menu fica na **barra lateral** (pode ser recolhido para mostrar só os ícones
 
 **Vendas**
 
-1. **Catálogo**: busque por nome ou código, filtre por fornecedor/estoque, ordene por **menor ou maior preço** (ou nome) e filtre por **faixa de preço** (faixas prontas de até R$ 5 a acima de R$ 200, ou mínimo e máximo digitados; produtos sem preço ficam fora das faixas e no fim da ordenação por preço). Ordenado por preço ou nome, a lista deixa de ser agrupada por fornecedor. Alterne grade/lista e clique no produto para incluí-lo no carrinho. Mostra os produtos dos fornecedores e os produtos próprios.
+1. **Catálogo**: busque por nome, código ou descrição (cada palavra digitada precisa aparecer), filtre por fornecedor/**categoria**/estoque, ordene por **menor ou maior preço** (ou nome) e filtre por **faixa de preço** (faixas prontas de até R$ 5 a acima de R$ 200, ou mínimo e máximo digitados; produtos sem preço ficam fora das faixas e no fim da ordenação por preço). Ordenado por preço ou nome, a lista deixa de ser agrupada por fornecedor. Alterne grade/lista e clique no produto para incluí-lo no carrinho. Mostra os produtos dos fornecedores e os produtos próprios. Cada cartão traz a categoria e a cor; o botão **i** abre os **detalhes do produto**: galeria de fotos, descrição, ficha técnica (material, medidas, peso, capacidade, personalização…), vídeo e, na SM, o custo por quantidade (tela interna; clique numa categoria para filtrar). O resumo da descrição (até ~200 caracteres), as medidas e o material vão para o item do orçamento e aparecem na folha e na página do cliente — o fornecedor, a marca e o tipo de gravação nunca. No **Mockups**, quando o produto tem mais de uma foto, escolha a foto usada na faixa *Fotos do produto*.
 2. **Carrinho**: cada item mostra o nome e o código do produto. Ajuste quantidades e, em *Ajustar custos e margem*, os custos de personalização e os custos fixos de cada item (começam com os valores da tela **Parâmetros**). Imposto de compra, imposto sobre venda e margem não aparecem no carrinho: são sempre os cadastrados em **Parâmetros**. Há uma **observação geral** (campo *Observações* no resumo) e uma **observação por produto** (campo abaixo da quantidade de cada item). As duas são gravadas com o orçamento, aparecem na folha impressa e voltam ao carrinho quando o orçamento é alterado.
 3. **Orçamentos**: tela única com duas abas.
    - **Todos os orçamentos**: lista paginada (20 por página) com filtros por número (`ORC-0005` ou `5`), produto (descrição ou código de qualquer item), período (de/até), faixa de valor total e situação. Clique em uma linha para ver os detalhes; **✎ Editar** carrega o orçamento de volta no carrinho (o carrinho precisa estar vazio).
@@ -161,7 +178,7 @@ O menu fica na **barra lateral** (pode ser recolhido para mostrar só os ícones
 
 **Cadastros**
 
-6. **Produtos Próprios**: inclua, busque, altere e exclua produtos da própria empresa. Cada um recebe um código sequencial `PDP-000001`, `PDP-000002`… (códigos excluídos não são reutilizados). A foto pode ser enviada do computador ou informada por URL; os arquivos ficam em `data/imagens/proprios/`.
+6. **Produtos Próprios**: inclua, busque, altere e exclua produtos da própria empresa. Cada um recebe um código sequencial `PDP-000001`, `PDP-000002`… (códigos excluídos não são reutilizados). A foto pode ser enviada do computador ou informada por URL; os arquivos ficam em `data/imagens/proprios/`. Em *Detalhes do produto* (opcional) informe descrição, material, medidas, peso, capacidade, cor, categoria, personalização e vídeo (YouTube/Vimeo) — aparecem no painel de detalhes do catálogo e, resumidos, no orçamento.
 7. **Parâmetros**: tela em abas.
    - **Precificação**: valores da calculadora (material, mão de obra, imposto de compra, designer, logística, imposto sobre venda e margem), com simulação de preço. Material, mão de obra, designer e logística são o ponto de partida de cada item novo; imposto de compra, imposto sobre venda e margem valem sempre para todos os itens do carrinho.
    - **Checklist de fechamento**: itens da lista usada na etapa Em Fechamento dos pedidos (incluir, renomear, reordenar, remover).
@@ -214,7 +231,8 @@ Todas as rotas exigem login, exceto as de `/api/auth`. Cada rota também exige a
 | `GET/POST /api/usuarios` · `PUT /api/usuarios/:id` | Usuários (`?inativos=1` inclui os inativos) |
 | `POST /api/usuarios/:id/inativar` · `POST /api/usuarios/:id/reativar` | Inativa / reativa (nenhum usuário é apagado) |
 | `GET /api/acessos` · `PUT /api/acessos/:id` | Telas liberadas por usuário (`{ permissoes: [...] }`) |
-| `GET /api/produtos` · `GET /api/produto/:id` | Catálogo (fornecedores + próprios; próprios têm id negativo) |
+| `GET /api/produtos` · `GET /api/produto/:id` | Catálogo (fornecedores + próprios; próprios têm id negativo). Filtros: `q`, `fornecedor`, `categoria`, `estoque`, `ordem`, `min`, `max`. O detalhe traz descrição, ficha, fotos, vídeo e faixas de preço |
+| `GET /api/categorias` | Categorias com a quantidade de produtos (`?fornecedor=`) |
 | `GET/POST /api/produtos-proprios` | Lista (`?q=` busca) / inclui produto próprio |
 | `GET/PUT/PATCH/DELETE /api/produtos-proprios/:codigo` | Consulta, substitui, altera campos ou exclui (`PDP-000001`) |
 | `GET/PUT /api/parametros` | Lê / grava os parâmetros da calculadora |

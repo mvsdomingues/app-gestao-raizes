@@ -2,7 +2,9 @@ import { exigirEnv } from '../config';
 import { isNA, reprPython, strPython } from '../lib/conversao';
 import { comTimeout, lerJson, verificarStatus } from './http';
 import { colunasDataFrame, type Registro } from './tabela';
+import { detalhesVazios, juntarCategorias, limparTexto, montarFicha, numeroBr, numeroPositivo, urlsUnicas } from './texto';
 import type { Coletor, LinhaFornecedor } from './tipos';
+import type { DetalhesProduto } from '@raizes/shared';
 
 const URL_BASE = 'https://api.minhaxbz.com.br:5001/api/clientes/GetListaDeProdutos';
 
@@ -46,6 +48,27 @@ function concatenar(a: unknown, b: unknown): unknown {
     throw new TypeError(`can only concatenate str (not "${typeof b}") to str`);
   }
   return a + b;
+}
+
+/** Detalhes de um produto da XBZ (só há a lista; não existe consulta de detalhe). */
+export function detalhesXbz(r: Registro, foto: string | null): DetalhesProduto {
+  const d = detalhesVazios();
+  const v = (c: string) => (Object.hasOwn(r, c) ? r[c] : null);
+  d.descricao = limparTexto(v('Descricao'), true);
+  d.cor = limparTexto(v('CorWebPrincipal'));
+  const gramas = numeroPositivo(v('Peso'));
+  if (gramas) d.peso = `${numeroBr(gramas)} g`;
+  // Altura / Largura / Profundidade quase sempre vêm zeradas: usa só as informadas
+  const dims = ['Altura', 'Largura', 'Profundidade'].map((c) => numeroPositivo(v(c))).filter((n): n is number => !!n);
+  if (dims.length >= 2) d.medidas = `${dims.map(numeroBr).join(' x ')} cm`;
+  d.categoria = juntarCategorias([[limparTexto(v('WebTipo')), limparTexto(v('WebSubTipo'))].filter(Boolean).join(' › ')]);
+  d.fotos = urlsUnicas([foto, v('ImageLink')]);
+  const secundaria = limparTexto(v('CorWebSecundaria'));
+  d.ficha = montarFicha([
+    ['Cor secundária', secundaria && secundaria !== d.cor ? secundaria : null],
+    ['NCM', v('Ncm')],
+  ]);
+  return d;
 }
 
 export const xbz: Coletor = {
@@ -106,14 +129,16 @@ export const xbz: Coletor = {
     const faltando = obrigatorias.filter((c) => !colunas.includes(c));
     if (faltando.length) throw new Error(`'${faltando[0]}'`);
 
-    return linhas.map(
-      (r): LinhaFornecedor => ({
+    return linhas.map((r): LinhaFornecedor => {
+      const imagem = colImg ? montarUrlXbz(celula(r, colImg)) : null;
+      return {
         codigo: celula(r, 'CodigoAmigavel'),
         nome: concatenar(concatenar(celula(r, 'Nome'), ' '), celula(r, 'CorWebPrincipal')),
         preco: celula(r, 'PrecoVenda'),
         qtd_estoque: celula(r, 'QuantidadeDisponivel'),
-        imagem_url: colImg ? montarUrlXbz(celula(r, colImg)) : null,
-      }),
-    );
+        imagem_url: imagem,
+        detalhes: detalhesXbz(r, imagem),
+      };
+    });
   },
 };

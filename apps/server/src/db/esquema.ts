@@ -204,21 +204,41 @@ export function garantirEsquema(db: Database.Database): void {
       ultimo_erro TEXT
     );
 
-    -- Catálogo único: produtos dos fornecedores + produtos próprios.
-    -- Os próprios recebem id negativo para nunca colidir com os dos fornecedores.
-    DROP VIEW IF EXISTS catalogo;
-    CREATE VIEW catalogo AS
-      SELECT id, fornecedor, codigo, nome, preco, qtd_estoque, atualizado, imagem_url,
-             'fornecedor' AS origem
-        FROM produtos
-      UNION ALL
-      SELECT -id, fornecedor, codigo, nome, preco, qtd_estoque, atualizado, imagem_url,
-             'proprio' AS origem
-        FROM produtos_proprios;
   `);
 
   migrarColunas(db);
+
+  // Catálogo único: produtos dos fornecedores + produtos próprios.
+  // Os próprios recebem id negativo para nunca colidir com os dos fornecedores.
+  // (Criada depois da migração, porque usa as colunas de detalhes.)
+  const cols = ['fornecedor', 'codigo', 'nome', 'preco', 'qtd_estoque', 'atualizado', 'imagem_url', ...COLUNAS_DETALHE_PRODUTO.map(([c]) => c)].join(', ');
+  db.exec(`
+    DROP VIEW IF EXISTS catalogo;
+    CREATE VIEW catalogo AS
+      SELECT id, ${cols}, 'fornecedor' AS origem FROM produtos
+      UNION ALL
+      SELECT -id, ${cols}, 'proprio' AS origem FROM produtos_proprios;
+  `);
 }
+
+/**
+ * Detalhes dos produtos (fornecedores e próprios). Textos limpos; fotos, ficha e
+ * faixas_preco em JSON.
+ */
+export const COLUNAS_DETALHE_PRODUTO: [string, string][] = [
+  ['descricao', 'TEXT'],
+  ['material', 'TEXT'],
+  ['medidas', 'TEXT'],
+  ['peso', 'TEXT'],
+  ['capacidade', 'TEXT'],
+  ['cor', 'TEXT'],
+  ['categoria', 'TEXT'],
+  ['personalizacao', 'TEXT'],
+  ['video', 'TEXT'],
+  ['fotos', "TEXT NOT NULL DEFAULT '[]'"],
+  ['ficha', "TEXT NOT NULL DEFAULT '[]'"],
+  ['faixas_preco', "TEXT NOT NULL DEFAULT '[]'"],
+];
 
 function colunas(db: Database.Database, tabela: string): string[] {
   return (db.prepare(`PRAGMA table_info(${tabela})`).all() as { name: string }[]).map((c) => c.name);
@@ -226,6 +246,13 @@ function colunas(db: Database.Database, tabela: string): string[] {
 
 /** Ajustes em bancos já existentes (colunas novas / renomeadas), sem perder dados. */
 function migrarColunas(db: Database.Database): void {
+  // Detalhes dos produtos (descrição, ficha técnica, fotos…)
+  for (const tabela of ['produtos', 'produtos_proprios']) {
+    const existentes = colunas(db, tabela);
+    for (const [coluna, tipo] of COLUNAS_DETALHE_PRODUTO) {
+      if (!existentes.includes(coluna)) db.exec(`ALTER TABLE ${tabela} ADD COLUMN ${coluna} ${tipo}`);
+    }
+  }
   // Exclusão de usuário virou "inativo" (versão anterior: excluido / excluido_em / excluido_por)
   const u = colunas(db, 'usuarios');
   if (u.includes('excluido')) {

@@ -140,7 +140,7 @@ export function ProdutosProprios() {
               <tr>
                 <th style={{ width: 56 }} />
                 <th style={{ width: 120 }}>Código</th>
-                <th>Descrição</th>
+                <th>Nome</th>
                 <th style={{ width: 120 }}>Fornecedor</th>
                 <th className="num" style={{ width: 110 }}>
                   Custo

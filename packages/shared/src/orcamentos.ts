@@ -93,6 +93,10 @@ export interface ItemPublico {
   qty: number;
   preco: number;
   observacao: string | null;
+  /** Resumo da descrição, medidas e material (null = não informado) */
+  descricao: string | null;
+  medidas: string | null;
+  material: string | null;
   /** Endereço da foto (rota pública amarrada ao link) ou null */
   imagem: string | null;
 }

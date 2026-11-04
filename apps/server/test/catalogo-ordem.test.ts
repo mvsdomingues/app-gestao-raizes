@@ -70,3 +70,46 @@ describe('catálogo: ordenação e faixa de preço', () => {
     expect((await lista('&min=abc')).total).toBe(7);
   });
 });
+
+describe('catálogo: categorias, busca na descrição e detalhes', () => {
+  beforeAll(() => {
+    db.prepare(
+      `INSERT INTO produtos (fornecedor, codigo, nome, preco, qtd_estoque, atualizado, descricao, categoria, fotos, ficha)
+       VALUES ('SM', 'M1', 'Garrafa', 19, 5, '2026-11-03', 'Garrafa em alumínio com tampa rosqueável', 'Garrafas|Lançamentos', ?, ?)`,
+    ).run(JSON.stringify(['https://x/a.jpg', 'https://x/b.jpg']), JSON.stringify([{ rotulo: 'NCM', valor: '7615' }]));
+    db.prepare(
+      `INSERT INTO produtos (fornecedor, codigo, nome, preco, qtd_estoque, atualizado, categoria)
+       VALUES ('SM', 'M2', 'Copo', 9, 5, '2026-11-03', 'Copos, Canecas|Garrafas Térmicas')`,
+    ).run();
+  });
+
+  it('busca também na descrição, palavra por palavra', async () => {
+    expect((await lista('&q=alumínio')).produtos.map((p) => p.codigo)).toEqual(['M1']);
+    expect((await lista('&q=garrafa%20rosque')).produtos.map((p) => p.codigo)).toEqual(['M1']);
+  });
+
+  it('filtra pela categoria exata (sem pegar parte de outra)', async () => {
+    expect((await lista('&categoria=Garrafas')).produtos.map((p) => p.codigo)).toEqual(['M1']);
+    expect((await lista('&categoria=Copos%2C%20Canecas')).produtos.map((p) => p.codigo)).toEqual(['M2']);
+  });
+
+  it('lista as categorias com a quantidade', async () => {
+    const r = await fetch(`${base}/api/categorias?fornecedor=SM`, { headers: { Cookie: cookie } });
+    expect(await r.json()).toEqual([
+      { nome: 'Copos, Canecas', total: 1 },
+      { nome: 'Garrafas', total: 1 },
+      { nome: 'Garrafas Térmicas', total: 1 },
+      { nome: 'Lançamentos', total: 1 },
+    ]);
+  });
+
+  it('o detalhe devolve fotos e ficha já convertidas', async () => {
+    const { id } = db.prepare("SELECT id FROM produtos WHERE codigo='M1'").get() as { id: number };
+    const r = await fetch(`${base}/api/produto/${id}`, { headers: { Cookie: cookie } });
+    const p = (await r.json()) as Record<string, unknown>;
+    expect(p.fotos).toEqual(['https://x/a.jpg', 'https://x/b.jpg']);
+    expect(p.ficha).toEqual([{ rotulo: 'NCM', valor: '7615' }]);
+    expect(p.faixas_preco).toEqual([]);
+    expect(p.descricao).toMatch(/alumínio/);
+  });
+});

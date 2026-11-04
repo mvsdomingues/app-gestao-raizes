@@ -3,6 +3,7 @@ import { randomBytes } from 'node:crypto';
 import {
   DIAS_VALIDADE_LINK,
   numeroOrcamento,
+  resumoDescricao,
   type ItemOrcamento,
   type LinkOrcamento,
   type OrcamentoPublico,
@@ -178,6 +179,9 @@ export function orcamentoPublico(db: Banco, codigo: string): OrcamentoPublico {
     qty: i.qty,
     preco: i.preco,
     observacao: i.observacao?.trim() || null,
+    descricao: resumoDescricao(i.descricao) || null,
+    medidas: i.medidas?.trim() || null,
+    material: i.material?.trim() || null,
     imagem: i.imagem_url ? `/api/publico/orcamentos/${codigo}/imagem/${n}` : null,
   }));
   const pedido = situacao === 'ACEITO' ? (pedidoAtivoDoOrcamento(db, l.id)?.codigo ?? null) : null;

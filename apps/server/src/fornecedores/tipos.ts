@@ -9,6 +9,8 @@ export interface LinhaFornecedor {
   preco: unknown;
   qtd_estoque: unknown;
   imagem_url: unknown;
+  /** Dados extras já limpos (descrição, ficha, fotos…); ausente = nada além do básico. */
+  detalhes?: import('@raizes/shared').DetalhesProduto;
 }
 
 export interface Coletor {

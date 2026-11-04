@@ -15,6 +15,7 @@ import {
   type Tinta,
 } from './motor';
 import { avisar } from '../../lib/dialogo';
+import { api } from '../../lib/api';
 
 const TINTAS: { valor: Tinta; rotulo: string }[] = [
   { valor: 'original', rotulo: 'Original' },
@@ -30,6 +31,10 @@ export function EstudioMockup() {
   const [st] = useState(estadoInicial);
   const [, atualizarTela] = useReducer((x: number) => x + 1, 0);
   const [arrastandoArquivo, setArrastandoArquivo] = useState(false);
+  /** Outras fotos do produto escolhido (galeria do fornecedor) */
+  const [fotos, setFotos] = useState<string[]>([]);
+  const [fotosQuebradas, setFotosQuebradas] = useState<Set<string>>(new Set());
+  const pedidoFotos = useRef(0);
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const arquivoRef = useRef<HTMLInputElement>(null);
 
@@ -62,6 +67,17 @@ export function EstudioMockup() {
     atualizarTela();
     const prod = id === ID_DEMO ? DEMO_PRODUCT : itensRef.current[id]?.produto;
     if (!prod) return;
+    // Galeria: a do carrinho ou, se não veio junto, a do catálogo
+    const seq = ++pedidoFotos.current;
+    setFotosQuebradas(new Set());
+    const doCarrinho = 'fotos' in prod && Array.isArray(prod.fotos) ? prod.fotos : null;
+    setFotos(doCarrinho ?? []);
+    if (!doCarrinho && id !== ID_DEMO && typeof prod.id === 'number' && prod.id > -1_000_000_000) {
+      api
+        .produto(prod.id)
+        .then((d) => seq === pedidoFotos.current && setFotos(d.fotos))
+        .catch(() => {});
+    }
     if (prod.imagem_url) {
       carregarImagemProduto(st, prod.imagem_url, render);
     } else {
@@ -411,6 +427,35 @@ export function EstudioMockup() {
                 <span className="mockup-hint">Arraste a logo diretamente sobre o produto</span>
               </div>
               <div className="mockup-panel-body">
+                {fotos.filter((f) => !fotosQuebradas.has(f)).length > 1 && (
+                  <div className="mockup-fotos-produto" id="mockup-fotos-produto">
+                    <span>Fotos do produto:</span>
+                    {fotos
+                      .filter((f) => !fotosQuebradas.has(f))
+                      .map((f, i) => (
+                        <button
+                          key={f}
+                          type="button"
+                          className={`detalhe-produto-mini${st.productImgSrc === f ? ' ativa' : ''}`}
+                          title={`Usar a foto ${i + 1}`}
+                          onClick={() => {
+                            carregarImagemProduto(st, f, () => {
+                              atualizarTela();
+                              render();
+                            });
+                          }}
+                        >
+                          <img
+                            src={f}
+                            alt=""
+                            loading="lazy"
+                            referrerPolicy="no-referrer"
+                            onError={() => setFotosQuebradas((q) => new Set(q).add(f))}
+                          />
+                        </button>
+                      ))}
+                  </div>
+                )}
                 <div className="mockup-canvas-stage" id="mockup-canvas-stage">
                   <canvas id="mockup-canvas-2d" width={700} height={700} ref={canvasRef} />
                   <div className="mockup-canvas-overlay-tip" id="mockup-canvas-overlay-tip">

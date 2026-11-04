@@ -1,5 +1,29 @@
 import { useEffect, useRef, useState, type DragEvent } from 'react';
-import { FORNECEDOR_PROPRIO, type DadosProdutoProprio, type ProdutoProprio } from '@raizes/shared';
+import {
+  DETALHES_PRODUTO_PROPRIO,
+  FORNECEDOR_PROPRIO,
+  type CampoDetalheProprio,
+  type DadosProdutoProprio,
+  type ProdutoProprio,
+} from '@raizes/shared';
+
+const CAMPOS_DETALHE = Object.keys(DETALHES_PRODUTO_PROPRIO) as CampoDetalheProprio[];
+type Detalhes = Record<CampoDetalheProprio, string>;
+const detalhesDe = (p: ProdutoProprio | null): Detalhes =>
+  Object.fromEntries(CAMPOS_DETALHE.map((c) => [c, p?.[c] ?? ''])) as Detalhes;
+
+/** Exemplos mostrados nos campos de detalhe. */
+const EXEMPLOS: Record<CampoDetalheProprio, string> = {
+  descricao: 'Como o produto é, para que serve, acabamento…',
+  material: 'Ex: Cerâmica',
+  medidas: 'Ex: 9,5 x 8 cm',
+  peso: 'Ex: 320 g',
+  capacidade: 'Ex: 300 ml',
+  cor: 'Ex: Branca',
+  categoria: 'Ex: Canecas',
+  personalizacao: 'Ex: Sublimação — área 20 x 9 cm',
+  video: 'https://youtube.com/…',
+};
 import { api } from '../../lib/api';
 
 const LIMITE_FOTO = 5 * 1024 * 1024;
@@ -28,6 +52,8 @@ export function FormularioProdutoProprio({ produto, fechar, salvo }: Props) {
   const [estoque, setEstoque] = useState('');
   const [imagemUrl, setImagemUrl] = useState('');
   const [foto, setFoto] = useState<Foto | null>(null);
+  const [detalhes, setDetalhes] = useState<Detalhes>(detalhesDe(null));
+  const [verDetalhes, setVerDetalhes] = useState(false);
   const [erro, setErro] = useState('');
   const [salvando, setSalvando] = useState(false);
   const [bordaZona, setBordaZona] = useState('');
@@ -43,6 +69,9 @@ export function FormularioProdutoProprio({ produto, fechar, salvo }: Props) {
     setEstoque(edicao ? String(edicao.qtd_estoque) : '');
     setImagemUrl(edicao?.imagem_url ?? '');
     setFoto(null);
+    const d = detalhesDe(edicao);
+    setDetalhes(d);
+    setVerDetalhes(CAMPOS_DETALHE.some((c) => d[c]));
     setErro('');
     const t = setTimeout(() => nomeRef.current?.focus(), 50);
     return () => clearTimeout(t);
@@ -76,7 +105,7 @@ export function FormularioProdutoProprio({ produto, fechar, salvo }: Props) {
     const n = nome.trim();
     const valor = Number(preco.replace(',', '.'));
     const qtd = estoque.trim() === '' ? 0 : Number(estoque.replace(',', '.'));
-    if (!n) return setErro('Informe a descrição do produto.');
+    if (!n) return setErro('Informe o nome do produto.');
     if (preco.trim() === '' || Number.isNaN(valor) || valor < 0) return setErro('Informe um custo unitário válido (≥ 0).');
     if (Number.isNaN(qtd) || qtd < 0) return setErro('Informe um estoque válido (≥ 0).');
 
@@ -86,6 +115,7 @@ export function FormularioProdutoProprio({ produto, fechar, salvo }: Props) {
       preco: valor,
       qtd_estoque: qtd,
       imagem_url: imagemUrl.trim(),
+      ...Object.fromEntries(CAMPOS_DETALHE.map((c) => [c, detalhes[c].trim() || null])),
     };
     if (foto) dados.imagem_upload = foto.dataUrl;
 
@@ -152,7 +182,7 @@ export function FormularioProdutoProprio({ produto, fechar, salvo }: Props) {
         </div>
 
         <div className="custom-modal-field">
-          <label className="custom-modal-label">Descrição do produto *</label>
+          <label className="custom-modal-label">Nome do produto *</label>
           <input
             ref={nomeRef}
             id="produto-nome"
@@ -260,6 +290,44 @@ export function FormularioProdutoProprio({ produto, fechar, salvo }: Props) {
             disabled={!!foto}
             onChange={(e) => setImagemUrl(e.target.value)}
           />
+        </div>
+
+        <div className="custom-modal-field detalhes-proprio">
+          <button
+            type="button"
+            className="link-botao"
+            id="btn-detalhes-produto"
+            aria-expanded={verDetalhes}
+            onClick={() => setVerDetalhes((v) => !v)}
+          >
+            {verDetalhes ? '▾' : '▸'} Detalhes do produto (opcional — descrição, medidas, material…)
+          </button>
+          {verDetalhes && (
+            <div className="detalhes-proprio-campos">
+              {CAMPOS_DETALHE.map((c) => {
+                const { rotulo, max } = DETALHES_PRODUTO_PROPRIO[c];
+                const props = {
+                  id: `produto-${c}`,
+                  className: 'custom-input',
+                  maxLength: max,
+                  placeholder: EXEMPLOS[c],
+                  value: detalhes[c],
+                  onChange: (e: { target: { value: string } }) => setDetalhes((d) => ({ ...d, [c]: e.target.value })),
+                };
+                return (
+                  <div key={c} className={`custom-modal-field campo-${c}`}>
+                    <label className="custom-modal-label" htmlFor={props.id}>
+                      {rotulo}
+                    </label>
+                    {c === 'descricao' ? <textarea rows={4} {...props} /> : <input type="text" {...props} />}
+                  </div>
+                );
+              })}
+              <p className="detalhes-proprio-dica">
+                A descrição (resumida), as medidas e o material aparecem no orçamento enviado ao cliente.
+              </p>
+            </div>
+          )}
         </div>
 
         {erro && <div className="form-mensagem erro">{erro}</div>}
