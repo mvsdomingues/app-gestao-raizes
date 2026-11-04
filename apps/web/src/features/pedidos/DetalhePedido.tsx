@@ -206,6 +206,7 @@ export function DetalhePedido() {
             observacao: p.orcamento.observacao ?? null,
             cliente: p.cliente,
             entregaPrevista: p.entrega_prevista,
+            mockups: p.orcamento.mockups ?? [],
           }}
         />
       </div>

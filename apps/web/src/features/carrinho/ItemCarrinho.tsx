@@ -12,7 +12,7 @@ import { useCarrinho, type ItemCarrinho as Item } from '../../state/carrinho';
  * redesenhada (mesmo comportamento da versão anterior).
  */
 export function ItemCarrinho({ item }: { item: Item }) {
-  const { abrirMockupParaProduto, parametros } = useApp();
+  const { parametros } = useApp();
   const { pode } = useSessao();
   const { remover, definirQtd, definirCalc, definirObservacaoItem } = useCarrinho();
   const { produto: p, qty, calc: c } = item;
@@ -64,11 +64,6 @@ export function ItemCarrinho({ item }: { item: Item }) {
           <span className={`sup-badge ${classeFornecedor(p.fornecedor, p.origem)}`}>{p.fornecedor}</span>
           {' \u00a0Custo fornecedor: '}
           {formatBRL(p.preco)}/un{' '}
-          {pode('mockup') && (
-          <button className="btn-item-mockup" onClick={() => abrirMockupParaProduto(id)} title="Gerar Mockup deste produto">
-            🎨 Mockup
-          </button>
-          )}
         </div>
         <div className="qty-control">
           <button className="qty-btn" onClick={() => definirQtd(id, Math.max(1, qty - 1), true)}>

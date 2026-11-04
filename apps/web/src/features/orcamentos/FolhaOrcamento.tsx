@@ -14,6 +14,8 @@ export type DadosFolhaOrcamento = Pick<DadosFolha, 'id' | 'numero' | 'dataHora' 
       medidas?: string | null;
       material?: string | null;
     })[];
+  /** Mockups dos produtos (item = posição na lista; url da imagem) */
+  mockups?: { item: number; url: string }[];
 };
 
 /**
@@ -185,6 +187,25 @@ export function FolhaOrcamento({
           </tr>
         </tfoot>
       </table>
+
+      {(folha.mockups?.length ?? 0) > 0 && (
+        <section className="orc-mockups" id="orc-mockups">
+          <div className="orc-mockups-titulo">Mockups dos produtos</div>
+          <div className="orc-mockups-grade">
+            {folha.mockups!
+              .filter((m) => itens[m.item])
+              .map((m) => (
+                <figure key={m.item} className="orc-mockup">
+                  <img src={m.url} alt={`Mockup: ${itens[m.item]!.nome}`} loading="lazy" />
+                  <figcaption>
+                    <span className="orc-mockup-num">{m.item + 1}</span> {itens[m.item]!.nome}
+                    {itens[m.item]!.codigo && <span className="orc-mockup-cod"> · Cód: {itens[m.item]!.codigo}</span>}
+                  </figcaption>
+                </figure>
+              ))}
+          </div>
+        </section>
+      )}
 
       {folha.observacao && (
         <div className="orc-observacoes" id="orc-observacoes">

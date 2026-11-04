@@ -6,6 +6,8 @@ import '../styles/50-atualizacao-historico.css';
 import '../styles/80-formularios.css';
 import '../styles/99c-clientes.css';
 import '../styles/99d-link-publico.css';
+import '../styles/99e-detalhe-produto.css';
+import '../styles/99f-estudio-mockup.css';
 
 createRoot(document.getElementById('root')!).render(
   <StrictMode>

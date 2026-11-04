@@ -129,6 +129,8 @@ export interface Orcamento extends ResumoOrcamento {
   link?: import('./orcamentos').LinkOrcamento | null;
   /** Resposta do cliente pelo link (da rodada de envio atual) */
   resposta_cliente?: import('./orcamentos').RespostaDoCliente | null;
+  /** Mockups dos produtos (opcionais), na ordem dos itens */
+  mockups?: import('./orcamentos').MockupOrcamento[];
 }
 
 /** Corpo de POST /api/orcamentos */

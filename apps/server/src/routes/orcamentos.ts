@@ -9,6 +9,7 @@ import {
   type OrcamentoCriado,
   type StatusPedido,
   type ClienteVinculado,
+  type ItemOrcamento,
   type RespostaOrcamentos,
   type ResumoOrcamento,
 } from '@raizes/shared';
@@ -21,6 +22,7 @@ import {
   statusDoOrcamento,
 } from '../db/repositorio-orcamentos';
 import { pedidoAtivoDoOrcamento } from '../db/repositorio-pedidos';
+import { mockupsDoOrcamento, reorganizarMockups } from '../db/repositorio-mockups';
 import { vinculoDoCliente } from '../db/repositorio-clientes';
 import { COLUNAS_LINK, extrairLink, trocarLink } from '../db/repositorio-link';
 import { urlBase } from '../lib/url';
@@ -93,6 +95,7 @@ export function lerOrcamento(db: Banco, id: number, base = ''): Orcamento | unde
     itens: JSON.parse(itens_json),
     pedido: pedidoAtivoDoOrcamento(db, row.id),
     movimentos: movimentosDoOrcamento(db, row.id),
+    mockups: mockupsDoOrcamento(db, row.id),
   };
 }
 
@@ -103,6 +106,8 @@ export interface OpcoesOrcamentos {
   kommo?: ServicoKommo | null;
   /** APP_URL_PUBLICA (endereço dos links enviados aos clientes) */
   urlPublica?: string | null;
+  /** Pasta das imagens (mockups de itens removidos numa alteração são apagados) */
+  imagensDir?: string;
 }
 
 export function rotasOrcamentos(db: Banco, opcoes: OpcoesOrcamentos = {}): Router {
@@ -332,6 +337,8 @@ export function rotasOrcamentos(db: Banco, opcoes: OpcoesOrcamentos = {}): Route
         id,
       );
     if (!info.changes) throw new ErroHttp(404, 'não encontrado');
+    // Cada mockup acompanha o seu produto; os de produtos removidos são apagados
+    if (opcoes.imagensDir) reorganizarMockups(db, opcoes.imagensDir, id, itens as ItemOrcamento[]);
     const corpo: OrcamentoCriado = { id, numero: numeroOrcamento(id), data_hora: dataHora };
     res.json(corpo);
   });

@@ -3,7 +3,8 @@ import { resolve, sep } from 'node:path';
 import { Router, type NextFunction, type Request, type Response } from 'express';
 import { numeroOrcamento } from '@raizes/shared';
 import type { Banco } from '../db/conexao';
-import { aceitarPeloLink, itensDoLink, orcamentoPublico, recusarPeloLink } from '../db/repositorio-link';
+import { aceitarPeloLink, itensDoLink, orcamentoDoLink, orcamentoPublico, recusarPeloLink } from '../db/repositorio-link';
+import { arquivoDoMockup, caminhoMockup } from '../db/repositorio-mockups';
 import { buscarPedido } from '../db/repositorio-pedidos';
 import type { ServicoKommo } from '../kommo/servico';
 import { corpoJson, ErroHttp } from '../lib/http';
@@ -109,6 +110,19 @@ export function rotasPublicas(db: Banco, imagensDir: string, kommo: ServicoKommo
         .type(resp.headers.get('Content-Type') || 'image/jpeg')
         .set('Cache-Control', 'private, max-age=86400')
         .send(Buffer.from(await resp.arrayBuffer()));
+    }),
+  );
+
+  /** Mockup do item n */
+  r.get(
+    '/api/publico/orcamentos/:codigo/mockup/:n',
+    comCodigo((req, res) => {
+      const id = orcamentoDoLink(db, String(req.params.codigo));
+      const n = Number(req.params.n);
+      const arquivo = Number.isInteger(n) && n >= 0 ? arquivoDoMockup(db, id, n) : undefined;
+      const caminho = arquivo ? caminhoMockup(imagensDir, arquivo) : '';
+      if (!arquivo || !existsSync(caminho)) throw new ErroHttp(410, 'Imagem indisponível');
+      res.set('Cache-Control', 'private, max-age=86400').sendFile(caminho);
     }),
   );
 

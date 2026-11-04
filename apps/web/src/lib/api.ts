@@ -1,4 +1,6 @@
 import type {
+  CenaMockup,
+  MockupOrcamento,
   AcessoUsuario,
   IdTela,
   Usuario,
@@ -147,6 +149,15 @@ export const api = {
     for (const [k, v] of Object.entries(filtros)) if (v && String(v).trim()) qs.set(k, String(v).trim());
     return enviar<RespostaOrcamentos>('GET', `/api/orcamentos?${qs}`);
   },
+
+  /** Mockups dos produtos do orçamento (opcionais; só enquanto "Aberto"). */
+  mockups: (orcamentoId: number) => enviar<MockupOrcamento[]>('GET', `/api/orcamentos/${orcamentoId}/mockups`),
+  cenaMockup: (orcamentoId: number, item: number) =>
+    enviar<{ cena: CenaMockup | null }>('GET', `/api/orcamentos/${orcamentoId}/mockups/${item}/cena`),
+  salvarMockup: (orcamentoId: number, item: number, imagem: string, cena: CenaMockup) =>
+    enviar<MockupOrcamento>('PUT', `/api/orcamentos/${orcamentoId}/mockups/${item}`, { imagem, cena }),
+  excluirMockup: (orcamentoId: number, item: number) =>
+    enviar<{ ok: boolean }>('DELETE', `/api/orcamentos/${orcamentoId}/mockups/${item}`),
 
   /** Muda a situação manual do orçamento (Aberto ↔ Enviado). */
   alterarStatusOrcamento: (id: number, status: StatusOrcamentoManual, statusAtual: StatusOrcamento, motivo?: string) =>

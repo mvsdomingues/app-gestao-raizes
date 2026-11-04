@@ -192,6 +192,21 @@ export function garantirEsquema(db: Database.Database): void {
       -- Unix timestamp usado como ponto de partida da próxima sincronização incremental
       marca     INTEGER
     );
+    -- Mockups dos produtos do orçamento (opcionais; um por item). "item" = posição em itens_json.
+    -- codigo/fornecedor mantêm o vínculo quando a lista de itens é alterada.
+    CREATE TABLE IF NOT EXISTS orcamento_mockups (
+      id            INTEGER PRIMARY KEY AUTOINCREMENT,
+      orcamento_id  INTEGER NOT NULL REFERENCES orcamentos(id),
+      item          INTEGER NOT NULL,
+      codigo        TEXT,
+      fornecedor    TEXT,
+      arquivo       TEXT NOT NULL,
+      cena          TEXT,
+      usuario_id    INTEGER REFERENCES usuarios(id),
+      atualizado    TEXT NOT NULL,
+      UNIQUE (orcamento_id, item)
+    );
+
     -- Notas a registrar no contato do Kommo (ex.: pedido gerado), com nova tentativa
     CREATE TABLE IF NOT EXISTS kommo_notas (
       id          INTEGER PRIMARY KEY AUTOINCREMENT,

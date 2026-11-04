@@ -118,6 +118,8 @@ export interface OrcamentoPublico {
   /** Aceite: código do pedido gerado */
   pedido: string | null;
   resposta: { resposta: RespostaCliente; em: string; observacao: string | null } | null;
+  /** Mockups dos produtos (imagem servida pela rota pública do link), na ordem dos itens */
+  mockups: { item: number; nome: string; imagem: string }[];
 }
 
 /** Movimentação de situação do orçamento (data/hora e quem fez). */
@@ -149,3 +151,77 @@ export function motivoBloqueioAlteracao(numero: string, status: StatusOrcamento,
   }
   return null;
 }
+
+// ══════════════════════════════════════════════════════════
+// MOCKUPS DOS PRODUTOS DO ORÇAMENTO
+// ══════════════════════════════════════════════════════════
+
+/** Mockup gravado para um item do orçamento (item = posição na lista de itens, a partir de 0). */
+export interface MockupOrcamento {
+  item: number;
+  /** Endereço interno da imagem (exige login) */
+  url: string;
+  atualizado: string;
+}
+
+/**
+ * Motivo para não permitir criar/alterar mockups (null = permitido). Os mockups são
+ * opcionais e só podem ser feitos enquanto o orçamento está "Aberto" (ainda não enviado).
+ */
+export function motivoBloqueioMockup(numero: string, status: StatusOrcamento, pedido?: string | null): string | null {
+  if (status === 'ENVIADO') {
+    return `O ${numero} já foi enviado ao cliente. Volte-o para "Aberto" para criar ou alterar mockups.`;
+  }
+  if (status === 'CANCELADO') return `O ${numero} está cancelado: os mockups não podem ser alterados.`;
+  if (status === 'PEDIDO_GERADO') {
+    return `O ${numero} já virou o pedido ${pedido ?? ''}: os mockups não podem ser alterados.`.replace('  ', ' ');
+  }
+  return null;
+}
+
+/** Cena do estúdio de mockups (guardada para reabrir e continuar a edição). */
+export interface CenaMockup {
+  versao: 1;
+  /** Foto do produto usada como fundo (URL original) */
+  foto: string | null;
+  objetos: ObjetoMockup[];
+}
+
+export type MesclagemMockup = 'source-over' | 'multiply' | 'overlay' | 'screen';
+export type TintaMockup = 'original' | 'white' | 'black' | 'gold';
+
+interface ObjetoMockupBase {
+  id: string;
+  /** Centro do objeto (0–1, relativo ao quadro) */
+  x: number;
+  y: number;
+  /** Largura do objeto relativa ao quadro (0–1) */
+  largura: number;
+  rotacao: number;
+  /** 0–1 */
+  opacidade: number;
+  mescla: MesclagemMockup;
+  tinta: TintaMockup;
+  /** Curvatura (-100 a 100): positivo = arco para baixo (canecas, garrafas) */
+  curva: number;
+  /** Perspectiva horizontal (-100 a 100): um lado menor que o outro */
+  perspectiva: number;
+}
+
+export interface LogoMockup extends ObjetoMockupBase {
+  tipo: 'logo';
+  /** Imagem da logo (data URL) */
+  src: string;
+  nomeArquivo: string;
+}
+
+export interface TextoMockup extends ObjetoMockupBase {
+  tipo: 'texto';
+  texto: string;
+  fonte: string;
+  cor: string;
+  negrito: boolean;
+  italico: boolean;
+}
+
+export type ObjetoMockup = LogoMockup | TextoMockup;

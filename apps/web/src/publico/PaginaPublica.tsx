@@ -112,6 +112,7 @@ export function PaginaPublica() {
             entregaPrevista: o.entrega_prevista,
             cliente: o.cliente ? { id: 0, nome: o.cliente.nome, telefone: o.cliente.telefone } : null,
             itens: o.itens.map((i) => ({ ...i, imagem_url: i.imagem ?? '' })),
+            mockups: (o.mockups ?? []).map((m) => ({ item: m.item, url: m.imagem })),
           }}
         />
       </div>

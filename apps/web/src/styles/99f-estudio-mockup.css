@@ -1,0 +1,129 @@
+/* ══════════════════════════════════
+   ESTÚDIO DE MOCKUPS (Konva) e mockups na folha do orçamento
+══════════════════════════════════ */
+#view-mockup { max-width: 1560px; padding: 22px 24px 60px; }
+.mk-cabecalho-acoes { display: flex; gap: 8px; flex-wrap: wrap; }
+
+.mk-grade {
+  display: grid;
+  grid-template-columns: 280px minmax(0, 1fr) 290px;
+  gap: 18px;
+  align-items: start;
+}
+@media (max-width: 1240px) {
+  .mk-grade { grid-template-columns: 260px minmax(0, 1fr); }
+  .mk-grade > #mk-propriedades { grid-column: 1 / -1; }
+}
+@media (max-width: 860px) {
+  .mk-grade { grid-template-columns: 1fr; }
+  #view-mockup { padding: 16px 12px 40px; }
+}
+.mk-coluna { display: flex; flex-direction: column; gap: 14px; min-width: 0; }
+.mk-coluna .mockup-panel-body { padding: 12px; gap: 10px; }
+
+/* Itens do orçamento */
+.mk-itens { max-height: 360px; overflow-y: auto; gap: 6px !important; }
+.mk-item {
+  display: flex; align-items: center; gap: 8px; width: 100%;
+  padding: 6px 8px; border: 1.5px solid var(--border); border-radius: var(--radius);
+  background: #fff; cursor: pointer; text-align: left; font: inherit; transition: all .15s;
+}
+.mk-item:hover { border-color: var(--uva); }
+.mk-item.ativo { border-color: var(--uva); background: #faf6fb; box-shadow: 0 0 0 1px var(--uva); }
+.mk-item-num {
+  flex: 0 0 22px; height: 22px; border-radius: 50%; background: var(--creme2);
+  font-size: .72rem; font-weight: 600; color: var(--berinjela); display: flex; align-items: center; justify-content: center;
+}
+.mk-item-foto { flex: 0 0 42px; width: 42px; height: 42px; border-radius: 6px; object-fit: cover; background: var(--creme); }
+.mk-item-foto.vazia { display: flex; align-items: center; justify-content: center; color: var(--muted); }
+.mk-item-info { flex: 1; min-width: 0; display: flex; flex-direction: column; }
+.mk-item-nome { font-size: .78rem; color: var(--text); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.mk-item-cod { font-size: .66rem; color: var(--muted); font-family: monospace; }
+.mk-item-ok {
+  flex: 0 0 20px; height: 20px; border-radius: 50%; background: var(--success); color: #fff;
+  font-size: .7rem; display: flex; align-items: center; justify-content: center;
+}
+
+.mk-botoes-linha { display: flex; gap: 6px; flex-wrap: wrap; }
+.mk-botoes-linha .mockup-tool-btn { flex: 1; }
+
+/* Camadas */
+.mk-camadas { gap: 4px !important; max-height: 220px; overflow-y: auto; }
+.mk-camada {
+  display: flex; align-items: center; gap: 8px; padding: 6px 8px; border-radius: 6px;
+  border: 1px solid transparent; background: none; cursor: pointer; font: inherit; text-align: left;
+}
+.mk-camada:hover { background: var(--creme); }
+.mk-camada.ativa { border-color: var(--uva); background: #faf6fb; }
+.mk-camada-tipo { width: 20px; text-align: center; font-weight: 700; color: var(--uva); }
+.mk-camada-nome { font-size: .78rem; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+
+/* Centro */
+.mk-centro { display: flex; flex-direction: column; gap: 10px; min-width: 0; }
+.mk-barra { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
+.mk-barra button:disabled, .mk-props button:disabled { opacity: .45; cursor: not-allowed; }
+.mockup-tool-btn.perigo { color: var(--danger); }
+.mockup-tool-btn.perigo:hover { border-color: var(--danger); background: #fdf3f2; }
+.mk-palco {
+  width: 100%; max-width: 720px; margin: 0 auto; border: 1px solid var(--border); border-radius: var(--radius-lg);
+  overflow: hidden; background: #fff; box-shadow: var(--shadow-sm); touch-action: none;
+}
+.mk-palco .konvajs-content { margin: 0 auto; }
+.mk-dica { font-size: .72rem; color: var(--muted); text-align: center; margin: 0; line-height: 1.5; }
+.mk-aviso {
+  padding: 10px 14px; border-radius: var(--radius); background: #fff6e5; border: 1px solid #f0d49a;
+  color: #7a5a12; font-size: .82rem;
+}
+.mk-vazio { font-size: .82rem; color: var(--muted); font-style: italic; margin: 0; }
+
+/* Propriedades */
+.mk-props { display: flex; flex-direction: column; gap: 12px; }
+.mk-campo { display: flex; flex-direction: column; gap: 4px; }
+.mk-campo .mockup-label { margin: 0; }
+.mk-campo-topo { display: flex; justify-content: space-between; align-items: baseline; }
+.mk-linha { display: flex; gap: 6px; align-items: center; }
+.mk-linha .mockup-select { flex: 1; min-width: 0; }
+.mk-textarea { resize: vertical; font-family: inherit; min-height: 52px; }
+.mk-cor { width: 36px; height: 34px; padding: 2px; border: 1px solid var(--border2); border-radius: 6px; background: #fff; cursor: pointer; }
+.mk-toggle { width: 34px; padding: 6px 0; text-align: center; }
+.mk-toggle.ativo { background: var(--uva); color: #fff; border-color: var(--uva); }
+.mk-logo-atual { display: flex; align-items: center; gap: 8px; font-size: .78rem; }
+.mk-logo-atual img {
+  width: 54px; height: 40px; object-fit: contain; border: 1px solid var(--border); border-radius: 6px;
+  background: repeating-conic-gradient(#eee 0% 25%, #fff 0% 50%) 50% / 12px 12px;
+}
+.mk-logo-atual span { flex: 1; min-width: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.mk-acoes-grade { display: grid; grid-template-columns: 1fr 1fr; gap: 6px; padding-top: 6px; border-top: 1px solid var(--border); }
+
+/* Escolher orçamento */
+.mk-escolher { max-width: 760px; }
+.mk-lista-orc { display: grid; grid-template-columns: repeat(auto-fill, minmax(210px, 1fr)); gap: 10px; }
+.mk-orc {
+  display: flex; flex-direction: column; gap: 3px; padding: 12px 14px; border: 1.5px solid var(--border);
+  border-radius: var(--radius); background: #fff; cursor: pointer; text-align: left; font: inherit; transition: all .15s;
+}
+.mk-orc:hover { border-color: var(--uva); box-shadow: var(--shadow-sm); }
+.mk-orc-num { font-family: var(--font-display); font-size: 1.15rem; font-weight: 700; color: var(--berinjela); }
+.mk-orc-cli { font-size: .82rem; color: var(--text); }
+.mk-orc-info { font-size: .72rem; color: var(--muted); }
+
+/* Folha do orçamento: mockups depois dos valores */
+.orc-mockups { margin: 22px 0 8px; }
+.orc-mockups-titulo {
+  font-size: .66rem; font-weight: 600; letter-spacing: 1px; text-transform: uppercase; color: var(--muted);
+  margin-bottom: 10px; padding-bottom: 6px; border-bottom: 1px solid #E5E0D8;
+}
+.orc-mockups-grade { display: grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); gap: 14px; }
+.orc-mockup { margin: 0; border: 1px solid #E5E0D8; border-radius: 8px; overflow: hidden; background: #fff; break-inside: avoid; page-break-inside: avoid; }
+.orc-mockup img { display: block; width: 100%; aspect-ratio: 1 / 1; object-fit: contain; background: #fff; }
+.orc-mockup figcaption { padding: 7px 10px; font-size: .74rem; color: var(--grafite); border-top: 1px solid #E5E0D8; line-height: 1.35; }
+.orc-mockup-num {
+  display: inline-flex; width: 18px; height: 18px; border-radius: 50%; background: var(--creme2); color: var(--berinjela);
+  font-size: .66rem; font-weight: 600; align-items: center; justify-content: center; margin-right: 4px;
+}
+.orc-mockup-cod { color: var(--muted); }
+@media print {
+  .orc-mockups { break-before: auto; }
+  .orc-mockups-grade { grid-template-columns: repeat(3, 1fr); gap: 10px; }
+}
+.mk-carregando { padding: 40px; text-align: center; color: var(--muted); font-style: italic; }

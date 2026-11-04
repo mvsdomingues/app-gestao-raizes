@@ -1,4 +1,4 @@
-import { Fragment, type ReactNode } from 'react';
+import { Fragment, lazy, Suspense, type ReactNode } from 'react';
 import type { IdTela } from '@raizes/shared';
 import { BarraLateral } from '../components/BarraLateral';
 import { BarraStatus } from '../components/BarraStatus';
@@ -9,7 +9,6 @@ import { Atualizacao } from '../features/atualizacao/Atualizacao';
 import { Carrinho } from '../features/carrinho/Carrinho';
 import { Catalogo } from '../features/catalogo/Catalogo';
 import { TelaLogin } from '../features/login/TelaLogin';
-import { EstudioMockup } from '../features/mockup/EstudioMockup';
 import { Orcamentos } from '../features/orcamentos/Orcamentos';
 import { Parametros } from '../features/parametros/Parametros';
 import { Pedidos } from '../features/pedidos/Pedidos';
@@ -19,6 +18,19 @@ import { ProvedorCarrinho } from '../state/carrinho';
 import { ProvedorApp, useApp } from './contexto';
 import { ProvedorSessao, useSessao } from './sessao';
 import { Dialogos } from '../components/Dialogos';
+
+// O estúdio de mockups (Konva) é carregado só na primeira vez que a tela é aberta
+const EstudioMockup = lazy(() => import('../features/mockup/EstudioMockup').then((m) => ({ default: m.EstudioMockup })));
+
+function MockupSobDemanda() {
+  const { visitas, tela } = useApp();
+  if (visitas.mockup === 0) return null;
+  return (
+    <Suspense fallback={tela === 'mockup' ? <div className="mk-carregando">Carregando o estúdio…</div> : null}>
+      <EstudioMockup />
+    </Suspense>
+  );
+}
 
 /**
  * Aplicação de página única: login → menu lateral + área de telas + rodapé de status.
@@ -64,7 +76,7 @@ const TELAS: Record<IdTela, ReactNode> = {
   carrinho: <Carrinho />,
   orcamentos: <Orcamentos />,
   pedidos: <Pedidos />,
-  mockup: <EstudioMockup />,
+  mockup: <MockupSobDemanda />,
   'produtos-proprios': <ProdutosProprios />,
   parametros: <Parametros />,
   usuarios: <Usuarios />,

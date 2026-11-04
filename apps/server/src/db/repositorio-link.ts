@@ -17,6 +17,7 @@ import type { Banco } from './conexao';
 import { SQL_STATUS_ORCAMENTO } from './repositorio-orcamentos';
 import { criarPedido, pedidoAtivoDoOrcamento } from './repositorio-pedidos';
 import { registrarMovimentoOrcamento } from './repositorio-orcamentos';
+import { mockupsDoOrcamento } from './repositorio-mockups';
 
 const LETRAS = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789';
 
@@ -160,6 +161,11 @@ function situacaoPublica(l: LinhaPublica): SituacaoPublica {
 }
 
 /** Itens do orçamento como estão gravados (para a rota de imagem). */
+/** Id do orçamento pelo código do link (404 se inválido/revogado). */
+export function orcamentoDoLink(db: Banco, codigo: string): number {
+  return porCodigo(db, codigo).id;
+}
+
 export function itensDoLink(db: Banco, codigo: string): ItemOrcamento[] {
   return JSON.parse(porCodigo(db, codigo).itens_json || '[]') as ItemOrcamento[];
 }
@@ -184,6 +190,9 @@ export function orcamentoPublico(db: Banco, codigo: string): OrcamentoPublico {
     material: i.material?.trim() || null,
     imagem: i.imagem_url ? `/api/publico/orcamentos/${codigo}/imagem/${n}` : null,
   }));
+  const mockups = mockupsDoOrcamento(db, l.id)
+    .filter((m) => itens[m.item])
+    .map((m) => ({ item: m.item, nome: itens[m.item]!.nome, imagem: `/api/publico/orcamentos/${codigo}/mockup/${m.item}` }));
   const pedido = situacao === 'ACEITO' ? (pedidoAtivoDoOrcamento(db, l.id)?.codigo ?? null) : null;
   return {
     numero: numeroOrcamento(l.id),
@@ -197,6 +206,7 @@ export function orcamentoPublico(db: Banco, codigo: string): OrcamentoPublico {
     total: l.total,
     observacao: l.observacao?.trim() || null,
     entrega_prevista: l.entrega_prevista,
+    mockups,
     pedido,
     resposta:
       l.resposta && l.resposta_em && (situacao === 'ACEITO' || situacao === 'RECUSADO')

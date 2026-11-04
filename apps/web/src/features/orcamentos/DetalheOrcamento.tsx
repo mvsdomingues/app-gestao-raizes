@@ -22,7 +22,7 @@ import { useConfigClientes } from '../clientes/config';
 
 /** Aba "Detalhes": situação, ações e folha do orçamento selecionado. */
 export function DetalheOrcamento() {
-  const { folha, irPara, setAbaOrcamentos, abrirPedido, versaoOrcamentos, abaOrcamentos, tela } = useApp();
+  const { folha, irPara, setAbaOrcamentos, abrirPedido, versaoOrcamentos, abaOrcamentos, tela, abrirMockups } = useApp();
   const { pode } = useSessao();
   const kommo = useConfigClientes();
   const [gerando, setGerando] = useState(false);
@@ -112,6 +112,16 @@ export function DetalheOrcamento() {
             {folha.id !== undefined && !pedido && status && podeGerarPedido(status) && pode('pedidos') && (
               <button className="btn-back" id="btn-gerar-pedido" onClick={() => setGerando(true)}>
                 📦 Gerar pedido
+              </button>
+            )}
+            {folha.id !== undefined && pode('mockup') && status === 'ABERTO' && !pedido && (
+              <button
+                className="btn-back"
+                id="btn-mockups-orcamento"
+                title="Criar ou alterar os mockups dos produtos deste orçamento (opcional)"
+                onClick={() => abrirMockups(folha.id!)}
+              >
+                🎨 Mockups{info?.mockups?.length ? ` (${info.mockups.length})` : ''}
               </button>
             )}
             {folha.id !== undefined && pode('carrinho') && (
@@ -273,7 +283,14 @@ export function DetalheOrcamento() {
 
       <div className="orcamento-sheet-full" id="orcamento-sheet">
         {folha ? (
-          <FolhaOrcamento folha={{ ...folha, cliente, entregaPrevista: info ? (info.entrega_prevista ?? null) : folha.entregaPrevista }} />
+          <FolhaOrcamento
+            folha={{
+              ...folha,
+              cliente,
+              entregaPrevista: info ? (info.entrega_prevista ?? null) : folha.entregaPrevista,
+              mockups: info?.mockups ?? [],
+            }}
+          />
         ) : (
           <div className="orc-empty-state">
             <div className="orc-empty-icon">📄</div>

@@ -108,9 +108,9 @@ interface ContextoApp {
   abaPedidos: AbaPedidos;
   setAbaPedidos: (a: AbaPedidos) => void;
 
-  /** Produto pedido pelo botão "🎨 Mockup" de um item do carrinho. */
-  mockupSolicitado: RefObject<number | string | null>;
-  abrirMockupParaProduto: (id: number) => void;
+  /** Orçamento pedido pelo botão "🎨 Mockups" dos detalhes do orçamento. */
+  mockupSolicitado: RefObject<number | null>;
+  abrirMockups: (orcamentoId: number) => void;
 }
 
 const Ctx = createContext<ContextoApp | null>(null);
@@ -139,7 +139,7 @@ export function ProvedorApp({ children }: { children: ReactNode }) {
   const [abaPedidos, setAbaPedidos] = useState<AbaPedidos>('lista');
   const [usuarioAcessos, setUsuarioAcessos] = useState<number | null>(null);
   const [versaoOrcamentos, setVersaoOrcamentos] = useState(0);
-  const mockupSolicitado = useRef<number | string | null>(null);
+  const mockupSolicitado = useRef<number | null>(null);
 
   const irPara = useCallback((t: Tela) => {
     if (!permitidasRef.current.includes(t)) {
@@ -253,8 +253,8 @@ export function ProvedorApp({ children }: { children: ReactNode }) {
       abaPedidos,
       setAbaPedidos,
       mockupSolicitado,
-      abrirMockupParaProduto: (id) => {
-        mockupSolicitado.current = id;
+      abrirMockups: (orcamentoId) => {
+        mockupSolicitado.current = orcamentoId;
         irPara('mockup');
       },
     }),
