@@ -93,6 +93,8 @@ export interface FiltrosProdutos {
   max?: number | null;
   /** Categoria exata (como vem do fornecedor) */
   categoria?: string;
+  /** Cor (sem diferenciar maiúsculas) */
+  cor?: string;
   limit: number;
   offset: number;
 }
@@ -109,10 +111,16 @@ export const api = {
         (f.ordem && f.ordem !== 'padrao' ? `&ordem=${f.ordem}` : '') +
         (f.min != null ? `&min=${f.min}` : '') +
         (f.max != null ? `&max=${f.max}` : '') +
-        (f.categoria ? `&categoria=${encodeURIComponent(f.categoria)}` : ''),
+        (f.categoria ? `&categoria=${encodeURIComponent(f.categoria)}` : '') +
+        (f.cor ? `&cor=${encodeURIComponent(f.cor)}` : ''),
     ),
 
   produto: (id: number) => getJson<ProdutoDetalhado>(`/api/produto/${id}`),
+
+  cores: (fornecedor: string) =>
+    getJson<{ nome: string; total: number }[]>(
+      `/api/cores${fornecedor ? `?fornecedor=${encodeURIComponent(fornecedor)}` : ''}`,
+    ),
 
   categorias: (fornecedor: string) =>
     getJson<{ nome: string; total: number }[]>(

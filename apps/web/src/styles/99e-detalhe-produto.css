@@ -60,6 +60,7 @@ button.tag-produto:hover { border-color: var(--uva); color: var(--uva); }
 .row-meta .tag-produto { max-width: 160px; }
 
 .filtro-categoria { max-width: 230px; }
+.filtro-cor { max-width: 180px; }
 
 /* Painel */
 .detalhe-produto-card { max-width: 920px; }

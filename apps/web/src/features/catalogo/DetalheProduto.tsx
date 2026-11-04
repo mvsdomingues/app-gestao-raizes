@@ -13,6 +13,8 @@ interface Props {
   alternar: (id: number) => void;
   /** Filtra o catálogo pela categoria clicada */
   filtrarCategoria: (categoria: string) => void;
+  /** Filtra o catálogo pela cor clicada */
+  filtrarCor: (cor: string) => void;
 }
 
 type Estado = { tipo: 'carregando' } | { tipo: 'erro' } | { tipo: 'ok'; p: ProdutoDetalhado };
@@ -34,7 +36,7 @@ function linhasFicha(p: ProdutoDetalhado): ItemFicha[] {
 }
 
 /** Painel com todos os detalhes do produto (só uso interno: mostra fornecedor e custo). */
-export function DetalheProduto({ id, fechar, noCarrinho, alternar, filtrarCategoria }: Props) {
+export function DetalheProduto({ id, fechar, noCarrinho, alternar, filtrarCategoria, filtrarCor }: Props) {
   const { abrirImagem } = useApp();
   const [estado, setEstado] = useState<Estado>({ tipo: 'carregando' });
   const [foto, setFoto] = useState(0);
@@ -154,7 +156,16 @@ export function DetalheProduto({ id, fechar, noCarrinho, alternar, filtrarCatego
                       {c}
                     </button>
                   ))}
-                  {p.cor && <span className="tag-produto tag-cor">{p.cor}</span>}
+                  {p.cor && (
+                    <button
+                      type="button"
+                      className="tag-produto tag-cor"
+                      title="Ver produtos desta cor"
+                      onClick={() => filtrarCor(p.cor!)}
+                    >
+                      {p.cor}
+                    </button>
+                  )}
                 </div>
               )}
 

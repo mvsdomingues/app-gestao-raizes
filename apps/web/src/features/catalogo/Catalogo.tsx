@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useRef, useState, type ReactNode } from 'react';
-import { FAIXAS_PRECO, ORDENS_CATALOGO, type OrdemCatalogo, type Produto } from '@raizes/shared';
+import { FAIXAS_PRECO, nomeCor, ORDENS_CATALOGO, type OrdemCatalogo, type Produto } from '@raizes/shared';
 import { useApp } from '../../app/contexto';
 import { Aviso, Carregando } from '../../components/Carregando';
 import { api } from '../../lib/api';
@@ -40,6 +40,8 @@ export function Catalogo() {
   const [precoMax, setPrecoMax] = useState('');
   const [categoria, setCategoria] = useState('');
   const [categorias, setCategorias] = useState<{ nome: string; total: number }[]>([]);
+  const [cor, setCor] = useState('');
+  const [cores, setCores] = useState<{ nome: string; total: number }[]>([]);
   const [detalhe, setDetalhe] = useState<number | null>(null);
   const [modo, setModo] = useState<'grid' | 'list'>('grid');
   const [conteudo, setConteudo] = useState<Conteudo>({ tipo: 'carregando', texto: 'Carregando produtos…' });
@@ -48,8 +50,8 @@ export function Catalogo() {
   const scrollRef = useRef<HTMLDivElement>(null);
 
   // Valores atuais dos filtros (lidos no momento da busca, como na versão anterior)
-  const filtros = useRef({ busca, fornecedor, somenteEstoque, pagina, ordem, faixa, precoMin, precoMax, categoria });
-  filtros.current = { busca, fornecedor, somenteEstoque, pagina, ordem, faixa, precoMin, precoMax, categoria };
+  const filtros = useRef({ busca, fornecedor, somenteEstoque, pagina, ordem, faixa, precoMin, precoMax, categoria, cor });
+  filtros.current = { busca, fornecedor, somenteEstoque, pagina, ordem, faixa, precoMin, precoMax, categoria, cor };
   const ultimaBusca = useRef(0);
   const debounce = useRef<ReturnType<typeof setTimeout> | null>(null);
 
@@ -70,6 +72,7 @@ export function Catalogo() {
         min,
         max,
         categoria: f.categoria,
+        cor: f.cor,
         limit: TAMANHO_PAGINA,
         offset: (pag - 1) * TAMANHO_PAGINA,
       });
@@ -98,10 +101,20 @@ export function Catalogo() {
       .categorias(fornecedor)
       .then((c) => ativo && setCategorias(c))
       .catch(() => ativo && setCategorias([]));
+    api
+      .cores(fornecedor)
+      .then((c) => ativo && setCores(c))
+      .catch(() => ativo && setCores([]));
     return () => {
       ativo = false;
     };
   }, [fornecedor, versaoCatalogo]);
+
+  const escolherCor = (c: string) => {
+    setCor(c);
+    filtros.current.cor = c;
+    void buscar(1);
+  };
 
   const escolherCategoria = (c: string) => {
     setCategoria(c);
@@ -186,6 +199,8 @@ export function Catalogo() {
                 // A categoria pode não existir no outro fornecedor
                 setCategoria('');
                 filtros.current.categoria = '';
+                setCor('');
+                filtros.current.cor = '';
                 void buscar(1);
               }}
             >
@@ -206,6 +221,21 @@ export function Catalogo() {
               <option value="">Todas as categorias</option>
               {categoria && !categorias.some((c) => c.nome === categoria) && <option value={categoria}>{categoria}</option>}
               {categorias.map((c) => (
+                <option key={c.nome} value={c.nome}>
+                  {c.nome} ({c.total.toLocaleString('pt-BR')})
+                </option>
+              ))}
+            </select>
+            <select
+              className="filter-select filtro-cor"
+              id="filter-cor"
+              title="Cor"
+              value={cor}
+              onChange={(e) => escolherCor(e.target.value)}
+            >
+              <option value="">Todas as cores</option>
+              {cor && !cores.some((c) => c.nome === cor) && <option value={cor}>{cor}</option>}
+              {cores.map((c) => (
                 <option key={c.nome} value={c.nome}>
                   {c.nome} ({c.total.toLocaleString('pt-BR')})
                 </option>
@@ -343,6 +373,10 @@ export function Catalogo() {
           filtrarCategoria={(c) => {
             setDetalhe(null);
             escolherCategoria(c);
+          }}
+          filtrarCor={(c) => {
+            setDetalhe(null);
+            escolherCor(nomeCor(c));
           }}
         />
 

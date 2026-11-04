@@ -113,3 +113,32 @@ describe('catálogo: categorias, busca na descrição e detalhes', () => {
     expect(p.descricao).toMatch(/alumínio/);
   });
 });
+
+describe('catálogo: filtro por cor', () => {
+  beforeAll(() => {
+    const ins = db.prepare(
+      `INSERT INTO produtos (fornecedor, codigo, nome, preco, qtd_estoque, atualizado, cor) VALUES (?, ?, ?, 5, 5, '2026-11-03', ?)`,
+    );
+    ins.run('XBZ', 'K1', 'Caneta azul', 'AZUL');
+    ins.run('ASIA', 'K2', 'Mochila azul', 'Azul');
+    ins.run('ASIA', 'K3', 'Mochila lilás', 'Lilás');
+    ins.run('XBZ', 'K4', 'Caneta lilás', 'LILÁS');
+  });
+
+  it('agrupa as grafias da mesma cor e conta os produtos', async () => {
+    const r = await fetch(`${base}/api/cores`, { headers: { Cookie: cookie } });
+    expect(await r.json()).toEqual([
+      { nome: 'Azul', total: 2 },
+      { nome: 'Lilás', total: 2 },
+    ]);
+    const x = await fetch(`${base}/api/cores?fornecedor=XBZ`, { headers: { Cookie: cookie } });
+    expect(((await x.json()) as { nome: string }[]).map((c) => c.nome)).toEqual(['Azul', 'Lilás']);
+  });
+
+  it('filtra sem diferenciar maiúsculas (com acento)', async () => {
+    expect((await lista('&cor=Azul')).produtos.map((p) => p.codigo).sort()).toEqual(['K1', 'K2']);
+    expect((await lista('&cor=lil%C3%A1s')).produtos.map((p) => p.codigo).sort()).toEqual(['K3', 'K4']);
+    expect((await lista('&cor=Lil%C3%A1s&fornecedor=XBZ')).produtos.map((p) => p.codigo)).toEqual(['K4']);
+    expect((await lista('&cor=Verde')).total).toBe(0);
+  });
+});

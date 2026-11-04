@@ -1,6 +1,8 @@
 import { Router } from 'express';
 import {
   categoriasDe,
+  chaveCor,
+  nomeCor,
   isOrdemCatalogo,
   SEPARADOR_CATEGORIA,
   type OrdemCatalogo,
@@ -77,6 +79,36 @@ export function rotasCatalogo(db: Banco): Router {
     );
   });
 
+  /** Grafias gravadas de cada cor (chave → ["AZUL", "Azul"…]), do fornecedor ou de todos. */
+  const grafiasCores = (fornecedor: string) => {
+    const rows = db
+      .prepare(
+        `SELECT cor, COUNT(*) AS n FROM catalogo
+          WHERE cor IS NOT NULL AND TRIM(cor) <> '' ${fornecedor ? 'AND fornecedor = ?' : ''}
+          GROUP BY cor`,
+      )
+      .all(...(fornecedor ? [fornecedor] : [])) as { cor: string; n: number }[];
+    const mapa = new Map<string, { grafias: string[]; total: number }>();
+    for (const { cor, n } of rows) {
+      const k = chaveCor(cor);
+      const g = mapa.get(k) ?? { grafias: [], total: 0 };
+      g.grafias.push(cor);
+      g.total += n;
+      mapa.set(k, g);
+    }
+    return mapa;
+  };
+
+  // Cores existentes (sem diferenciar maiúsculas), com a quantidade de produtos
+  r.get('/api/cores', (req, res) => {
+    const fornecedor = typeof req.query.fornecedor === 'string' ? req.query.fornecedor.trim() : '';
+    res.json(
+      [...grafiasCores(fornecedor)]
+        .map(([k, { total }]) => ({ nome: nomeCor(k), total }))
+        .sort((a, b) => a.nome.localeCompare(b.nome, 'pt-BR')),
+    );
+  });
+
   r.get('/api/status', (_req, res) => {
     const rows = db
       .prepare(
@@ -93,6 +125,7 @@ export function rotasCatalogo(db: Banco): Router {
     const busca = (q('q') ?? '').trim();
     const fornecedor = (q('fornecedor') ?? '').trim();
     const categoria = (q('categoria') ?? '').trim();
+    const cor = chaveCor(q('cor'));
     const apenasEstoque = (q('estoque') ?? '0') === '1';
     const limit = inteiroPython(q('limit') ?? '80');
     const offset = inteiroPython(q('offset') ?? '0');
@@ -111,6 +144,12 @@ export function rotasCatalogo(db: Banco): Router {
     if (categoria) {
       wheres.push(`('${SEPARADOR_CATEGORIA}' || categoria || '${SEPARADOR_CATEGORIA}') LIKE ?`);
       params.push(`%${SEPARADOR_CATEGORIA}${categoria}${SEPARADOR_CATEGORIA}%`);
+    }
+    if (cor) {
+      // Todas as grafias gravadas da cor escolhida ("AZUL", "Azul"…)
+      const grafias = grafiasCores('').get(cor)?.grafias ?? [cor];
+      wheres.push(`cor IN (${grafias.map(() => '?').join(', ')})`);
+      params.push(...grafias);
     }
     if (fornecedor) {
       wheres.push('fornecedor = ?');

@@ -104,3 +104,17 @@ export function urlVideoIncorporado(url: string | null | undefined): string | nu
   if (vimeo) return `https://player.vimeo.com/video/${vimeo[1]}`;
   return null;
 }
+
+/**
+ * Chave da cor para o filtro: os fornecedores escrevem a mesma cor de jeitos
+ * diferentes ("AZUL", "Azul", "azul ").
+ */
+export function chaveCor(cor: string | null | undefined): string {
+  return (cor ?? '').trim().replace(/\s+/g, ' ').toLocaleLowerCase('pt-BR');
+}
+
+/** Nome da cor para exibir no filtro ("AZUL ROYAL" → "Azul royal"). */
+export function nomeCor(cor: string | null | undefined): string {
+  const c = chaveCor(cor);
+  return c ? c.charAt(0).toLocaleUpperCase('pt-BR') + c.slice(1) : '';
+}
