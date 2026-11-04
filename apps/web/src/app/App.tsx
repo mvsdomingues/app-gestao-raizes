@@ -9,6 +9,7 @@ import { Atualizacao } from '../features/atualizacao/Atualizacao';
 import { Carrinho } from '../features/carrinho/Carrinho';
 import { Catalogo } from '../features/catalogo/Catalogo';
 import { TelaLogin } from '../features/login/TelaLogin';
+import { DashGeral } from '../features/dashboards/DashGeral';
 import { Orcamentos } from '../features/orcamentos/Orcamentos';
 import { Parametros } from '../features/parametros/Parametros';
 import { Pedidos } from '../features/pedidos/Pedidos';
@@ -77,6 +78,7 @@ const TELAS: Record<IdTela, ReactNode> = {
   orcamentos: <Orcamentos />,
   pedidos: <Pedidos />,
   mockup: <MockupSobDemanda />,
+  'dash-geral': <DashGeral />,
   'produtos-proprios': <ProdutosProprios />,
   parametros: <Parametros />,
   usuarios: <Usuarios />,

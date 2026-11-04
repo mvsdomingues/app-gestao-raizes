@@ -193,6 +193,15 @@ O menu fica na **barra lateral** (pode ser recolhido para mostrar só os ícones
 
 8. **Atualização**: atualiza a base dos fornecedores integrados e mostra o log; com o Kommo ligado, mostra também a sincronização dos clientes.
 
+### Dashboards
+
+Menu **Dashboards** (central de acompanhamento; novos painéis entram nesse grupo). Permissão por painel na tela Acessos.
+
+- **Visão geral**: filtros de período (hoje, 7/30/90 dias, este mês, mês anterior, este ano ou datas personalizadas) e de vendedor, valendo para todos os indicadores. Cada número é comparado com o período anterior de mesma duração.
+  - Destaque para o **valor em pedidos gerados**; cartões de total de pedidos, total de orçamentos, valor em orçamentos, ticket médio, conversão de orçamentos em pedidos (medidor), tempo médio até virar pedido, pedidos com entrega atrasada e entregas dos próximos 7 dias.
+  - Gráficos: valor gerado e quantidade por dia/semana/mês (conforme o tamanho do período), funil dos orçamentos, situação atual dos orçamentos, etapa atual dos pedidos, produtos mais vendidos, pedidos por fornecedor e por vendedor. Passe o mouse para ver os valores; *Ver tabela* mostra os números de cada gráfico.
+  - Regras: o orçamento conta na data em que foi criado; o pedido, na data em que foi gerado; pedidos cancelados não entram nos totais de pedidos (aparecem só na etapa "Cancelado").
+
 ### Link do orçamento (aceite pelo cliente)
 
 *Enviar para o Cliente* gera um link secreto do orçamento (`/o/<código>`, 43 caracteres aleatórios; não há número nem sequência no endereço). A janela que abre mostra o link, **Copiar link** e **Enviar pelo WhatsApp** (telefone do cliente e mensagem prontos); os detalhes do orçamento mostram o link, a validade, se o cliente já abriu, e **Gerar novo link** (o anterior para de funcionar).
@@ -239,6 +248,7 @@ Todas as rotas exigem login, exceto as de `/api/auth`. Cada rota também exige a
 | `GET /api/produtos` · `GET /api/produto/:id` | Catálogo (fornecedores + próprios; próprios têm id negativo). Filtros: `q`, `fornecedor`, `categoria`, `cor`, `estoque`, `ordem`, `min`, `max`. O detalhe traz descrição, ficha, fotos, vídeo e faixas de preço |
 | `GET /api/orcamentos/:id/mockups` · `GET …/mockups/:item/cena` | Mockups do orçamento / cena do estúdio de um item |
 | `PUT /api/orcamentos/:id/mockups/:item` · `DELETE …/mockups/:item` | Grava (`{ imagem: data URL JPG/PNG, cena }`) ou exclui o mockup do item (só com o orçamento Aberto) |
+| `GET /api/dashboards/geral?de&ate&usuario` · `GET /api/dashboards/usuarios` | Indicadores da Visão geral / vendedores do filtro |
 | `GET /api/categorias` · `GET /api/cores` | Categorias / cores com a quantidade de produtos (`?fornecedor=`) |
 | `GET/POST /api/produtos-proprios` | Lista (`?q=` busca) / inclui produto próprio |
 | `GET/PUT/PATCH/DELETE /api/produtos-proprios/:codigo` | Consulta, substitui, altera campos ou exclui (`PDP-000001`) |

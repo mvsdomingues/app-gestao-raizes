@@ -7,3 +7,4 @@ export * from './acesso';
 export * from './orcamentos';
 export * from './clientes';
 export * from './catalogo';
+export * from './dashboards';

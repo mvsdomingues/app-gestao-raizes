@@ -89,6 +89,7 @@ const REGRAS: Regra[] = [
   { metodos: 'TODOS', caminho: /^\/api\/clientes(\/|$)/, telas: ['carrinho', 'orcamentos', 'pedidos'] },
   { metodos: 'ESCRITA', caminho: /^\/api\/parametros(\/|$)/, telas: ['parametros'] },
   { metodos: 'ESCRITA', caminho: /^\/api\/produtos-proprios(\/|$)/, telas: ['produtos-proprios'] },
+  { metodos: 'TODOS', caminho: /^\/api\/dashboards(\/|$)/, telas: ['dash-geral'] },
   // Mockups dos produtos de um orçamento (estúdio)
   { metodos: 'TODOS', caminho: /^\/api\/orcamentos\/\d+\/mockups(\/|$)/, telas: ['mockup'] },
   { metodos: 'GET', caminho: /^\/api\/orcamentos(\/|$)/, telas: ['orcamentos', 'pedidos', 'mockup'] },

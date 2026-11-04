@@ -20,6 +20,7 @@
 @import './99d-link-publico.css';
 @import './99e-detalhe-produto.css';
 @import './99f-estudio-mockup.css';
+@import './99g-dashboards.css';
 
 /* O React monta a aplicação dentro de #root; "display: contents" mantém
    header, telas e rodapé como filhos diretos do layout flex do <body>. */

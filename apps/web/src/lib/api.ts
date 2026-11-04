@@ -1,4 +1,5 @@
 import type {
+  DashboardGeral,
   CenaMockup,
   MockupOrcamento,
   AcessoUsuario,
@@ -149,6 +150,11 @@ export const api = {
     for (const [k, v] of Object.entries(filtros)) if (v && String(v).trim()) qs.set(k, String(v).trim());
     return enviar<RespostaOrcamentos>('GET', `/api/orcamentos?${qs}`);
   },
+
+  /** Dashboards › Visão geral (período AAAA-MM-DD, inclusive; usuario = vendedor, vazio = todos) */
+  dashboardGeral: (de: string, ate: string, usuario = '') =>
+    enviar<DashboardGeral>('GET', `/api/dashboards/geral?${new URLSearchParams({ de, ate, ...(usuario ? { usuario } : {}) })}`),
+  usuariosDashboard: () => enviar<{ id: number; nome: string }[]>('GET', '/api/dashboards/usuarios'),
 
   /** Mockups dos produtos do orçamento (opcionais; só enquanto "Aberto"). */
   mockups: (orcamentoId: number) => enviar<MockupOrcamento[]>('GET', `/api/orcamentos/${orcamentoId}/mockups`),

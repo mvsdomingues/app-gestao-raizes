@@ -7,6 +7,7 @@ import { carregarSessao, exigirAcesso } from './lib/sessao';
 import { rotasAuth } from './routes/auth';
 import { rotasAtualizacao } from './routes/atualizacao';
 import { rotasCatalogo } from './routes/catalogo';
+import { rotasDashboards } from './routes/dashboards';
 import { rotasMockups } from './routes/mockups';
 import { rotasOrcamentos } from './routes/orcamentos';
 import { rotasParametros } from './routes/parametros';
@@ -54,6 +55,7 @@ export function criarApp({ db, gerenciador, imagensDir, webDist, kommo = null, u
   app.use(rotasCatalogo(db));
   app.use(rotasPublicas(db, imagensDir, kommo));
   app.use(rotasClientes(db, kommo));
+  app.use(rotasDashboards(db));
   app.use(rotasMockups(db, imagensDir));
   app.use(rotasOrcamentos(db, { exigirClienteAoEnviar: !!kommo, kommo, urlPublica, imagensDir }));
   app.use(rotasPedidos(db, kommo));

@@ -17,6 +17,7 @@ export const TELAS_SISTEMA = [
   { id: 'usuarios', rotulo: 'Usuários', grupo: 'Sistema' },
   { id: 'acessos', rotulo: 'Acessos', grupo: 'Sistema' },
   { id: 'status', rotulo: 'Atualização', grupo: 'Sistema' },
+  { id: 'dash-geral', rotulo: 'Visão geral', grupo: 'Dashboards' },
 ] as const;
 
 export type IdTela = (typeof TELAS_SISTEMA)[number]['id'];

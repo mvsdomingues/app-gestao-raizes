@@ -17,6 +17,11 @@ interface ItemMenu {
  */
 const GRUPOS: { titulo: string; itens: ItemMenu[] }[] = [
   {
+    // Central de acompanhamento (novos painéis entram aqui)
+    titulo: 'Dashboards',
+    itens: [{ tela: 'dash-geral', rotulo: 'Visão geral', icone: 'dashboard', id: 'tab-dash-geral' }],
+  },
+  {
     titulo: 'Vendas',
     itens: [
       { tela: 'catalogo', rotulo: 'Catálogo', icone: 'catalogo', id: 'tab-catalogo' },
