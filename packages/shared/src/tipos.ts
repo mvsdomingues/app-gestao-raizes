@@ -61,11 +61,6 @@ export interface ItemOrcamento {
   observacao?: string;
   /** Custo de personalização calculado pelas tabelas (uso interno; nunca vai para o cliente) */
   personalizacao?: import('./personalizacao').ResultadoPersonalizacao;
-  /**
-   * Custos fixos do ORÇAMENTO inteiro (designer e logística), iguais em todos os itens;
-   * o `calc` do item guarda só a parte rateada dele. Ausente = orçamento antigo.
-   */
-  custos_fixos_pedido?: import('./calculadora').CustosFixosPedido;
   /** Resumo da descrição (até ~200 caracteres), mostrado na folha e na página do cliente. */
   descricao?: string;
   medidas?: string;

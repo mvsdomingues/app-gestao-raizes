@@ -95,9 +95,3 @@
 .param-numero span { font-size: .84rem; color: var(--muted); }
 .param-numero input { text-align: right; }
 .param-campo-dica { display: block; font-size: .72rem; color: var(--muted); margin-top: 4px; }
-
-/* Custos fixos do orçamento (designer e logística: uma vez por orçamento) */
-.cart-fixos { padding: 10px 0 6px; border-top: 1px dashed var(--border); border-bottom: 1px dashed var(--border); margin: 6px 0; }
-.cart-fixos .link-botao { font-size: .8rem; }
-.cart-fixos .cart-field-row { margin-top: 6px; }
-.cart-fixos-rotulo { font-weight: 400; }

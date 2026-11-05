@@ -149,7 +149,7 @@ O menu fica na **barra lateral** (pode ser recolhido para mostrar só os ícones
 **Vendas**
 
 1. **Catálogo**: busque por nome, código ou descrição (cada palavra digitada precisa aparecer), filtre por fornecedor/**categoria**/**cor**/estoque (a cor junta as grafias de cada fornecedor: "AZUL" e "Azul" são a mesma), ordene por **menor ou maior preço** (ou nome) e filtre por **faixa de preço** (faixas prontas de até R$ 5 a acima de R$ 200, ou mínimo e máximo digitados; produtos sem preço ficam fora das faixas e no fim da ordenação por preço). Ordenado por preço ou nome, a lista deixa de ser agrupada por fornecedor. Alterne grade/lista e clique no produto para incluí-lo no carrinho. Mostra os produtos dos fornecedores e os produtos próprios. Cada cartão traz a categoria e a cor; o botão **i** abre os **detalhes do produto**: galeria de fotos, descrição, ficha técnica (material, medidas, peso, capacidade, personalização…), vídeo e, na SM, o custo por quantidade (tela interna; clique numa categoria ou na cor para filtrar). O resumo da descrição (até ~200 caracteres), as medidas e o material vão para o item do orçamento e aparecem na folha e na página do cliente — o fornecedor, a marca e o tipo de gravação nunca.
-2. **Carrinho**: cada item mostra o nome e o código do produto. Ajuste quantidades e a personalização de cada item. **Designer e logística são custos do orçamento inteiro**: ficam no resumo (*Custos fixos do orçamento*, começam com os valores de **Parâmetros**), são cobrados uma vez e divididos pelo total de peças do orçamento (cada item recebe a parte proporcional à sua quantidade). Imposto de compra, imposto sobre venda e margem não aparecem no carrinho: são sempre os cadastrados em **Parâmetros**. Há uma **observação geral** (campo *Observações* no resumo) e uma **observação por produto** (campo abaixo da quantidade de cada item). As duas são gravadas com o orçamento, aparecem na folha impressa e voltam ao carrinho quando o orçamento é alterado.
+2. **Carrinho**: cada item mostra o nome e o código do produto. Ajuste quantidades e, em *Ajustar custos e margem*, os custos de personalização e os custos fixos de cada item (começam com os valores da tela **Parâmetros**). Imposto de compra, imposto sobre venda e margem não aparecem no carrinho: são sempre os cadastrados em **Parâmetros**. Há uma **observação geral** (campo *Observações* no resumo) e uma **observação por produto** (campo abaixo da quantidade de cada item). As duas são gravadas com o orçamento, aparecem na folha impressa e voltam ao carrinho quando o orçamento é alterado.
 3. **Orçamentos**: tela única com duas abas.
    - **Todos os orçamentos**: lista paginada (20 por página) com filtros por número (`ORC-0005` ou `5`), produto (descrição ou código de qualquer item), período (de/até), faixa de valor total e situação. Clique em uma linha para ver os detalhes; **✎ Editar** carrega o orçamento de volta no carrinho (o carrinho precisa estar vazio).
    - **Detalhes**: folha do orçamento selecionado, com **Editar**, **Gerar pedido** e **Imprimir / Salvar PDF**.
@@ -276,7 +276,7 @@ Sem as variáveis no `.env`, nada disso aparece e os orçamentos funcionam como 
 ### Calculadora de preço
 
 ```
-Custo total/un = custo × (1 + imposto de compra*) + material + mão de obra + (designer + logística do orçamento) ÷ total de peças do orçamento
+Custo total/un = custo × (1 + imposto de compra*) + material + mão de obra + (designer + logística) ÷ qtd
 Preço          = Custo total ÷ (1 − imposto sobre venda − margem)
 ```
 

@@ -1,11 +1,11 @@
 import { useEffect, useState } from 'react';
-import { faturamentoPreenchido, faturamentoVazio, formatBRL, montarItemOrcamento } from '@raizes/shared';
+import { calcComParametros, faturamentoPreenchido, faturamentoVazio, formatBRL, montarItemOrcamento } from '@raizes/shared';
 import { ResumoFaturamento } from '../clientes/FormularioFaturamento';
 import { ModalFaturamento } from '../clientes/ModalFaturamento';
 import { useApp } from '../../app/contexto';
 import { useSessao } from '../../app/sessao';
 import { api, ErroApi } from '../../lib/api';
-import { custosFixosEmVigor, precosDoCarrinho, subtotalCarrinho, useCarrinho } from '../../state/carrinho';
+import { precosDoCarrinho, subtotalCarrinho, useCarrinho } from '../../state/carrinho';
 import { ItemCarrinho } from './ItemCarrinho';
 import { avisar, confirmar, erro } from '../../lib/dialogo';
 import { useConfigClientes } from '../clientes/config';
@@ -14,17 +14,8 @@ import { SeletorCliente } from '../clientes/SeletorCliente';
 export function Carrinho() {
   const { tela, visitas, irPara, mostrarOrcamento, parametros, tecnicas, carregarParametros } = useApp();
   const { pode, usuario } = useSessao();
-  const {
-    estado,
-    limpar,
-    redesenhar,
-    definirFrete,
-    definirObservacao,
-    definirCliente,
-    definirEntregaPrevista,
-    definirFaturamento,
-    definirCustosFixos,
-  } = useCarrinho();
+  const { estado, limpar, redesenhar, definirFrete, definirObservacao, definirCliente, definirEntregaPrevista, definirFaturamento } =
+    useCarrinho();
   const { frete, edicao, observacao, cliente, entregaPrevista, faturamento } = estado;
   const [editandoFaturamento, setEditandoFaturamento] = useState(false);
   const temFaturamento = faturamentoPreenchido(faturamento);
@@ -42,8 +33,7 @@ export function Carrinho() {
 
   const itens = Object.values(estado.itens);
   const count = itens.length;
-  const subtotal = subtotalCarrinho(estado.itens, parametros, tecnicas, estado.custosFixos);
-  const fixos = custosFixosEmVigor(estado.custosFixos, parametros);
+  const subtotal = subtotalCarrinho(estado.itens, parametros, tecnicas);
   const valorFrete = Math.max(0, Number.parseFloat(frete) || 0);
   const total = subtotal + valorFrete;
   const unidades = itens.reduce((s, i) => s + i.qty, 0);
@@ -57,7 +47,7 @@ export function Carrinho() {
     limpar();
   };
 
-  const precos = precosDoCarrinho(estado.itens, parametros, tecnicas, estado.custosFixos);
+  const precos = precosDoCarrinho(estado.itens, parametros, tecnicas);
   const gerarOrcamento = async () => {
     if (!itens.length) {
       void avisar('Adicione produtos ao carrinho antes de gerar o orçamento.', { tipo: 'aviso', titulo: 'Carrinho vazio' });
@@ -77,9 +67,8 @@ export function Carrinho() {
     // Imposto de compra, imposto sobre venda e margem: sempre os Parâmetros cadastrados
     const snapshot = itens.map((itemCarrinho) => {
       const { produto, qty, observacao: obsItem } = itemCarrinho;
-      const { personalizacao, calcBase } = precos.get(itemCarrinho)!;
-      // calcBase já traz a parte deste item nos custos fixos do orçamento
-      const item = { ...montarItemOrcamento(produto, qty, calcBase, personalizacao), custos_fixos_pedido: fixos };
+      const { personalizacao } = precos.get(itemCarrinho)!;
+      const item = montarItemOrcamento(produto, qty, calcComParametros(itemCarrinho.calc, parametros), personalizacao);
       // Observação de cada produto vai junto com o item do orçamento
       const obs = obsItem?.trim();
       return obs ? { ...item, observacao: obs } : item;
@@ -236,49 +225,6 @@ export function Carrinho() {
                       onChange={(e) => definirFrete(e.target.value)}
                     />
                   </div>
-                </div>
-                <div className="cart-fixos" id="cart-fixos">
-                  <div className="cart-faturamento-topo">
-                    <span className="cart-field-label">Custos fixos do orçamento</span>
-                    {estado.custosFixos && (
-                      <button type="button" className="link-botao" id="btn-fixos-padrao" onClick={() => definirCustosFixos(null)}>
-                        Voltar ao padrão
-                      </button>
-                    )}
-                  </div>
-                  {(
-                    [
-                      ['designer_total', 'Designer / mockup', 'campo-designer'],
-                      ['logistica_total', 'Logística / frete compra', 'campo-logistica'],
-                    ] as const
-                  ).map(([campo, rotulo, idCampo]) => (
-                    <div className="cart-field-row" key={campo}>
-                      <label className="cart-field-label cart-fixos-rotulo" htmlFor={idCampo}>
-                        {rotulo}
-                      </label>
-                      <div className="cart-field-input-wrap">
-                        <span className="cart-field-suffix" style={{ marginRight: 2 }}>
-                          R$
-                        </span>
-                        <input
-                          className="cart-field-input"
-                          id={idCampo}
-                          type="number"
-                          min="0"
-                          step="5"
-                          value={fixos[campo]}
-                          onFocus={(e) => e.target.select()}
-                          onChange={(e) => definirCustosFixos({ ...fixos, [campo]: Math.max(0, Number.parseFloat(e.target.value) || 0) })}
-                        />
-                      </div>
-                    </div>
-                  ))}
-                  <span className="cart-faturamento-vazio" id="cart-fixos-rateio">
-                    {unidades > 0
-                      ? `Cobrados uma vez no orçamento e divididos pelas ${unidades} peças: ${formatBRL((fixos.designer_total + fixos.logistica_total) / unidades)}/peça.`
-                      : 'Cobrados uma vez no orçamento e divididos pelas peças.'}
-                    {estado.custosFixos ? ' (ajustado neste orçamento)' : ' (padrão de Parâmetros)'}
-                  </span>
                 </div>
                 <div className="cart-field-row">
                   <label className="cart-field-label" htmlFor="campo-entrega">
