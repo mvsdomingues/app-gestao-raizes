@@ -46,6 +46,13 @@ const GRUPOS: { titulo: string; itens: ItemMenu[] }[] = [
       { tela: 'status', rotulo: 'Atualização', icone: 'atualizacao', id: 'tab-status' },
     ],
   },
+  {
+    titulo: 'Ajuda',
+    itens: [
+      { tela: 'ajuda-calculos', rotulo: 'Cálculos', icone: 'calculo', id: 'tab-ajuda-calculos' },
+      { tela: 'ajuda-manual', rotulo: 'Manual', icone: 'manual', id: 'tab-ajuda-manual' },
+    ],
+  },
 ];
 
 const CHAVE_RECOLHIDA = 'raizes.menuRecolhido';

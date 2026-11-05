@@ -190,6 +190,20 @@ describe('cadastro de usuários', () => {
     const telas = db.prepare("SELECT tela FROM usuarios_permissoes WHERE usuario_id = 1 AND tela = 'pedidos'").all();
     expect(telas).toHaveLength(1);
   });
+
+  it('telas de ajuda novas são liberadas a todos os usuários ativos', () => {
+    db.prepare("DELETE FROM telas_conhecidas WHERE tela LIKE 'ajuda-%'").run();
+    db.prepare("DELETE FROM usuarios_permissoes WHERE tela LIKE 'ajuda-%'").run();
+    garantirAcessoInicial(db);
+    const ativos = (db.prepare('SELECT COUNT(*) AS c FROM usuarios WHERE inativo = 0').get() as { c: number }).c;
+    const com = (db.prepare("SELECT COUNT(DISTINCT usuario_id) AS c FROM usuarios_permissoes WHERE tela = 'ajuda-manual'").get() as { c: number }).c;
+    expect(ativos).toBeGreaterThan(1);
+    expect(com).toBe(ativos);
+    // Ajustável em Acessos: retirada, não volta sozinha
+    db.prepare("DELETE FROM usuarios_permissoes WHERE tela = 'ajuda-manual' AND usuario_id <> 1").run();
+    garantirAcessoInicial(db);
+    expect((db.prepare("SELECT COUNT(*) AS c FROM usuarios_permissoes WHERE tela = 'ajuda-manual'").get() as { c: number }).c).toBe(1);
+  });
 });
 
 describe('usuário responsável', () => {

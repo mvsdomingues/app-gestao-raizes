@@ -2,6 +2,7 @@ import { createHash, randomBytes } from 'node:crypto';
 import {
   IDS_TELAS,
   isIdTela,
+  TELAS_AJUDA,
   type AcessoUsuario,
   type IdTela,
   type Usuario,
@@ -89,6 +90,12 @@ export function garantirAcessoInicial(db: Banco): void {
         .all(TELA_ACESSOS) as { id: number }[];
       const ins = db.prepare('INSERT OR IGNORE INTO usuarios_permissoes (usuario_id, tela) VALUES (?, ?)');
       for (const a of admins) for (const t of novas) ins.run(a.id, t);
+      // Ajuda serve a todos: liberada também aos demais usuários ativos (ajustável em Acessos)
+      const novasAjuda = novas.filter((t) => TELAS_AJUDA.includes(t));
+      if (novasAjuda.length) {
+        const ativos = db.prepare('SELECT id FROM usuarios WHERE inativo = 0').all() as { id: number }[];
+        for (const u of ativos) for (const t of novasAjuda) ins.run(u.id, t);
+      }
     }
     const marcar = db.prepare('INSERT OR IGNORE INTO telas_conhecidas (tela) VALUES (?)');
     for (const t of IDS_TELAS) marcar.run(t);

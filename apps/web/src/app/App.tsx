@@ -19,6 +19,8 @@ import { ProvedorCarrinho } from '../state/carrinho';
 import { ProvedorApp, useApp } from './contexto';
 import { ProvedorSessao, useSessao } from './sessao';
 import { Dialogos } from '../components/Dialogos';
+import { MemoriasCalculo } from '../features/ajuda/MemoriasCalculo';
+import { ManualOperacao } from '../features/ajuda/ManualOperacao';
 
 // O estúdio de mockups (Konva) é carregado só na primeira vez que a tela é aberta
 const EstudioMockup = lazy(() => import('../features/mockup/EstudioMockup').then((m) => ({ default: m.EstudioMockup })));
@@ -84,6 +86,8 @@ const TELAS: Record<IdTela, ReactNode> = {
   usuarios: <Usuarios />,
   acessos: <Acessos />,
   status: <Atualizacao />,
+  'ajuda-calculos': <MemoriasCalculo />,
+  'ajuda-manual': <ManualOperacao />,
 };
 
 function Telas() {

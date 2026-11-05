@@ -193,6 +193,14 @@ O menu fica na **barra lateral** (pode ser recolhido para mostrar só os ícones
 
 8. **Atualização**: atualiza a base dos fornecedores integrados e mostra o log; com o Kommo ligado, mostra também a sincronização dos clientes.
 
+### Ajuda
+
+Menu **Ajuda**, liberado a todos os usuários ativos (ajustável em Acessos):
+
+- **Cálculos** (*Memórias de cálculo*): todas as contas do sistema passo a passo — preço de venda, por que dividir pela margem, custos fixos e faixas, material por técnica (fração mínima, folga, soma por técnica no orçamento), mão de obra, item sem técnica, ajustes, totais e indicadores dos dashboards. Os números dos exemplos são calculados pelas mesmas funções do carrinho. No fim, um **simulador** com os parâmetros e tabelas cadastrados.
+- **Manual** (*Manual de operação*): guia completo, tela por tela, com passos, regras, problemas comuns e glossário.
+- As duas telas têm sumário e busca no texto (ignora acentos).
+
 ### Dashboards
 
 Menu **Dashboards** (central de acompanhamento; novos painéis entram nesse grupo). Permissão por painel na tela Acessos.

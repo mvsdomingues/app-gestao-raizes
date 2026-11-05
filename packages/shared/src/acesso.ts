@@ -18,9 +18,14 @@ export const TELAS_SISTEMA = [
   { id: 'acessos', rotulo: 'Acessos', grupo: 'Sistema' },
   { id: 'status', rotulo: 'Atualização', grupo: 'Sistema' },
   { id: 'dash-geral', rotulo: 'Visão geral', grupo: 'Dashboards' },
+  { id: 'ajuda-calculos', rotulo: 'Memórias de cálculo', grupo: 'Ajuda' },
+  { id: 'ajuda-manual', rotulo: 'Manual de operação', grupo: 'Ajuda' },
 ] as const;
 
 export type IdTela = (typeof TELAS_SISTEMA)[number]['id'];
+
+/** Telas de ajuda: quando aparecem pela primeira vez, são liberadas a todos os usuários ativos. */
+export const TELAS_AJUDA: readonly IdTela[] = ['ajuda-calculos', 'ajuda-manual'];
 export const IDS_TELAS: readonly IdTela[] = TELAS_SISTEMA.map((t) => t.id);
 
 export function isIdTela(v: unknown): v is IdTela {
