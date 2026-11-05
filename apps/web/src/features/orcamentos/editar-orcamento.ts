@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { motivoBloqueioAlteracao, personalizacaoVazia, type ItemOrcamento, type Orcamento, type ParametrosCalculo } from '@raizes/shared';
+import { motivoBloqueioAlteracao, personalizacaoVazia, type CustosFixosPedido, type ItemOrcamento, type Orcamento, type ParametrosCalculo } from '@raizes/shared';
 import { useApp } from '../../app/contexto';
 import { api } from '../../lib/api';
 import { useCarrinho, type ItemCarrinho, type Itens } from '../../state/carrinho';
@@ -76,6 +76,21 @@ async function montarItensCarrinho(
 }
 
 /**
+ * Custos fixos do orçamento salvo. Orçamentos antigos repetiam designer e logística
+ * inteiros em cada item: usa o maior valor de um item (o valor do orçamento).
+ * null = iguais aos Parâmetros (o carrinho segue o padrão).
+ */
+function custosFixosDoOrcamento(o: Orcamento, parametros: ParametrosCalculo): CustosFixosPedido | null {
+  const gravado = o.itens.find((i) => i.custos_fixos_pedido)?.custos_fixos_pedido;
+  const fixos = gravado ?? {
+    designer_total: Math.max(0, ...o.itens.map((i) => i.calc?.designer_total ?? parametros.designer_total)),
+    logistica_total: Math.max(0, ...o.itens.map((i) => i.calc?.logistica_total ?? parametros.logistica_total)),
+  };
+  const iguais = fixos.designer_total === parametros.designer_total && fixos.logistica_total === parametros.logistica_total;
+  return iguais ? null : fixos;
+}
+
+/**
  * Ação "Editar" de um orçamento salvo: exige carrinho vazio, carrega os itens
  * e o frete no carrinho e abre a tela do carrinho em modo de alteração.
  */
@@ -145,6 +160,7 @@ export function useEditarOrcamento() {
         o.cliente ?? null,
         o.entrega_prevista ?? null,
         o.faturamento ?? null,
+        custosFixosDoOrcamento(o, parametros),
       );
       irPara('carrinho');
     } catch (e) {

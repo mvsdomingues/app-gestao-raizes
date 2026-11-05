@@ -7,6 +7,7 @@ import {
   calcularPersonalizacao,
   calcularPersonalizacaoOrcamento,
   getFaixa,
+  ratearCustosFixos,
   personalizacaoVazia,
   type ParametrosCalculo,
   type TecnicaComValores,
@@ -61,6 +62,10 @@ export function MemoriasCalculo() {
   // Exemplo base: produto de R$ 20,00, 50 unidades, parâmetros de fábrica
   const base = calcPreco(20, 50, P);
   const divisor = 1 - P.imposto - P.margem;
+
+  // Custos fixos: 5 cores × 20 un dividem designer e logística do orçamento
+  const partesCores = ratearCustosFixos([20, 20, 20, 20, 20], { designer_total: P.designer_total, logistica_total: P.logistica_total });
+  const fixoCores = calcPreco(20, 20, { ...P, ...partesCores[0]! });
 
   // Material: 50 canecas, arte 10 × 8 cm, Sublimação
   const sub = calcularPersonalizacao({ ...personalizacaoVazia(), tecnica_id: 1, altura_cm: 10, largura_cm: 8 }, 50, [SUBLIMACAO]);
@@ -117,7 +122,7 @@ export function MemoriasCalculo() {
           <div className="ajuda-fluxo-seta">+</div>
           <div className="ajuda-fluxo-passo">
             <b>Custos fixos</b>
-            <span>designer + logística ÷ quantidade</span>
+            <span>designer + logística ÷ peças do orçamento</span>
           </div>
           <div className="ajuda-fluxo-seta">=</div>
           <div className="ajuda-fluxo-passo destaque">
@@ -136,7 +141,7 @@ export function MemoriasCalculo() {
             ['Custo do produto', 'Fornecedor (atualização da base) ou Produtos Próprios', 'Não'],
             ['Imposto de compra', <Menu key="m">Parâmetros › Precificação</Menu>, 'Não — vale para todos os itens'],
             ['Material e mão de obra', <Menu key="m">Parâmetros › Tabelas gerais</Menu>, 'Sim — fica marcado como “ajustado”'],
-            ['Designer e logística', <Menu key="m">Parâmetros › Precificação</Menu>, <span key="s">Sim — em <Bt>⚙ Ajustar custos fixos</Bt></span>],
+            ['Designer e logística', <Menu key="m">Parâmetros › Precificação</Menu>, <span key="s">Sim — no resumo do carrinho, para o orçamento todo</span>],
             ['Imposto sobre venda e margem', <Menu key="m">Parâmetros › Precificação</Menu>, 'Não — vale para todos os itens'],
           ]}
         />
@@ -150,7 +155,7 @@ export function MemoriasCalculo() {
               <b>Custo com imposto</b> = custo do produto × (1 + imposto de compra*)
             </>,
             <>
-              <b>Custo total/un</b> = custo com imposto + material/un + mão de obra/un + (designer + logística) ÷ quantidade
+              <b>Custo total/un</b> = custo com imposto + material/un + mão de obra/un + (designer + logística) ÷ total de peças do orçamento
             </>,
             <>
               <b>Preço/un</b> = custo total/un ÷ (1 − imposto sobre venda − margem)
@@ -221,8 +226,9 @@ export function MemoriasCalculo() {
 
       <Secao id="calc-quantidade" titulo="Quantidade, faixas e custos fixos" numero={4}>
         <p>
-          Designer e logística são valores <b>por pedido</b>, não por peça. Por isso eles são divididos pela quantidade: quanto mais
-          peças, menor a parte de cada uma. É o principal motivo de o preço unitário cair com o volume.
+          Designer e logística são valores <b>do orçamento inteiro</b>, cobrados uma única vez — não por produto nem por peça. Eles são
+          divididos pelo <b>total de peças do orçamento</b> (somando todos os itens): quanto mais peças, menor a parte de cada uma. É o
+          principal motivo de o preço unitário cair com o volume.
         </p>
         <Tabela
           colunas={['Quantidade', 'Faixa', 'Custos fixos/un', 'Custo total/un', 'Preço/un', 'Total']}
@@ -232,7 +238,29 @@ export function MemoriasCalculo() {
             return [`${q} un`, getFaixa(q).nome, brl(r.custoFixoRateado), brl(r.custoTotal), brl(r.preco), brl(r.preco * q)];
           })}
         />
-        <p className="ajuda-pequeno">Produto de R$ 20,00 com os parâmetros de fábrica.</p>
+        <p className="ajuda-pequeno">Produto de R$ 20,00 sozinho no orçamento, com os parâmetros de fábrica.</p>
+        <Exemplo
+          titulo="Exemplo: caneca em 5 cores × 20 unidades (100 peças no orçamento)"
+          dados={<>Designer {brl(P.designer_total)} + logística {brl(P.logistica_total)} = {brl(P.designer_total + P.logistica_total)} para o orçamento</>}
+          passos={[
+            ['Peças do orçamento', '5 itens × 20 un', '100 peças'],
+            ['Custo fixo por peça', `${brl(P.designer_total + P.logistica_total)} ÷ 100`, brl(fixoCores.custoFixoRateado)],
+            ['Parte de cada cor', `${brl(fixoCores.custoFixoRateado)} × 20 un`, brl(partesCores[0]!.designer_total + partesCores[0]!.logistica_total)],
+            ['Total cobrado no orçamento', `5 × ${brl(partesCores[0]!.designer_total + partesCores[0]!.logistica_total)}`, brl(P.designer_total + P.logistica_total)],
+          ]}
+          conclusao={
+            <>
+              Se cada cor pagasse designer e logística inteiros, seriam 5 × {brl(P.designer_total + P.logistica_total)} ={' '}
+              <b>{brl(5 * (P.designer_total + P.logistica_total))}</b> ({brl(calcPreco(20, 20, P).custoFixoRateado)} por peça). Como o
+              custo é do orçamento, a cobrança é de <b>{brl(P.designer_total + P.logistica_total)}</b> uma vez só.
+            </>
+          }
+        />
+        <Dica tipo="regra">
+          A divisão entre os itens é pela quantidade de peças de cada um; os centavos que sobram ficam no último item. Os valores vêm de{' '}
+          <Menu>Parâmetros › Precificação</Menu> e podem ser alterados para o orçamento em <b>Custos fixos do orçamento</b>, no resumo do
+          carrinho.
+        </Dica>
         <p>
           As <b>faixas</b> só identificam o tamanho do pedido (não mudam o preço por si):
         </p>
@@ -492,7 +520,7 @@ function Simulador() {
         Usa os valores cadastrados agora em <Menu>Parâmetros</Menu> (margem {pct(parametros.margem)}, imposto sobre venda{' '}
         {pct(parametros.imposto)}, imposto de compra {parametros.imposto_compra_ativo ? pct(parametros.imposto_compra) : 'desligado'},
         designer {brl(parametros.designer_total)}, logística {brl(parametros.logistica_total)}) e as tabelas de técnicas. Nada é
-        gravado. Considera o item sozinho no orçamento (sem rateio com outros itens).
+        gravado. Considera o item sozinho no orçamento (sem dividir material e custos fixos com outros itens).
       </p>
       <div className="ajuda-sim-campos">
         <label>

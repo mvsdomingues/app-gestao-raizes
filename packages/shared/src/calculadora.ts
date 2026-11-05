@@ -108,6 +108,35 @@ export function calcPreco(
   };
 }
 
+/** Custos fixos do orçamento (designer/mockup e logística): uma vez por orçamento, não por item. */
+export interface CustosFixosPedido {
+  designer_total: number;
+  logistica_total: number;
+}
+
+/**
+ * Rateia os custos fixos do orçamento entre os itens pela quantidade de peças:
+ * cada item recebe (custo × qtd do item ÷ qtd total). Como o preço divide o custo
+ * fixo do item pela qtd do item, toda peça do orçamento carrega o mesmo valor
+ * (custo ÷ qtd total). Os centavos que sobram ficam no último item.
+ */
+export function ratearCustosFixos(qtds: number[], fixos: CustosFixosPedido): CustosFixosPedido[] {
+  const total = qtds.reduce((s, q) => s + Math.max(0, q), 0);
+  const cent = (v: number) => Math.round(v * 100) / 100;
+  const acum = { designer_total: 0, logistica_total: 0 };
+  return qtds.map((q, i) => {
+    const ultimo = i === qtds.length - 1;
+    const parte = total > 0 ? Math.max(0, q) / total : 0;
+    const r = {
+      designer_total: ultimo ? cent(Math.max(0, fixos.designer_total) - acum.designer_total) : cent(Math.max(0, fixos.designer_total) * parte),
+      logistica_total: ultimo ? cent(Math.max(0, fixos.logistica_total) - acum.logistica_total) : cent(Math.max(0, fixos.logistica_total) * parte),
+    };
+    acum.designer_total = cent(acum.designer_total + r.designer_total);
+    acum.logistica_total = cent(acum.logistica_total + r.logistica_total);
+    return r;
+  });
+}
+
 /** Texto "custo base … · margem … + imposto venda …" gravado em cada item do orçamento. */
 export function montarComposicao(
   custoBase: number,

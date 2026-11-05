@@ -169,15 +169,19 @@ export function ManualOperacao() {
             ['Observação do produto', 'Cor, posição do logo, gravação… Vai para a folha e para o cliente.'],
             ['Técnica de personalização', 'Escolha a técnica; veja a seção “Personalização no carrinho”.'],
             ['Preço de venda calculado', 'Preço por unidade, com a faixa, o custo total/un e a margem real.'],
-            [<Bt key="b">⚙ Ajustar custos fixos</Bt>, 'Designer/mockup e logística deste item (R$ por pedido, divididos pela quantidade).'],
             [<Bt key="b">✕</Bt>, 'Remove o item.'],
           ]}
         />
         <h4>No resumo (lado direito)</h4>
         <ul>
           <li>
-            <b>Cliente</b> (com o Kommo ligado), <b>Faturamento e entrega</b>, <b>Previsão de entrega</b>, <b>Frete</b> e{' '}
-            <b>Observações</b> gerais do orçamento.
+            <b>Cliente</b> (com o Kommo ligado), <b>Frete</b>, <b>Custos fixos do orçamento</b>, <b>Previsão de entrega</b>,{' '}
+            <b>Faturamento e entrega</b> e <b>Observações</b> gerais do orçamento.
+          </li>
+          <li>
+            <b>Custos fixos do orçamento</b>: designer/mockup e logística, cobrados <b>uma vez</b> no orçamento e divididos pelo total de
+            peças (a linha abaixo mostra o valor por peça). Começam com os valores de Parâmetros; altere se este orçamento tiver outro
+            custo. <Bt>Voltar ao padrão</Bt> desfaz.
           </li>
           <li>Subtotal (soma dos itens), frete e total.</li>
           <li>
@@ -582,7 +586,7 @@ export function ManualOperacao() {
           linhas={[
             [
               'Precificação',
-              'Material e mão de obra padrão dos itens sem técnica, imposto de compra (e se é aplicado), designer, logística, imposto sobre venda e margem. Mostra uma simulação ao lado. Vale para os próximos cálculos do carrinho (orçamentos já gerados não mudam).',
+              'Material e mão de obra padrão dos itens sem técnica, imposto de compra (e se é aplicado), designer e logística (padrão de cada orçamento), imposto sobre venda e margem. Mostra uma simulação ao lado. Vale para os próximos cálculos do carrinho (orçamentos já gerados não mudam).',
             ],
             ['Tabelas gerais', 'Técnicas de personalização, Material por técnica e Mão de obra por técnica.'],
             ['Checklist de fechamento', 'Itens da lista usada em Em Fechamento (incluir, renomear, reordenar, remover). Vale para os próximos pedidos.'],
@@ -687,7 +691,7 @@ export function ManualOperacao() {
             ['O cliente não consegue aceitar', 'O link venceu (7 dias) ou o cliente já respondeu. Volte para aberto e reenvie para renovar a validade.'],
             ['Não aparece o botão de mockup', 'Mockups só com o orçamento Aberto.'],
             ['Cliente não aparece na busca', 'Contato recém-criado no Kommo: use Buscar direto no Kommo.'],
-            ['Preço muito alto em pedido pequeno', 'Custos fixos (designer + logística) divididos por poucas peças, ou fração mínima grande na técnica. Ajuste no item ou nas tabelas.'],
+            ['Preço muito alto em pedido pequeno', 'Custos fixos (designer + logística) divididos por poucas peças, ou fração mínima grande na técnica. Ajuste os custos fixos no resumo do carrinho ou a técnica nas tabelas.'],
             ['Não vejo uma tela no menu', 'Ela não está liberada para o seu usuário. Peça a liberação a quem administra os Acessos.'],
             ['Fui desconectado', 'A sessão expira após 12 horas sem uso ou quando a senha é trocada em outro lugar. Entre de novo.'],
           ]}
@@ -707,7 +711,7 @@ export function ManualOperacao() {
             ['Fração mínima', 'Menor quantidade de material que se usa/compra, em m².'],
             ['Folga', 'Percentual de sobra de material para perdas e acertos.'],
             ['Rateio', 'Divisão de um valor entre itens (material somado por técnica; custos fixos entre as peças).'],
-            ['Custos fixos', 'Designer/mockup e logística: valores por pedido, divididos pela quantidade.'],
+            ['Custos fixos', 'Designer/mockup e logística: valores do orçamento inteiro, cobrados uma vez e divididos pelo total de peças.'],
             ['Margem real', 'Quanto do preço de venda sobra como lucro, depois do custo e do imposto sobre venda.'],
             ['Ajustado', 'Item cujo material ou mão de obra foi alterado pelo operador em relação ao sugerido.'],
             ['Link do cliente', 'Endereço secreto do orçamento para o cliente ver, aceitar ou rejeitar.'],

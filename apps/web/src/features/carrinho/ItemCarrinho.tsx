@@ -1,5 +1,5 @@
-import { useEffect, useMemo, useRef, useState, type FocusEvent, type FormEvent } from 'react';
-import { formatBRL, getFaixa, type CampoNumerico } from '@raizes/shared';
+import { useEffect, useMemo, useRef, useState } from 'react';
+import { formatBRL, getFaixa } from '@raizes/shared';
 import { useApp } from '../../app/contexto';
 import { useSessao } from '../../app/sessao';
 import { classeFornecedor } from '../../lib/fornecedor';
@@ -15,13 +15,16 @@ import { BlocoPersonalizacao } from './BlocoPersonalizacao';
 export function ItemCarrinho({ item }: { item: Item }) {
   const { parametros, tecnicas } = useApp();
   const { pode } = useSessao();
-  const { estado, remover, definirQtd, definirCalc, definirObservacaoItem, definirPersonalizacao } = useCarrinho();
-  const { produto: p, qty, calc: c } = item;
+  const { estado, remover, definirQtd, definirObservacaoItem, definirPersonalizacao } = useCarrinho();
+  const { produto: p, qty } = item;
   const id = p.id;
 
   // Impostos e margem dos Parâmetros; material e mão de obra pelas tabelas da técnica
   // (material somado com os outros itens da mesma técnica)
-  const precos = useMemo(() => precosDoCarrinho(estado.itens, parametros, tecnicas), [estado.itens, parametros, tecnicas]);
+  const precos = useMemo(
+    () => precosDoCarrinho(estado.itens, parametros, tecnicas, estado.custosFixos),
+    [estado.itens, parametros, tecnicas, estado.custosFixos],
+  );
   const { res, personalizacao } = precos.get(estado.itens[String(id)] ?? item) ?? [...precos.values()][0]!;
   const faixa = getFaixa(qty);
   // A faixa ao lado da quantidade é fixada quando o item é desenhado
@@ -37,12 +40,6 @@ export function ItemCarrinho({ item }: { item: Item }) {
     const aoMudar = () => confirmarQtd(el.value);
     el.addEventListener('change', aoMudar);
     return () => el.removeEventListener('change', aoMudar);
-  });
-
-  const campo = (nome: CampoNumerico) => ({
-    onFocus: (e: FocusEvent<HTMLInputElement>) => e.target.select(),
-    onInput: (e: FormEvent<HTMLInputElement>) =>
-      definirCalc(id, nome, Math.max(0, Number.parseFloat(e.currentTarget.value) || 0)),
   });
 
   return (
@@ -130,22 +127,6 @@ export function ItemCarrinho({ item }: { item: Item }) {
           </div>
         </div>
 
-        <details className="calc-details">
-          <summary>⚙ Ajustar custos fixos</summary>
-          <div className="calc-panel-inner">
-            <div className="calc-section-title">Custos Fixos por Pedido (R$ total, rateado pela qtd)</div>
-            <div className="calc-row">
-              <span className="calc-label">Designer / mockup</span>
-              <input className="calc-input" type="number" min="0" step="5"
-                defaultValue={c.designer_total.toFixed(2)} {...campo('designer_total')} />
-            </div>
-            <div className="calc-row">
-              <span className="calc-label">Logística / frete compra</span>
-              <input className="calc-input" type="number" min="0" step="5"
-                defaultValue={c.logistica_total.toFixed(2)} {...campo('logistica_total')} />
-            </div>
-          </div>
-        </details>
       </div>
       <div className="cart-item-right">
         <button className="remove-btn" onClick={() => remover(id)}>

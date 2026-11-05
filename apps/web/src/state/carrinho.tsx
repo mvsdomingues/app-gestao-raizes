@@ -10,6 +10,8 @@ import {
   faturamentoVazio,
   calcComPersonalizacao,
   calcularPersonalizacaoOrcamento,
+  ratearCustosFixos,
+  type CustosFixosPedido,
   personalizacaoVazia,
   type DadosFaturamento,
   type PersonalizacaoItem,
@@ -73,6 +75,8 @@ export interface EstadoCarrinho {
   entregaPrevista: string;
   /** Dados de faturamento e entrega (opcionais no orçamento) */
   faturamento: DadosFaturamento;
+  /** Designer e logística do orçamento inteiro (null = os de Parâmetros › Precificação) */
+  custosFixos: CustosFixosPedido | null;
 }
 
 /** Orçamento do histórico carregado no carrinho para alteração. */
@@ -94,6 +98,7 @@ type Acao =
   | { tipo: 'redesenhar' }
   | { tipo: 'frete'; valor: string }
   | { tipo: 'observacao'; valor: string }
+  | { tipo: 'custosFixos'; valor: CustosFixosPedido | null }
   | {
       tipo: 'carregarOrcamento';
       itens: Itens;
@@ -103,6 +108,7 @@ type Acao =
       cliente: ClienteVinculado | null;
       entregaPrevista: string;
       faturamento: DadosFaturamento;
+      custosFixos: CustosFixosPedido | null;
     }
   | { tipo: 'entregaPrevista'; valor: string }
   | { tipo: 'faturamento'; valor: DadosFaturamento }
@@ -142,6 +148,7 @@ function redutor(estado: EstadoCarrinho, acao: Acao): EstadoCarrinho {
         cliente: null,
         entregaPrevista: '',
         faturamento: faturamentoVazio(),
+        custosFixos: null,
       };
     case 'qtd': {
       const item = itens[acao.id];
@@ -174,6 +181,8 @@ function redutor(estado: EstadoCarrinho, acao: Acao): EstadoCarrinho {
       return { ...estado, frete: acao.valor };
     case 'observacao':
       return { ...estado, observacao: acao.valor };
+    case 'custosFixos':
+      return { ...estado, custosFixos: acao.valor };
     case 'carregarOrcamento':
       return {
         ...redesenho,
@@ -184,6 +193,7 @@ function redutor(estado: EstadoCarrinho, acao: Acao): EstadoCarrinho {
         cliente: acao.cliente,
         entregaPrevista: acao.entregaPrevista,
         faturamento: acao.faturamento,
+        custosFixos: acao.custosFixos,
       };
     case 'entregaPrevista':
       return { ...estado, entregaPrevista: acao.valor };
@@ -217,7 +227,9 @@ interface ContextoCarrinho {
     cliente?: ClienteVinculado | null,
     entregaPrevista?: string | null,
     faturamento?: DadosFaturamento | null,
+    custosFixos?: CustosFixosPedido | null,
   ) => void;
+  definirCustosFixos: (valor: CustosFixosPedido | null) => void;
   definirCliente: (cliente: ClienteVinculado | null) => void;
   definirFaturamento: (valor: DadosFaturamento) => void;
   definirEntregaPrevista: (valor: string) => void;
@@ -236,6 +248,7 @@ export function ProvedorCarrinho({ children }: { children: ReactNode }) {
     cliente: null,
     entregaPrevista: '',
     faturamento: faturamentoVazio(),
+    custosFixos: null,
   });
   const valor = useMemo<ContextoCarrinho>(
     () => ({
@@ -250,7 +263,8 @@ export function ProvedorCarrinho({ children }: { children: ReactNode }) {
       redesenhar: () => despachar({ tipo: 'redesenhar' }),
       definirFrete: (valor) => despachar({ tipo: 'frete', valor }),
       definirObservacao: (valor) => despachar({ tipo: 'observacao', valor }),
-      carregarOrcamento: (itens, frete, edicao, observacao = '', cliente = null, entregaPrevista = null, faturamento = null) =>
+      definirCustosFixos: (valor) => despachar({ tipo: 'custosFixos', valor }),
+      carregarOrcamento: (itens, frete, edicao, observacao = '', cliente = null, entregaPrevista = null, faturamento = null, custosFixos = null) =>
         despachar({
           tipo: 'carregarOrcamento',
           itens,
@@ -260,6 +274,7 @@ export function ProvedorCarrinho({ children }: { children: ReactNode }) {
           cliente,
           entregaPrevista: entregaPrevista ?? '',
           faturamento: faturamento ?? faturamentoVazio(),
+          custosFixos,
         }),
       definirFaturamento: (valor) => despachar({ tipo: 'faturamento', valor }),
       definirEntregaPrevista: (valor) => despachar({ tipo: 'entregaPrevista', valor }),
@@ -278,12 +293,28 @@ export function useCarrinho(): ContextoCarrinho {
 }
 
 /** Subtotal dos preços calculados (sem frete), com os parâmetros cadastrados. */
-export function subtotalCarrinho(itens: Itens, parametros: ParametrosCalculo, tecnicas: TecnicaComValores[] | null): number {
-  const precos = precosDoCarrinho(itens, parametros, tecnicas);
+export function subtotalCarrinho(
+  itens: Itens,
+  parametros: ParametrosCalculo,
+  tecnicas: TecnicaComValores[] | null,
+  custosFixos: CustosFixosPedido | null,
+): number {
+  const precos = precosDoCarrinho(itens, parametros, tecnicas, custosFixos);
   return Object.values(itens).reduce((s, item) => s + precos.get(item)!.res.preco * item.qty, 0);
 }
 
-export type PrecoItem = { personalizacao: ResultadoPersonalizacao; calc: ParametrosCalculo; res: ResultadoCalculo };
+export type PrecoItem = {
+  personalizacao: ResultadoPersonalizacao;
+  /** Parâmetros do item com a parte dele dos custos fixos (sem a personalização) */
+  calcBase: ParametrosCalculo;
+  calc: ParametrosCalculo;
+  res: ResultadoCalculo;
+};
+
+/** Custos fixos em vigor: os do orçamento ou, sem ajuste, os de Parâmetros. */
+export function custosFixosEmVigor(custosFixos: CustosFixosPedido | null, parametros: ParametrosCalculo): CustosFixosPedido {
+  return custosFixos ?? { designer_total: parametros.designer_total, logistica_total: parametros.logistica_total };
+}
 
 /**
  * Preço de cada item do carrinho: parâmetros cadastrados (impostos e margem), ajustes
@@ -294,8 +325,14 @@ export function precosDoCarrinho(
   itens: Itens,
   parametros: ParametrosCalculo,
   tecnicas: TecnicaComValores[] | null,
+  custosFixos: CustosFixosPedido | null,
 ): Map<ItemCarrinho, PrecoItem> {
   const lista = Object.values(itens);
+  // Designer e logística: uma vez por orçamento, rateados pela quantidade de peças
+  const partes = ratearCustosFixos(
+    lista.map((i) => i.qty),
+    custosFixosEmVigor(custosFixos, parametros),
+  );
   // Sem técnica: material e mão de obra padrão de Parâmetros › Precificação (como no cálculo anterior)
   const pers = calcularPersonalizacaoOrcamento(
     lista.map((item) => ({ chave: item, personalizacao: item.personalizacao, qty: item.qty })),
@@ -303,11 +340,12 @@ export function precosDoCarrinho(
     { material_unit: parametros.mat_personalizacao, mao_obra_unit: parametros.mo_personalizacao },
   );
   const precos = new Map<ItemCarrinho, PrecoItem>();
-  for (const item of lista) {
+  lista.forEach((item, n) => {
     const personalizacao = pers.get(item)!;
-    const calc = calcComPersonalizacao(calcComParametros(item.calc, parametros), personalizacao);
-    precos.set(item, { personalizacao, calc, res: calcPreco(item.produto.preco as number, item.qty, calc) });
-  }
+    const calcBase = { ...calcComParametros(item.calc, parametros), ...partes[n]! };
+    const calc = calcComPersonalizacao(calcBase, personalizacao);
+    precos.set(item, { personalizacao, calcBase, calc, res: calcPreco(item.produto.preco as number, item.qty, calc) });
+  });
   return precos;
 }
 
