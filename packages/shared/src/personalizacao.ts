@@ -66,6 +66,11 @@ export interface ResultadoPersonalizacao {
   mao_obra_ajustada: boolean;
   /** O que o operador informou (para reabrir o orçamento no carrinho) */
   entrada: PersonalizacaoItem;
+  /**
+   * Material calculado em conjunto com os outros itens da mesma técnica no orçamento
+   * (área somada e arredondada uma vez só; cada item fica com a parte da sua área).
+   */
+  grupo?: GrupoMaterial;
   /** Impede gerar o orçamento (cadastro incompleto, arte sem medidas…) */
   erro: string | null;
 }
@@ -181,6 +186,87 @@ export function calcularPersonalizacao(
   };
 }
 
+/** Material de uma técnica somado no orçamento. */
+export interface GrupoMaterial {
+  /** Quantos itens dividem o material */
+  itens: number;
+  area_necessaria_m2: number;
+  fracoes: number;
+  material_m2: number;
+  material_valor: number;
+}
+
+/** Item do orçamento/carrinho para o cálculo em conjunto. */
+export interface ItemPersonalizacao<K> {
+  chave: K;
+  personalizacao: PersonalizacaoItem;
+  qty: number;
+}
+
+/**
+ * Personalização de todos os itens do orçamento. O material de cada técnica é
+ * calculado em conjunto: as áreas necessárias (já com a folga) dos itens são somadas,
+ * arredondadas UMA vez em frações mínimas e o material é rateado pela área de cada
+ * item. Assim várias cores do mesmo produto (ou produtos diferentes com a mesma
+ * técnica) não pagam uma fração mínima cada. Ajustes do operador valem por item.
+ * Um item sozinho na técnica dá o mesmo resultado de `calcularPersonalizacao`.
+ */
+export function calcularPersonalizacaoOrcamento<K>(
+  itens: ItemPersonalizacao<K>[],
+  tecnicas: TecnicaComValores[] | null,
+  padrao?: PadraoSemTecnica,
+): Map<K, ResultadoPersonalizacao> {
+  const res = new Map<K, ResultadoPersonalizacao>();
+  const grupos = new Map<number, { chave: K; r: ResultadoPersonalizacao; qtd: number }[]>();
+  for (const i of itens) {
+    const r = calcularPersonalizacao(i.personalizacao, i.qty, tecnicas, padrao);
+    res.set(i.chave, r);
+    // Só entram no rateio itens com técnica de cadastro completo e arte medida
+    if (r.tecnica_id === null || r.erro) continue;
+    const g = grupos.get(r.tecnica_id) ?? [];
+    g.push({ chave: i.chave, r, qtd: Math.max(1, i.qty) });
+    grupos.set(r.tecnica_id, g);
+  }
+
+  for (const membros of grupos.values()) {
+    const fracao = membros[0]!.r.fracao_minima ?? 0;
+    const preco = membros[0]!.r.preco_m2 ?? 0;
+    const area = arred(membros.reduce((s, m) => s + m.r.area_necessaria_m2, 0));
+    const fracoes = fracoesNecessarias(area, fracao);
+    const m2Grupo = arred(fracoes * fracao);
+    const valorGrupo = dinheiro(m2Grupo * preco);
+    const grupo: GrupoMaterial = { itens: membros.length, area_necessaria_m2: area, fracoes, material_m2: m2Grupo, material_valor: valorGrupo };
+
+    // Rateio pela área; os centavos que sobram do arredondamento ficam no último item
+    let valorDistribuido = 0;
+    membros.forEach((m, n) => {
+      const parte = area > 0 ? m.r.area_necessaria_m2 / area : 0;
+      const m2Sug = arred(m2Grupo * parte);
+      const valorSug = n === membros.length - 1 ? dinheiro(valorGrupo - valorDistribuido) : dinheiro(valorGrupo * parte);
+      valorDistribuido = dinheiro(valorDistribuido + valorSug);
+
+      const p = m.r.entrada;
+      const m2 = p.material_m2 !== null ? Math.max(0, p.material_m2) : m2Sug;
+      const baseValor = p.material_m2 !== null ? dinheiro(m2 * preco) : valorSug;
+      const valor = p.material_valor !== null ? Math.max(0, p.material_valor) : baseValor;
+      res.set(m.chave, {
+        ...m.r,
+        fracoes,
+        material_m2_sugerido: m2Sug,
+        material_valor_sugerido: valorSug,
+        material_m2: m2,
+        material_valor: valor,
+        material_unit: valor / m.qtd,
+        material_ajustado:
+          (p.material_m2 !== null && arred(p.material_m2) !== m2Sug) ||
+          (p.material_valor !== null && dinheiro(p.material_valor) !== baseValor),
+        grupo,
+      });
+    });
+  }
+  return res;
+}
+
 /** Texto curto para a composição do preço e a folha interna. */
 export function descreverPersonalizacao(r: ResultadoPersonalizacao): string {
   const n = (v: number, c = 2) => v.toLocaleString('pt-BR', { minimumFractionDigits: c, maximumFractionDigits: 4 });
@@ -189,6 +275,7 @@ export function descreverPersonalizacao(r: ResultadoPersonalizacao): string {
     return ['sem técnica de personalização', ...ajustes].join(' · ');
   }
   const partes = [`${r.tecnica} · arte ${n(r.altura_cm ?? 0, 1)} × ${n(r.largura_cm ?? 0, 1)} cm`, `material ${n(r.material_m2)} m²`];
+  if (r.grupo && r.grupo.itens > 1) partes.push(`material rateado entre ${r.grupo.itens} itens (${n(r.grupo.material_m2)} m² no total)`);
   if (r.material_ajustado) partes.push('material ajustado');
   if (r.mao_obra_ajustada) partes.push('mão de obra ajustada');
   return partes.join(' · ');

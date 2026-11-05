@@ -9,10 +9,12 @@ import {
   type Produto,
   faturamentoVazio,
   calcComPersonalizacao,
-  calcularPersonalizacao,
+  calcularPersonalizacaoOrcamento,
   personalizacaoVazia,
   type DadosFaturamento,
   type PersonalizacaoItem,
+  type ResultadoCalculo,
+  type ResultadoPersonalizacao,
   type TecnicaComValores,
 } from '@raizes/shared';
 
@@ -277,19 +279,36 @@ export function useCarrinho(): ContextoCarrinho {
 
 /** Subtotal dos preços calculados (sem frete), com os parâmetros cadastrados. */
 export function subtotalCarrinho(itens: Itens, parametros: ParametrosCalculo, tecnicas: TecnicaComValores[] | null): number {
-  return Object.values(itens).reduce((s, item) => s + precoDoItem(item, parametros, tecnicas).res.preco * item.qty, 0);
+  const precos = precosDoCarrinho(itens, parametros, tecnicas);
+  return Object.values(itens).reduce((s, item) => s + precos.get(item)!.res.preco * item.qty, 0);
 }
 
+export type PrecoItem = { personalizacao: ResultadoPersonalizacao; calc: ParametrosCalculo; res: ResultadoCalculo };
+
 /**
- * Preço do item: parâmetros cadastrados (impostos e margem), ajustes do item e o
- * custo de personalização calculado pelas tabelas de material e mão de obra.
+ * Preço de cada item do carrinho: parâmetros cadastrados (impostos e margem), ajustes
+ * do item e o custo de personalização. O material é calculado em conjunto por técnica
+ * (área somada, arredondada uma vez e rateada) — por isso depende do carrinho inteiro.
  */
-export function precoDoItem(item: ItemCarrinho, parametros: ParametrosCalculo, tecnicas: TecnicaComValores[] | null) {
+export function precosDoCarrinho(
+  itens: Itens,
+  parametros: ParametrosCalculo,
+  tecnicas: TecnicaComValores[] | null,
+): Map<ItemCarrinho, PrecoItem> {
+  const lista = Object.values(itens);
   // Sem técnica: material e mão de obra padrão de Parâmetros › Precificação (como no cálculo anterior)
-  const personalizacao = calcularPersonalizacao(item.personalizacao, item.qty, tecnicas, {
-    material_unit: parametros.mat_personalizacao,
-    mao_obra_unit: parametros.mo_personalizacao,
-  });
-  const calc = calcComPersonalizacao(calcComParametros(item.calc, parametros), personalizacao);
-  return { personalizacao, calc, res: calcPreco(item.produto.preco as number, item.qty, calc) };
+  const pers = calcularPersonalizacaoOrcamento(
+    lista.map((item) => ({ chave: item, personalizacao: item.personalizacao, qty: item.qty })),
+    tecnicas,
+    { material_unit: parametros.mat_personalizacao, mao_obra_unit: parametros.mo_personalizacao },
+  );
+  const precos = new Map<ItemCarrinho, PrecoItem>();
+  for (const item of lista) {
+    const personalizacao = pers.get(item)!;
+    const calc = calcComPersonalizacao(calcComParametros(item.calc, parametros), personalizacao);
+    precos.set(item, { personalizacao, calc, res: calcPreco(item.produto.preco as number, item.qty, calc) });
+  }
+  return precos;
 }
+
+

@@ -1,10 +1,10 @@
-import { useEffect, useRef, useState, type FocusEvent, type FormEvent } from 'react';
+import { useEffect, useMemo, useRef, useState, type FocusEvent, type FormEvent } from 'react';
 import { formatBRL, getFaixa, type CampoNumerico } from '@raizes/shared';
 import { useApp } from '../../app/contexto';
 import { useSessao } from '../../app/sessao';
 import { classeFornecedor } from '../../lib/fornecedor';
 import { ImagemProduto } from '../../components/ImagemProduto';
-import { precoDoItem, useCarrinho, type ItemCarrinho as Item } from '../../state/carrinho';
+import { precosDoCarrinho, useCarrinho, type ItemCarrinho as Item } from '../../state/carrinho';
 import { BlocoPersonalizacao } from './BlocoPersonalizacao';
 
 /**
@@ -15,12 +15,14 @@ import { BlocoPersonalizacao } from './BlocoPersonalizacao';
 export function ItemCarrinho({ item }: { item: Item }) {
   const { parametros, tecnicas } = useApp();
   const { pode } = useSessao();
-  const { remover, definirQtd, definirCalc, definirObservacaoItem, definirPersonalizacao } = useCarrinho();
+  const { estado, remover, definirQtd, definirCalc, definirObservacaoItem, definirPersonalizacao } = useCarrinho();
   const { produto: p, qty, calc: c } = item;
   const id = p.id;
 
   // Impostos e margem dos Parâmetros; material e mão de obra pelas tabelas da técnica
-  const { res, personalizacao } = precoDoItem(item, parametros, tecnicas);
+  // (material somado com os outros itens da mesma técnica)
+  const precos = useMemo(() => precosDoCarrinho(estado.itens, parametros, tecnicas), [estado.itens, parametros, tecnicas]);
+  const { res, personalizacao } = precos.get(estado.itens[String(id)] ?? item) ?? [...precos.values()][0]!;
   const faixa = getFaixa(qty);
   // A faixa ao lado da quantidade é fixada quando o item é desenhado
   const [faixaInicial] = useState(faixa.nome);

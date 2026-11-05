@@ -289,3 +289,4 @@
   padding: 0;
 }
 .pers-erro { margin-top: 8px; color: #9a3f12; background: #fff4ec; border-radius: 6px; padding: 6px 8px; }
+.pers-grupo { margin-top: 8px; padding: 5px 8px; border-left: 3px solid var(--uva); background: #f4eef8; color: var(--text); border-radius: 0 6px 6px 0; }

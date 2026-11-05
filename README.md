@@ -236,7 +236,7 @@ Cada item do carrinho tem uma técnica de personalização (uma por item) e as m
 - **Material**
   - área da arte (m²) = altura × largura ÷ 10.000
   - área necessária = quantidade × área da arte × (1 + folga da técnica) — a folga entra **antes** do arredondamento
-  - material sugerido = área necessária arredondada para cima em frações mínimas
+  - material sugerido = área necessária arredondada para cima em frações mínimas — **somando todos os itens da mesma técnica no orçamento** (arredonda uma vez só; cada item fica com a parte proporcional à sua área). Ex.: 5 cores × 20 un da mesma caneca em DTF UV (arte 8 × 8 cm) = 0,704 m² → 1 m² = R$ 60 para o orçamento, R$ 12 por cor (e não 1 m² por cor)
   - valor = material × preço por m²
 - **Mão de obra** = valor unitário da técnica × quantidade.
 - Exemplo: 50 canecas, Sublimação (R$ 40/m², fração 0,25 m², folga 10%, mão de obra R$ 2,50), arte 10 × 8 cm → 0,008 m² × 50 × 1,10 = 0,44 m² → **0,5 m²** (2 frações) = **R$ 20,00** de material e R$ 125,00 de mão de obra.

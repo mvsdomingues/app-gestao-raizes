@@ -5,7 +5,7 @@ import { ModalFaturamento } from '../clientes/ModalFaturamento';
 import { useApp } from '../../app/contexto';
 import { useSessao } from '../../app/sessao';
 import { api, ErroApi } from '../../lib/api';
-import { precoDoItem, subtotalCarrinho, useCarrinho } from '../../state/carrinho';
+import { precosDoCarrinho, subtotalCarrinho, useCarrinho } from '../../state/carrinho';
 import { ItemCarrinho } from './ItemCarrinho';
 import { avisar, confirmar, erro } from '../../lib/dialogo';
 import { useConfigClientes } from '../clientes/config';
@@ -47,6 +47,7 @@ export function Carrinho() {
     limpar();
   };
 
+  const precos = precosDoCarrinho(estado.itens, parametros, tecnicas);
   const gerarOrcamento = async () => {
     if (!itens.length) {
       void avisar('Adicione produtos ao carrinho antes de gerar o orçamento.', { tipo: 'aviso', titulo: 'Carrinho vazio' });
@@ -54,7 +55,7 @@ export function Carrinho() {
     }
     // Custo de personalização pelas tabelas: cadastro incompleto ou arte sem medidas impedem gerar
     const pendencias = itens
-      .map((i) => ({ nome: i.produto.nome ?? i.produto.codigo ?? 'Produto', erro: precoDoItem(i, parametros, tecnicas).personalizacao.erro }))
+      .map((i) => ({ nome: i.produto.nome ?? i.produto.codigo ?? 'Produto', erro: precos.get(i)!.personalizacao.erro }))
       .filter((x) => x.erro);
     if (pendencias.length) {
       void avisar(
@@ -66,7 +67,7 @@ export function Carrinho() {
     // Imposto de compra, imposto sobre venda e margem: sempre os Parâmetros cadastrados
     const snapshot = itens.map((itemCarrinho) => {
       const { produto, qty, observacao: obsItem } = itemCarrinho;
-      const { personalizacao } = precoDoItem(itemCarrinho, parametros, tecnicas);
+      const { personalizacao } = precos.get(itemCarrinho)!;
       const item = montarItemOrcamento(produto, qty, calcComParametros(itemCarrinho.calc, parametros), personalizacao);
       // Observação de cada produto vai junto com o item do orçamento
       const obs = obsItem?.trim();
