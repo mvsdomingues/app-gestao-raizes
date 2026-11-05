@@ -13,8 +13,9 @@ import { api } from '../../lib/api';
 import { ParametrosSistema } from './ParametrosSistema';
 import { ParametrosChecklist } from './ParametrosChecklist';
 import { ParametrosImpressao } from './ParametrosImpressao';
+import { ParametrosTabelas } from './ParametrosTabelas';
 
-type Aba = 'precificacao' | 'checklist' | 'impressao' | 'sistema';
+type Aba = 'precificacao' | 'tabelas' | 'checklist' | 'impressao' | 'sistema';
 
 /** Valores como digitados na tela (percentuais em %, ex.: "35"). */
 type Formulario = Record<CampoNumerico, string> & { imposto_compra_ativo: boolean };
@@ -121,6 +122,8 @@ export function Parametros() {
             <>
               Valores usados para preencher a calculadora de cada item do carrinho (em <b>Ajustar custos e margem</b>).
             </>
+          ) : aba === 'tabelas' ? (
+            'Tabelas gerais de precificação: técnicas de personalização e valores de material e de mão de obra por técnica.'
           ) : aba === 'checklist' ? (
             'Lista de checagem usada na etapa Em Fechamento dos pedidos.'
           ) : aba === 'impressao' ? (
@@ -139,6 +142,15 @@ export function Parametros() {
             onClick={() => setAba('precificacao')}
           >
             Precificação
+          </button>
+          <button
+            role="tab"
+            id="aba-param-tabelas"
+            aria-selected={aba === 'tabelas'}
+            className={`subaba${aba === 'tabelas' ? ' active' : ''}`}
+            onClick={() => setAba('tabelas')}
+          >
+            Tabelas gerais
           </button>
           <button
             role="tab"
@@ -169,6 +181,7 @@ export function Parametros() {
           </button>
         </div>
 
+        {aba === 'tabelas' && <ParametrosTabelas visitas={visitas.parametros} />}
         {aba === 'checklist' && <ParametrosChecklist visitas={visitas.parametros} />}
         {aba === 'impressao' && <ParametrosImpressao visitas={visitas.parametros} />}
         {aba === 'sistema' && <ParametrosSistema visitas={visitas.parametros} />}

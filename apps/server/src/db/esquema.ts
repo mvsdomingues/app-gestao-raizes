@@ -207,6 +207,31 @@ export function garantirEsquema(db: Database.Database): void {
       UNIQUE (orcamento_id, item)
     );
 
+    -- Tabelas gerais de precificação (Parâmetros › Tabelas gerais)
+    CREATE TABLE IF NOT EXISTS tecnicas_personalizacao (
+      id         INTEGER PRIMARY KEY AUTOINCREMENT,
+      nome       TEXT NOT NULL UNIQUE COLLATE NOCASE,
+      descricao  TEXT NOT NULL DEFAULT '',
+      criado     TEXT NOT NULL,
+      atualizado TEXT NOT NULL
+    );
+    -- Uma linha por técnica em cada tabela
+    CREATE TABLE IF NOT EXISTS parametros_material (
+      id            INTEGER PRIMARY KEY AUTOINCREMENT,
+      tecnica_id    INTEGER NOT NULL UNIQUE REFERENCES tecnicas_personalizacao(id),
+      preco_m2      REAL NOT NULL,
+      fracao_minima REAL NOT NULL,
+      criado        TEXT NOT NULL,
+      atualizado    TEXT NOT NULL
+    );
+    CREATE TABLE IF NOT EXISTS parametros_mao_obra (
+      id             INTEGER PRIMARY KEY AUTOINCREMENT,
+      tecnica_id     INTEGER NOT NULL UNIQUE REFERENCES tecnicas_personalizacao(id),
+      valor_unitario REAL NOT NULL,
+      criado         TEXT NOT NULL,
+      atualizado     TEXT NOT NULL
+    );
+
     -- Notas a registrar no contato do Kommo (ex.: pedido gerado), com nova tentativa
     CREATE TABLE IF NOT EXISTS kommo_notas (
       id          INTEGER PRIMARY KEY AUTOINCREMENT,

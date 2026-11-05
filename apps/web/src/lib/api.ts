@@ -1,4 +1,7 @@
 import type {
+  ParametroMaoObra,
+  ParametroMaterial,
+  TecnicaPersonalizacao,
   ParametrosImpressao,
   RespostaParametrosImpressao,
   DadosFaturamento,
@@ -263,6 +266,25 @@ export const api = {
   /** Marca/desmarca um item do checklist (só na etapa Em Fechamento) */
   marcarChecklistPedido: (codigo: string, item: number, feito: boolean) =>
     enviar<Pedido>('PUT', `/api/pedidos/${encodeURIComponent(codigo)}/checklist/${item}`, { feito }),
+  // Parâmetros › Tabelas gerais (técnicas, material e mão de obra)
+  tecnicas: () => enviar<TecnicaPersonalizacao[]>('GET', '/api/parametros/tecnicas'),
+  salvarTecnica: (dados: { nome: string; descricao: string }, id?: number) =>
+    id
+      ? enviar<TecnicaPersonalizacao>('PUT', `/api/parametros/tecnicas/${id}`, dados)
+      : enviar<TecnicaPersonalizacao>('POST', '/api/parametros/tecnicas', dados),
+  excluirTecnica: (id: number) => enviar<{ ok: boolean }>('DELETE', `/api/parametros/tecnicas/${id}`),
+  parametrosMaterial: () => enviar<ParametroMaterial[]>('GET', '/api/parametros/material'),
+  salvarMaterial: (dados: { tecnica_id: number; preco_m2: string; fracao_minima: string }, id?: number) =>
+    id
+      ? enviar<ParametroMaterial>('PUT', `/api/parametros/material/${id}`, dados)
+      : enviar<ParametroMaterial>('POST', '/api/parametros/material', dados),
+  excluirMaterial: (id: number) => enviar<{ ok: boolean }>('DELETE', `/api/parametros/material/${id}`),
+  parametrosMaoObra: () => enviar<ParametroMaoObra[]>('GET', '/api/parametros/mao-obra'),
+  salvarMaoObra: (dados: { tecnica_id: number; valor_unitario: string }, id?: number) =>
+    id
+      ? enviar<ParametroMaoObra>('PUT', `/api/parametros/mao-obra/${id}`, dados)
+      : enviar<ParametroMaoObra>('POST', '/api/parametros/mao-obra', dados),
+  excluirMaoObra: (id: number) => enviar<{ ok: boolean }>('DELETE', `/api/parametros/mao-obra/${id}`),
   parametrosImpressao: () => enviar<RespostaParametrosImpressao>('GET', '/api/parametros/impressao'),
   salvarParametrosImpressao: (valores: Partial<ParametrosImpressao>) =>
     enviar<RespostaParametrosImpressao>('PUT', '/api/parametros/impressao', valores),

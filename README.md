@@ -220,6 +220,15 @@ Menu **Dashboards** (central de acompanhamento; novos painéis entram nesse grup
 - **No pedido:** os dados confirmados pelo cliente são gravados no orçamento e copiados para o pedido (também quando o pedido é gerado internamente). Uma observação do pedido registra o que o cliente informou ou alterou.
 - **Alteração:** nos detalhes do pedido, *Faturamento e entrega → Alterar dados*, enquanto o pedido estiver em andamento (não encerrado nem cancelado). Cada alteração vira uma observação com o que mudou (campo: antes → depois) e quem alterou.
 
+### Tabelas gerais de precificação
+
+Em **Parâmetros › Tabelas gerais** (incluir, alterar e excluir; duplo clique numa linha também altera):
+
+- **Técnicas de personalização**: técnica e descrição. Não pode repetir o nome nem excluir uma técnica usada nas outras tabelas.
+- **Material**: técnica (escolhida da tabela de técnicas), preço por m² e fração mínima (m²).
+- **Mão de obra**: técnica (escolhida da tabela de técnicas) e valor unitário (por peça).
+- Cada técnica aparece uma vez em cada tabela. Os valores ainda não entram no cálculo do carrinho (a nova lógica de cálculo virá numa próxima etapa).
+
 ### Impressão do orçamento
 
 - A folha (tela, impressão/PDF, pedido e página do cliente) mostra no início os **dados de faturamento e entrega**, quando informados.
@@ -263,6 +272,9 @@ Todas as rotas exigem login, exceto as de `/api/auth`. Cada rota também exige a
 | `GET /api/produtos` · `GET /api/produto/:id` | Catálogo (fornecedores + próprios; próprios têm id negativo). Filtros: `q`, `fornecedor`, `categoria`, `cor`, `estoque`, `ordem`, `min`, `max`. O detalhe traz descrição, ficha, fotos, vídeo e faixas de preço |
 | `GET /api/orcamentos/:id/mockups` · `GET …/mockups/:item/cena` | Mockups do orçamento / cena do estúdio de um item |
 | `PUT /api/orcamentos/:id/mockups/:item` · `DELETE …/mockups/:item` | Grava (`{ imagem: data URL JPG/PNG, cena }`) ou exclui o mockup do item (só com o orçamento Aberto) |
+| `GET/POST /api/parametros/tecnicas` · `PUT/DELETE …/tecnicas/:id` | Técnicas de personalização (`{ nome, descricao }`) |
+| `GET/POST /api/parametros/material` · `PUT/DELETE …/material/:id` | Material por técnica (`{ tecnica_id, preco_m2, fracao_minima }`) |
+| `GET/POST /api/parametros/mao-obra` · `PUT/DELETE …/mao-obra/:id` | Mão de obra por técnica (`{ tecnica_id, valor_unitario }`) |
 | `GET/PUT /api/parametros/impressao` | Textos da impressão (`{ instrucoes_especiais, rodape }`) |
 | `PUT /api/pedidos/:codigo/faturamento` | Altera os dados de faturamento do pedido em andamento (`{ faturamento }`; registra a mudança nas observações) |
 | `GET /api/dashboards/geral?de&ate&usuario` · `GET /api/dashboards/usuarios` | Indicadores da Visão geral / vendedores do filtro |

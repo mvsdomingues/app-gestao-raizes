@@ -84,3 +84,14 @@
 .param-contador { align-self: flex-end; font-size: .72rem; color: var(--muted); }
 /* Linha de validade depois do rodapé, com espaçamento dobrado */
 .orc-footer.apos-rodape { margin-top: 56px; }
+
+/* Parâmetros › Tabelas gerais */
+.param-tabelas { display: flex; flex-direction: column; gap: 18px; }
+.param-tabela .update-panel-header { align-items: flex-start; gap: 12px; }
+.param-tabela .btn-novo:disabled { opacity: .5; cursor: not-allowed; }
+.param-tabela-vazia { font-size: .84rem; color: var(--muted); font-style: italic; margin: 6px 0 0; }
+.param-descricao { color: var(--muted); font-size: .84rem; white-space: pre-wrap; }
+.param-numero { display: flex; align-items: center; gap: 6px; }
+.param-numero span { font-size: .84rem; color: var(--muted); }
+.param-numero input { text-align: right; }
+.param-campo-dica { display: block; font-size: .72rem; color: var(--muted); margin-top: 4px; }
