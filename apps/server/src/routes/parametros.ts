@@ -8,7 +8,7 @@ import {
 import type { Banco } from '../db/conexao';
 import { dataHoraLocal } from '../lib/datas';
 import { corpoJson, ErroHttp } from '../lib/http';
-import { gravarParametrosSistema, lerParametrosSistema } from '../db/repositorio-parametros';
+import { gravarParametrosSistema, lerParametrosSistema, gravarParametrosImpressao, lerParametrosImpressao } from '../db/repositorio-parametros';
 import { gravarChecklist, lerChecklist } from '../db/repositorio-checklist';
 
 const CHAVES = Object.keys(CALC_DEFAULTS) as (keyof ParametrosCalculo)[];
@@ -44,6 +44,17 @@ export function rotasParametros(db: Banco): Router {
 
   r.put('/api/parametros/checklist', (req, res) => {
     res.json(gravarChecklist(db, corpoJson(req).itens));
+  });
+
+  // ── Textos da impressão do orçamento (aba "Impressão") ──
+  r.get('/api/parametros/impressao', (_req, res) => {
+    res.json(lerParametrosImpressao(db));
+  });
+
+  r.put('/api/parametros/impressao', (req, res) => {
+    const erros = gravarParametrosImpressao(db, corpoJson(req));
+    if (erros.length) throw new ErroHttp(400, erros.join('; '));
+    res.json(lerParametrosImpressao(db));
   });
 
   // ── Parâmetros de sistema (aba "Sistema") ──

@@ -6,6 +6,7 @@ import { useSessao } from '../../app/sessao';
 import { api } from '../../lib/api';
 import { erroDe } from '../../lib/dialogo';
 import { FolhaOrcamento } from '../orcamentos/FolhaOrcamento';
+import { useParametrosImpressao } from '../orcamentos/impressao';
 import { ClienteVinculado } from '../clientes/ClienteVinculado';
 import { ResumoFaturamento } from '../clientes/FormularioFaturamento';
 import { ModalFaturamento } from '../clientes/ModalFaturamento';
@@ -14,6 +15,7 @@ import { agoraLocal, duracao, formatarDataHora, TagStatusPedido, useAcoesPedido 
 
 /** Aba "Detalhes": etapas do pedido, histórico de movimentações e o orçamento de origem. */
 export function DetalhePedido() {
+  const impressao = useParametrosImpressao();
   const { pedidoAberto: p, atualizarPedidoAberto, setAbaPedidos, mostrarOrcamento, irPara } = useApp();
   const { pode } = useSessao();
   const { avancar, cancelar, processando } = useAcoesPedido(atualizarPedidoAberto);
@@ -210,7 +212,9 @@ export function DetalhePedido() {
             cliente: p.cliente,
             entregaPrevista: p.entrega_prevista,
             mockups: p.orcamento.mockups ?? [],
+            faturamento: p.faturamento ?? p.orcamento.faturamento ?? null,
           }}
+          impressao={impressao}
         />
       </div>
     </>

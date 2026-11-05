@@ -246,6 +246,23 @@ export const SISTEMA_DEFAULTS: ParametrosSistema = {
   kommo_notas_ativo: true,
 };
 
+/** Textos da impressão do orçamento (aba "Impressão" da tela Parâmetros). */
+export interface ParametrosImpressao {
+  /** Seção "Instruções especiais", só na versão impressa (vazio = não aparece) */
+  instrucoes_especiais: string;
+  /** Rodapé do documento (vazio = só o rodapé padrão) */
+  rodape: string;
+}
+
+export const IMPRESSAO_DEFAULTS: ParametrosImpressao = { instrucoes_especiais: '', rodape: '' };
+export const LIMITES_IMPRESSAO: Record<keyof ParametrosImpressao, number> = { instrucoes_especiais: 4000, rodape: 600 };
+
+/** GET/PUT /api/parametros/impressao */
+export interface RespostaParametrosImpressao {
+  valores: ParametrosImpressao;
+  atualizado: string | null;
+}
+
 /** Item do cadastro do checklist de fechamento (Parâmetros › Checklist de fechamento). */
 export interface ItemChecklist {
   /** Gerado pelo servidor; itens novos vão sem id */

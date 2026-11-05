@@ -1,4 +1,6 @@
 import type {
+  ParametrosImpressao,
+  RespostaParametrosImpressao,
   DadosFaturamento,
   DashboardGeral,
   CenaMockup,
@@ -261,6 +263,9 @@ export const api = {
   /** Marca/desmarca um item do checklist (só na etapa Em Fechamento) */
   marcarChecklistPedido: (codigo: string, item: number, feito: boolean) =>
     enviar<Pedido>('PUT', `/api/pedidos/${encodeURIComponent(codigo)}/checklist/${item}`, { feito }),
+  parametrosImpressao: () => enviar<RespostaParametrosImpressao>('GET', '/api/parametros/impressao'),
+  salvarParametrosImpressao: (valores: Partial<ParametrosImpressao>) =>
+    enviar<RespostaParametrosImpressao>('PUT', '/api/parametros/impressao', valores),
   parametrosSistema: () => enviar<RespostaParametrosSistema>('GET', '/api/parametros/sistema'),
   salvarParametrosSistema: (valores: Partial<ParametrosSistema>) =>
     enviar<RespostaParametrosSistema>('PUT', '/api/parametros/sistema', valores),

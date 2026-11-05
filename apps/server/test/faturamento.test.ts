@@ -81,3 +81,20 @@ describe('faturamento no orçamento e no pedido', () => {
     expect((await req('GET', `/api/orcamentos/${vazio.json.id}`)).json.faturamento).toBeNull();
   });
 });
+
+describe('textos da impressão (Parâmetros › Impressão)', () => {
+  it('lê padrões vazios, grava, limpa espaços e valida o tamanho', async () => {
+    expect((await req('GET', '/api/parametros/impressao')).json).toEqual({
+      valores: { instrucoes_especiais: '', rodape: '' },
+      atualizado: null,
+    });
+    const r = await req('PUT', '/api/parametros/impressao', { instrucoes_especiais: '  Pagamento 50/50 \r\nPrazo após aprovação  ', rodape: 'CNPJ 00' });
+    expect(r.status).toBe(200);
+    expect(r.json.valores).toEqual({ instrucoes_especiais: 'Pagamento 50/50\nPrazo após aprovação', rodape: 'CNPJ 00' });
+    expect(r.json.atualizado).toBeTruthy();
+    // Só o campo enviado muda
+    expect((await req('PUT', '/api/parametros/impressao', { rodape: '' })).json.valores.instrucoes_especiais).toMatch(/^Pagamento/);
+    expect((await req('PUT', '/api/parametros/impressao', { rodape: 'x'.repeat(601) })).status).toBe(400);
+    expect((await req('PUT', '/api/parametros/impressao', { rodape: 5 })).status).toBe(400);
+  });
+});

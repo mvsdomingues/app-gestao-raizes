@@ -12,8 +12,9 @@ import { useApp } from '../../app/contexto';
 import { api } from '../../lib/api';
 import { ParametrosSistema } from './ParametrosSistema';
 import { ParametrosChecklist } from './ParametrosChecklist';
+import { ParametrosImpressao } from './ParametrosImpressao';
 
-type Aba = 'precificacao' | 'checklist' | 'sistema';
+type Aba = 'precificacao' | 'checklist' | 'impressao' | 'sistema';
 
 /** Valores como digitados na tela (percentuais em %, ex.: "35"). */
 type Formulario = Record<CampoNumerico, string> & { imposto_compra_ativo: boolean };
@@ -122,6 +123,8 @@ export function Parametros() {
             </>
           ) : aba === 'checklist' ? (
             'Lista de checagem usada na etapa Em Fechamento dos pedidos.'
+          ) : aba === 'impressao' ? (
+            'Textos da folha do orçamento: instruções especiais (só na impressão) e rodapé.'
           ) : (
             'Configurações que mudam o comportamento do sistema para todos os usuários.'
           )}
@@ -148,6 +151,15 @@ export function Parametros() {
           </button>
           <button
             role="tab"
+            id="aba-param-impressao"
+            aria-selected={aba === 'impressao'}
+            className={`subaba${aba === 'impressao' ? ' active' : ''}`}
+            onClick={() => setAba('impressao')}
+          >
+            Impressão
+          </button>
+          <button
+            role="tab"
             id="aba-param-sistema"
             aria-selected={aba === 'sistema'}
             className={`subaba${aba === 'sistema' ? ' active' : ''}`}
@@ -158,6 +170,7 @@ export function Parametros() {
         </div>
 
         {aba === 'checklist' && <ParametrosChecklist visitas={visitas.parametros} />}
+        {aba === 'impressao' && <ParametrosImpressao visitas={visitas.parametros} />}
         {aba === 'sistema' && <ParametrosSistema visitas={visitas.parametros} />}
 
         <div className="param-grid" style={{ display: aba === 'precificacao' ? undefined : 'none' }}>

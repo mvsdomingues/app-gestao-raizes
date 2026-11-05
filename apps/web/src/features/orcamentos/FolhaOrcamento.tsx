@@ -1,4 +1,14 @@
-import { formatarDataBr, formatarTelefone, formatBRL, resumoDescricao, type ItemOrcamento } from '@raizes/shared';
+import {
+  formatarCep,
+  formatarDataBr,
+  formatarDocumento,
+  formatarTelefone,
+  formatBRL,
+  resumoDescricao,
+  type DadosFaturamento,
+  type ItemOrcamento,
+  type ParametrosImpressao,
+} from '@raizes/shared';
 import type { FolhaOrcamento as DadosFolha } from '../../app/contexto';
 import { ImagemProduto } from '../../components/ImagemProduto';
 import { classeFornecedor } from '../../lib/fornecedor';
@@ -16,6 +26,8 @@ export type DadosFolhaOrcamento = Pick<DadosFolha, 'id' | 'numero' | 'dataHora' 
     })[];
   /** Mockups dos produtos (item = posição na lista; url da imagem) */
   mockups?: { item: number; url: string }[];
+  /** Dados de faturamento e entrega (aparecem no início do documento) */
+  faturamento?: DadosFaturamento | null;
 };
 
 /**
@@ -28,9 +40,12 @@ export function FolhaOrcamento({
   folha,
   publico = false,
   validoAte,
+  impressao,
 }: {
   folha: DadosFolhaOrcamento;
   publico?: boolean;
+  /** Instruções especiais (só na impressão) e rodapé, da tela Parâmetros › Impressão */
+  impressao?: ParametrosImpressao | null;
   /** Data/hora até quando vale (link do cliente); sem ela, "Válido por 7 dias" */
   validoAte?: string | null;
 }) {
@@ -74,6 +89,8 @@ export function FolhaOrcamento({
           {folha.cliente.telefone && <span className="orc-cliente-tel">{formatarTelefone(folha.cliente.telefone)}</span>}
         </div>
       )}
+
+      {folha.faturamento && <BlocoFaturamento d={folha.faturamento} />}
 
       <div className="orc-totals-block">
         <div>
@@ -214,10 +231,50 @@ export function FolhaOrcamento({
         </div>
       )}
 
+      {impressao?.instrucoes_especiais && (
+        <section className="orc-instrucoes so-impressao" id="orc-instrucoes">
+          <div className="orc-observacoes-titulo">Instruções especiais</div>
+          <div className="orc-instrucoes-texto">{impressao.instrucoes_especiais}</div>
+        </section>
+      )}
+
       <div className="orc-footer">
         <div className="orc-footer-brand">Raízes Personalizados</div>
         <span>{validade ? `Válido até ${validade}` : 'Válido por 7 dias'} · sujeito à disponibilidade de estoque</span>
       </div>
+      {impressao?.rodape && (
+        <div className="orc-rodape-texto" id="orc-rodape">
+          {impressao.rodape}
+        </div>
+      )}
     </>
+  );
+}
+
+/** Dados de faturamento e entrega no início da folha. */
+function BlocoFaturamento({ d }: { d: DadosFaturamento }) {
+  const rua = [d.logradouro, d.numero].filter(Boolean).join(', ');
+  const cidade = [d.cidade, d.uf].filter(Boolean).join('/');
+  const endereco = [rua, d.complemento, d.bairro].filter(Boolean).join(' – ');
+  return (
+    <section className="orc-faturamento" id="orc-faturamento-folha">
+      <div className="orc-faturamento-col">
+        <span className="orc-cliente-rotulo">Faturamento</span>
+        <span className="orc-faturamento-nome">{d.nome || '—'}</span>
+        {d.documento && (
+          <span>
+            {d.tipo_pessoa === 'PJ' ? 'CNPJ' : 'CPF'} {formatarDocumento(d.documento)}
+          </span>
+        )}
+        {(d.contato || d.email) && <span>{[d.contato, d.email].filter(Boolean).join(' · ')}</span>}
+      </div>
+      {(endereco || cidade || d.cep) && (
+        <div className="orc-faturamento-col">
+          <span className="orc-cliente-rotulo">Endereço de entrega</span>
+          {endereco && <span>{endereco}</span>}
+          {(cidade || d.cep) && <span>{[cidade, d.cep ? `CEP ${formatarCep(d.cep)}` : ''].filter(Boolean).join(' · ')}</span>}
+        </div>
+      )}
+    </section>
   );
 }

@@ -21,6 +21,7 @@ import { SQL_STATUS_ORCAMENTO } from './repositorio-orcamentos';
 import { criarPedido, pedidoAtivoDoOrcamento } from './repositorio-pedidos';
 import { registrarMovimentoOrcamento } from './repositorio-orcamentos';
 import { mockupsDoOrcamento } from './repositorio-mockups';
+import { lerParametrosImpressao } from './repositorio-parametros';
 
 const LETRAS = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789';
 
@@ -211,6 +212,7 @@ export function orcamentoPublico(db: Banco, codigo: string): OrcamentoPublico {
     observacao: l.observacao?.trim() || null,
     entrega_prevista: l.entrega_prevista,
     faturamento: faturamentoDoBanco(l.faturamento_json),
+    impressao: lerParametrosImpressao(db).valores,
     mockups,
     pedido,
     resposta:

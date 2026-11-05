@@ -16,6 +16,7 @@ import { formatarDataHora } from '../pedidos/comum';
 import { ModalNovoPedido } from '../pedidos/ModalNovoPedido';
 import { useEditarOrcamento } from './editar-orcamento';
 import { FolhaOrcamento } from './FolhaOrcamento';
+import { useParametrosImpressao } from './impressao';
 import { TagStatusOrcamento, useSituacaoOrcamento } from './situacao';
 import { ClienteVinculado } from '../clientes/ClienteVinculado';
 import { ResumoFaturamento } from '../clientes/FormularioFaturamento';
@@ -32,6 +33,7 @@ export function DetalheOrcamento() {
   const [info, setInfo] = useState<Orcamento | null>(null);
   const { editar, carregando } = useEditarOrcamento();
   const { alterar, processando } = useSituacaoOrcamento((o) => setInfo(o));
+  const impressao = useParametrosImpressao();
 
   // Recarrega a situação ao abrir outro orçamento, ao gerar/cancelar pedido ou quando ela muda
   useEffect(() => {
@@ -303,7 +305,9 @@ export function DetalheOrcamento() {
               cliente,
               entregaPrevista: info ? (info.entrega_prevista ?? null) : folha.entregaPrevista,
               mockups: info?.mockups ?? [],
+              faturamento: info?.faturamento ?? null,
             }}
+            impressao={impressao}
           />
         ) : (
           <div className="orc-empty-state">

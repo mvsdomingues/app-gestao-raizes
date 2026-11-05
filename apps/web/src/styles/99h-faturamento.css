@@ -64,3 +64,21 @@
 .pub-faturamento h3 { margin: 0 0 4px; font-size: 1.02rem; color: #3A183F; }
 .pub-faturamento-sub { margin: 0 0 12px; font-size: .84rem; color: #5b544c; }
 @media print { .pedido-faturamento { break-inside: avoid; } }
+
+/* Folha: faturamento no início, instruções especiais (só impressão) e rodapé parametrizável */
+.orc-faturamento {
+  display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 10px 24px;
+  margin: -6px 0 18px; padding: 10px 14px; border: 1px solid #E5E0D8; border-radius: 8px; font-size: .8rem; color: #1F2329;
+}
+.orc-faturamento-col { display: flex; flex-direction: column; gap: 2px; line-height: 1.4; }
+.orc-faturamento-nome { font-weight: 600; font-size: .88rem; color: #3A183F; }
+.orc-instrucoes { margin: 18px 0 6px; padding: 12px 16px; border: 1px solid #E5E0D8; border-radius: 8px; break-inside: avoid; }
+.orc-instrucoes-texto { font-size: .8rem; line-height: 1.5; white-space: pre-wrap; color: #1F2329; }
+.orc-rodape-texto { margin-top: 10px; font-size: .7rem; line-height: 1.45; color: #7A7167; white-space: pre-wrap; text-align: center; }
+@media print { .orc-faturamento { break-inside: avoid; } }
+
+/* Parâmetros › Impressão */
+.param-texto { display: flex; flex-direction: column; gap: 6px; margin-bottom: 18px; }
+.param-texto-titulo { font-weight: 600; font-size: .92rem; color: var(--berinjela); }
+.param-texto textarea { resize: vertical; font-family: var(--font-body); line-height: 1.5; }
+.param-contador { align-self: flex-end; font-size: .72rem; color: var(--muted); }

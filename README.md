@@ -220,6 +220,14 @@ Menu **Dashboards** (central de acompanhamento; novos painéis entram nesse grup
 - **No pedido:** os dados confirmados pelo cliente são gravados no orçamento e copiados para o pedido (também quando o pedido é gerado internamente). Uma observação do pedido registra o que o cliente informou ou alterou.
 - **Alteração:** nos detalhes do pedido, *Faturamento e entrega → Alterar dados*, enquanto o pedido estiver em andamento (não encerrado nem cancelado). Cada alteração vira uma observação com o que mudou (campo: antes → depois) e quem alterou.
 
+### Impressão do orçamento
+
+- A folha (tela, impressão/PDF, pedido e página do cliente) mostra no início os **dados de faturamento e entrega**, quando informados.
+- **Parâmetros › Impressão**:
+  - **Instruções especiais**: texto livre (condições de pagamento, prazos…) que aparece **só na versão impressa/PDF**, depois dos valores e dos mockups — inclusive quando o cliente imprime pelo link.
+  - **Rodapé**: texto no fim do documento, abaixo da validade (tela e impressão).
+  - Campos vazios não aparecem. A mudança vale para todos os orçamentos, inclusive os já enviados.
+
 ### Clientes do Kommo
 
 Com `KOMMO_SUBDOMINIO` e `KOMMO_TOKEN` no `.env`, o orçamento passa a ter **cliente**, escolhido entre os contatos do Kommo (o sistema não cria contatos no Kommo).
@@ -255,6 +263,7 @@ Todas as rotas exigem login, exceto as de `/api/auth`. Cada rota também exige a
 | `GET /api/produtos` · `GET /api/produto/:id` | Catálogo (fornecedores + próprios; próprios têm id negativo). Filtros: `q`, `fornecedor`, `categoria`, `cor`, `estoque`, `ordem`, `min`, `max`. O detalhe traz descrição, ficha, fotos, vídeo e faixas de preço |
 | `GET /api/orcamentos/:id/mockups` · `GET …/mockups/:item/cena` | Mockups do orçamento / cena do estúdio de um item |
 | `PUT /api/orcamentos/:id/mockups/:item` · `DELETE …/mockups/:item` | Grava (`{ imagem: data URL JPG/PNG, cena }`) ou exclui o mockup do item (só com o orçamento Aberto) |
+| `GET/PUT /api/parametros/impressao` | Textos da impressão (`{ instrucoes_especiais, rodape }`) |
 | `PUT /api/pedidos/:codigo/faturamento` | Altera os dados de faturamento do pedido em andamento (`{ faturamento }`; registra a mudança nas observações) |
 | `GET /api/dashboards/geral?de&ate&usuario` · `GET /api/dashboards/usuarios` | Indicadores da Visão geral / vendedores do filtro |
 | `GET /api/categorias` · `GET /api/cores` | Categorias / cores com a quantidade de produtos (`?fornecedor=`) |

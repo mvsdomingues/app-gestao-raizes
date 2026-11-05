@@ -179,6 +179,9 @@ describe('link do cliente', () => {
       material: null,
       imagem: `/api/publico/orcamentos/${e.codigo}/imagem/0`,
     });
+    // Textos da impressão vão para a folha do cliente; faturamento ainda não informado
+    expect(r.json.impressao).toEqual({ instrucoes_especiais: '', rodape: '' });
+    expect(r.json.faturamento).toBeNull();
     // Resumo do produto (descrição curta, medidas e material) vai para o cliente
     expect(r.json.itens[1]).toMatchObject({ descricao: 'Caneca de cerâmica com alça', medidas: '9 x 8 cm', material: 'Cerâmica' });
     for (const proibido of ['XBZ', 'custo', 'composicao', 'margem', 'fornecedor', 'usuario', 'responsavel', 'cliente_kommo_id', '"id"']) {

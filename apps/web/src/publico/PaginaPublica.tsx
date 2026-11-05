@@ -138,7 +138,9 @@ export function PaginaPublica() {
             cliente: o.cliente ? { id: 0, nome: o.cliente.nome, telefone: o.cliente.telefone } : null,
             itens: o.itens.map((i) => ({ ...i, imagem_url: i.imagem ?? '' })),
             mockups: (o.mockups ?? []).map((m) => ({ item: m.item, url: m.imagem })),
+            faturamento: o.faturamento,
           }}
+          impressao={o.impressao}
         />
       </div>
 
