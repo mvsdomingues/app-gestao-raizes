@@ -372,6 +372,18 @@
 .pedido-obs-meta { font-size: .74rem; color: var(--muted); }
 .pedido-obs-meta b { color: var(--grafite); font-weight: 600; }
 .pedido-obs-linha .pedido-obs-texto { margin-top: 2px; font-size: .9rem; white-space: pre-wrap; overflow-wrap: anywhere; }
+/* Caixa com rolagem: altura de ~10 linhas de texto */
+.pedido-obs-rolagem {
+  --obs-linha: calc(.9rem * 1.45);
+  max-height: calc(var(--obs-linha) * 10 + 4px); overflow-y: auto; margin-top: 16px; padding: 0 6px 0 8px;
+  overscroll-behavior: contain; scrollbar-width: thin; scrollbar-color: #cbbfd4 transparent;
+}
+.pedido-obs-rolagem:focus-visible { outline: 2px solid rgba(94, 58, 115, .35); outline-offset: 2px; border-radius: 6px; }
+.pedido-obs-rolagem .pedido-obs-linha { margin-top: 0; line-height: 1.45; }
+.pedido-obs-rolagem .pedido-obs-meta { line-height: 1.45; }
+.pedido-obs-rolagem::-webkit-scrollbar { width: 8px; }
+.pedido-obs-rolagem::-webkit-scrollbar-thumb { background: #cbbfd4; border-radius: 4px; }
+@media print { .pedido-obs-rolagem { max-height: none; overflow: visible; } }
 @media (max-width: 640px) { .pedido-obs-nova { flex-direction: column; align-items: stretch; } }
 @media print { .pedido-obs-nova { display: none; } .pedido-observacoes { break-inside: avoid; } }
 

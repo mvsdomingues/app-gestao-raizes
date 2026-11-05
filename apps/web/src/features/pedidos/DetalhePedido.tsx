@@ -278,19 +278,22 @@ function ObservacoesPedido({ pedido, aoSalvar }: { pedido: Pedido; aoSalvar: (p:
       {pedido.observacoes.length === 0 ? (
         <p className="pedido-checklist-nota">Nenhuma observação registrada.</p>
       ) : (
-        <ol className="pedido-obs-linha" id="pedido-obs-linha">
-          {pedido.observacoes.map((o) => (
-            <li key={o.id} className={o.origem === 'CLIENTE' ? 'cliente' : ''}>
-              <div className="pedido-obs-meta">
-                <span>{formatarDataHora(o.data_hora)}</span> ·{' '}
-                <b>
-                  <NomeUsuario usuario={o.usuario} origem={o.origem} />
-                </b>
-              </div>
-              <div className="pedido-obs-texto">{o.texto}</div>
-            </li>
-          ))}
-        </ol>
+        // Rolagem: a caixa mostra cerca de 10 linhas; as mais antigas ficam abaixo
+        <div className="pedido-obs-rolagem" id="pedido-obs-rolagem" tabIndex={0} aria-label="Histórico de observações">
+          <ol className="pedido-obs-linha" id="pedido-obs-linha">
+            {pedido.observacoes.map((o) => (
+              <li key={o.id} className={o.origem === 'CLIENTE' ? 'cliente' : ''}>
+                <div className="pedido-obs-meta">
+                  <span>{formatarDataHora(o.data_hora)}</span> ·{' '}
+                  <b>
+                    <NomeUsuario usuario={o.usuario} origem={o.origem} />
+                  </b>
+                </div>
+                <div className="pedido-obs-texto">{o.texto}</div>
+              </li>
+            ))}
+          </ol>
+        </div>
       )}
     </div>
   );
