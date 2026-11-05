@@ -74,7 +74,7 @@
 .orc-faturamento-nome { font-weight: 600; font-size: .88rem; color: #3A183F; }
 .orc-instrucoes { margin: 18px 0 6px; padding: 12px 16px; border: 1px solid #E5E0D8; border-radius: 8px; break-inside: avoid; }
 .orc-instrucoes-texto { font-size: .8rem; line-height: 1.5; white-space: pre-wrap; color: #1F2329; }
-.orc-rodape-texto { margin-top: 10px; font-size: .7rem; line-height: 1.45; color: #7A7167; white-space: pre-wrap; text-align: center; }
+.orc-rodape-texto { margin-top: 28px; font-size: .7rem; line-height: 1.45; color: #7A7167; white-space: pre-wrap; text-align: center; }
 @media print { .orc-faturamento { break-inside: avoid; } }
 
 /* Parâmetros › Impressão */
@@ -82,3 +82,5 @@
 .param-texto-titulo { font-weight: 600; font-size: .92rem; color: var(--berinjela); }
 .param-texto textarea { resize: vertical; font-family: var(--font-body); line-height: 1.5; }
 .param-contador { align-self: flex-end; font-size: .72rem; color: var(--muted); }
+/* Linha de validade depois do rodapé, com espaçamento dobrado */
+.orc-footer.apos-rodape { margin-top: 56px; }

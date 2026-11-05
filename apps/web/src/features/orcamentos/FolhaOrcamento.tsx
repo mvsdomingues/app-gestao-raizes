@@ -238,15 +238,17 @@ export function FolhaOrcamento({
         </section>
       )}
 
-      <div className="orc-footer">
-        <div className="orc-footer-brand">Raízes Personalizados</div>
-        <span>{validade ? `Válido até ${validade}` : 'Válido por 7 dias'} · sujeito à disponibilidade de estoque</span>
-      </div>
       {impressao?.rodape && (
         <div className="orc-rodape-texto" id="orc-rodape">
           {impressao.rodape}
         </div>
       )}
+
+      {/* Assinatura e validade: sempre a última linha do documento */}
+      <div className={`orc-footer${impressao?.rodape ? ' apos-rodape' : ''}`}>
+        <div className="orc-footer-brand">Raízes Personalizados</div>
+        <span>{validade ? `Válido até ${validade}` : 'Válido por 7 dias'} · sujeito à disponibilidade de estoque</span>
+      </div>
     </>
   );
 }
