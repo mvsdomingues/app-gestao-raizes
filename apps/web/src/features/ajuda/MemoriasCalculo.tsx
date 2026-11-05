@@ -391,7 +391,7 @@ export function MemoriasCalculo() {
             ['Novo valor do material', `0,75 m² × ${brl(40)}`, brl(30)],
             ['Por unidade', `${brl(30)} ÷ 50`, brl(0.6)],
           ]}
-          conclusao="O item mostra o selo MATERIAL AJUSTADO e o botão “Voltar ao sugerido”. A marcação fica gravada no orçamento e aparece na folha interna (nunca para o cliente)."
+          conclusao="O item mostra o selo MATERIAL AJUSTADO e o botão “Voltar ao sugerido”. A marcação fica gravada no orçamento e aparece só na folha interna. O cliente vê apenas a técnica e as medidas da arte."
         />
         <Dica tipo="regra">Digitar exatamente o valor sugerido não marca o item como ajustado.</Dica>
       </Secao>

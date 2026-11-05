@@ -40,6 +40,15 @@ const FATURAMENTO = {
   uf: 'SP',
 };
 
+// Personalização gravada no item (uso interno); o cliente só vê técnica e medidas
+const PERS = {
+  tecnica_id: 1, tecnica: 'Sublimação', altura_cm: 10, largura_cm: 8, preco_m2: 40, fracao_minima: 0.25, folga: 0.1,
+  area_arte_m2: 0.008, area_necessaria_m2: 0.088, fracoes: 1, material_m2_sugerido: 0.25, material_valor_sugerido: 10,
+  material_m2: 0.5, material_valor: 20, material_unit: 2, mao_obra_unit_sugerido: 2.5, mao_obra_unit: 2.5, mao_obra_total: 25,
+  material_ajustado: true, mao_obra_ajustada: false, entrada: {}, erro: null,
+  grupo: { itens: 2, area_necessaria_m2: 0.176, fracoes: 1, material_m2: 0.25, material_valor: 10 },
+};
+
 const item = (n = 1) => ({
   nome: `Caneca ${n}`,
   codigo: `C${n}`,
@@ -70,7 +79,7 @@ async function req(metodo: string, url: string, corpo?: unknown, comLogin = true
 
 /** Cria um orçamento com cliente e envia; devolve id, número e código do link. */
 async function enviado(total = 200) {
-  const c = await req('POST', '/api/orcamentos', { itens: [item(1), { ...item(2), descricao: 'Caneca de cerâmica com alça', medidas: '9 x 8 cm', material: 'Cerâmica' }], subtotal: total, frete: 15, total: total + 15, cliente_kommo_id: 7 });
+  const c = await req('POST', '/api/orcamentos', { itens: [item(1), { ...item(2), descricao: 'Caneca de cerâmica com alça', medidas: '9 x 8 cm', material: 'Cerâmica', personalizacao: PERS }], subtotal: total, frete: 15, total: total + 15, cliente_kommo_id: 7 });
   const o = await req('POST', `/api/orcamentos/${c.json.id}/status`, { status: 'ENVIADO' });
   expect(o.status).toBe(200);
   const codigo = (o.json.link.url as string).split('/o/')[1]!;
@@ -177,6 +186,7 @@ describe('link do cliente', () => {
       descricao: null,
       medidas: null,
       material: null,
+      personalizacao: null,
       imagem: `/api/publico/orcamentos/${e.codigo}/imagem/0`,
     });
     // Textos da impressão vão para a folha do cliente; faturamento ainda não informado
@@ -184,6 +194,11 @@ describe('link do cliente', () => {
     expect(r.json.faturamento).toBeNull();
     // Resumo do produto (descrição curta, medidas e material) vai para o cliente
     expect(r.json.itens[1]).toMatchObject({ descricao: 'Caneca de cerâmica com alça', medidas: '9 x 8 cm', material: 'Cerâmica' });
+    // Técnica e medidas da arte vão para o cliente; valores e material, nunca
+    expect(r.json.itens[1].personalizacao).toEqual({ tecnica: 'Sublimação', altura_cm: 10, largura_cm: 8 });
+    for (const proibido of ['material_m2', 'material_valor', 'preco_m2', 'mao_obra', 'fracao', 'folga', 'ajustad', 'grupo']) {
+      expect(r.texto).not.toContain(proibido);
+    }
     for (const proibido of ['XBZ', 'custo', 'composicao', 'margem', 'fornecedor', 'usuario', 'responsavel', 'cliente_kommo_id', '"id"']) {
       expect(r.texto).not.toContain(proibido);
     }

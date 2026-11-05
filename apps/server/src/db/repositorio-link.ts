@@ -1,6 +1,7 @@
 // Link público do orçamento: código aleatório, validade e resposta do cliente.
 import { randomBytes } from 'node:crypto';
 import {
+  personalizacaoParaCliente,
   DIAS_VALIDADE_LINK,
   numeroOrcamento,
   resumoDescricao,
@@ -193,6 +194,8 @@ export function orcamentoPublico(db: Banco, codigo: string): OrcamentoPublico {
     descricao: resumoDescricao(i.descricao) || null,
     medidas: i.medidas?.trim() || null,
     material: i.material?.trim() || null,
+    // Só técnica e medidas da arte (sem valores nem material)
+    personalizacao: personalizacaoParaCliente(i.personalizacao),
     imagem: i.imagem_url ? `/api/publico/orcamentos/${codigo}/imagem/${n}` : null,
   }));
   const mockups = mockupsDoOrcamento(db, l.id)

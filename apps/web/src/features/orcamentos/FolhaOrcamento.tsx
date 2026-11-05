@@ -3,7 +3,9 @@ import {
   formatarDataBr,
   formatarDocumento,
   formatarTelefone,
-  descreverPersonalizacao,
+  personalizacaoParaCliente,
+  textoPersonalizacaoCliente,
+  type PersonalizacaoCliente,
   formatBRL,
   resumoDescricao,
   type DadosFaturamento,
@@ -13,6 +15,16 @@ import {
 import type { FolhaOrcamento as DadosFolha } from '../../app/contexto';
 import { ImagemProduto } from '../../components/ImagemProduto';
 import { classeFornecedor } from '../../lib/fornecedor';
+
+/** Linha interna (fora da impressão e do cliente): material usado e ajustes. */
+function materialInterno(r: NonNullable<ItemOrcamento['personalizacao']>): string {
+  const m2 = (v: number) => v.toLocaleString('pt-BR', { maximumFractionDigits: 4 });
+  const partes = [`Interno: material ${m2(r.material_m2)} m²`];
+  if (r.grupo && r.grupo.itens > 1) partes.push(`rateado entre ${r.grupo.itens} itens (${m2(r.grupo.material_m2)} m² no total)`);
+  if (r.material_ajustado) partes.push('material ajustado');
+  if (r.mao_obra_ajustada) partes.push('mão de obra ajustada');
+  return partes.join(' · ');
+}
 
 const cinza = { fontSize: '.82rem', color: '#7A7167' } as const;
 
@@ -24,6 +36,8 @@ export type DadosFolhaOrcamento = Pick<DadosFolha, 'id' | 'numero' | 'dataHora' 
       descricao?: string | null;
       medidas?: string | null;
       material?: string | null;
+      /** Página do cliente: técnica e medidas da arte (sem valores) */
+      arte?: PersonalizacaoCliente | null;
     })[];
   /** Mockups dos produtos (item = posição na lista; url da imagem) */
   mockups?: { item: number; url: string }[];
@@ -152,9 +166,22 @@ export function FolhaOrcamento({
                     </div>
                     <div className="orc-prod-code">Cód: {item.codigo || '–'}</div>
                     {item.descricao && <div className="orc-prod-desc">{resumoDescricao(item.descricao)}</div>}
+                    {(() => {
+                      // Técnica e medidas da arte: para todos (tela, impressão e cliente), sem valores
+                      const arte = item.arte ?? personalizacaoParaCliente(item.personalizacao);
+                      return (
+                        arte && (
+                          <div className="orc-prod-ficha orc-prod-arte">
+                            <span>
+                              <b>Personalização:</b> {textoPersonalizacaoCliente(arte)}
+                            </span>
+                          </div>
+                        )
+                      );
+                    })()}
                     {!publico && item.personalizacao && item.personalizacao.tecnica_id !== null && (
                       <div className="orc-prod-pers so-tela" title="Só na tela interna (não sai na impressão nem para o cliente)">
-                        {descreverPersonalizacao(item.personalizacao)}
+                        {materialInterno(item.personalizacao)}
                       </div>
                     )}
                     {(item.medidas || item.material) && (
@@ -238,7 +265,8 @@ export function FolhaOrcamento({
       )}
 
       {impressao?.instrucoes_especiais && (
-        <section className="orc-instrucoes so-impressao" id="orc-instrucoes">
+        // Interno: só na impressão; na página do cliente aparece também na tela
+        <section className={`orc-instrucoes${publico ? '' : ' so-impressao'}`} id="orc-instrucoes">
           <div className="orc-observacoes-titulo">Instruções especiais</div>
           <div className="orc-instrucoes-texto">{impressao.instrucoes_especiais}</div>
         </section>

@@ -1,3 +1,4 @@
+import type { PersonalizacaoCliente } from './personalizacao';
 // ══════════════════════════════════════════════════════════
 // SITUAÇÃO DO ORÇAMENTO — Aberto → Enviado → Pedido gerado (ou Cancelado)
 // ══════════════════════════════════════════════════════════
@@ -97,6 +98,8 @@ export interface ItemPublico {
   descricao: string | null;
   medidas: string | null;
   material: string | null;
+  /** Técnica e medidas da arte (sem valores nem quantidade de material); null = sem técnica */
+  personalizacao: PersonalizacaoCliente | null;
   /** Endereço da foto (rota pública amarrada ao link) ou null */
   imagem: string | null;
 }

@@ -223,8 +223,9 @@ export function ManualOperacao() {
           <Menu>Parâmetros › Tabelas gerais</Menu>; ao voltar ao carrinho, as tabelas são relidas.
         </Dica>
         <Dica>
-          A técnica, as medidas e os ajustes ficam gravados no orçamento e aparecem só na tela interna (linha laranja abaixo do produto
-          na folha). Ao editar o orçamento, voltam para o carrinho como estavam.
+          A técnica e as medidas da arte aparecem para o cliente (link e impressão) na linha <i>Personalização</i> do produto — sem
+          valores nem quantidade de material. O material usado e os ajustes ficam só na tela interna (linha laranja <i>Interno</i>).
+          Ao editar o orçamento, tudo volta para o carrinho como estava.
         </Dica>
       </Secao>
 
@@ -376,7 +377,9 @@ export function ManualOperacao() {
           <li>
             <b>Nunca</b>: custo, composição do preço, fornecedor, usuários ou dados internos.
           </li>
-          <li>Botão de imprimir/salvar PDF (com as instruções especiais de Parâmetros › Impressão).</li>
+          <li>A técnica de personalização e as medidas da arte de cada produto (sem valores nem material).</li>
+          <li>As instruções especiais de Parâmetros › Impressão, logo após os valores e mockups.</li>
+          <li>Botão de imprimir/salvar PDF.</li>
           <li>
             <Bt>Aceitar orçamento</Bt>: abre o formulário de faturamento já preenchido com o que foi informado; o cliente completa os
             campos obrigatórios e confirma (observação opcional). O pedido é gerado na hora e a movimentação aparece como{' '}
@@ -428,9 +431,10 @@ export function ManualOperacao() {
           linhas={[
             ['Dados de faturamento e entrega', 'Sim', 'Sim (no início)', 'Sim'],
             ['Produtos, quantidades e valores', 'Sim', 'Sim', 'Sim'],
-            ['Fornecedor e personalização (técnica, ajustes)', 'Sim', 'Não', 'Não'],
+            ['Técnica de personalização e medidas da arte', 'Sim', 'Sim', 'Sim'],
+            ['Fornecedor, material usado e ajustes', 'Sim', 'Não', 'Não'],
             ['Mockups', 'Sim', 'Sim', 'Sim'],
-            ['Instruções especiais', 'Não', 'Sim', 'Só ao imprimir'],
+            ['Instruções especiais', 'Não', 'Sim', 'Sim'],
             ['Rodapé e validade', 'Sim', 'Sim', 'Sim'],
           ]}
         />

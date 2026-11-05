@@ -267,6 +267,29 @@ export function calcularPersonalizacaoOrcamento<K>(
   return res;
 }
 
+/**
+ * O que o cliente pode ver da personalização (link e impressão): só a técnica e as
+ * medidas da arte — nunca preço por m², material, mão de obra ou ajustes.
+ */
+export interface PersonalizacaoCliente {
+  tecnica: string;
+  altura_cm: number;
+  largura_cm: number;
+}
+
+export function personalizacaoParaCliente(
+  r: Pick<ResultadoPersonalizacao, 'tecnica_id' | 'tecnica' | 'altura_cm' | 'largura_cm'> | null | undefined,
+): PersonalizacaoCliente | null {
+  if (!r || r.tecnica_id === null || !r.tecnica || !(r.altura_cm && r.altura_cm > 0) || !(r.largura_cm && r.largura_cm > 0)) return null;
+  return { tecnica: r.tecnica, altura_cm: r.altura_cm, largura_cm: r.largura_cm };
+}
+
+/** "Sublimação · arte 10 × 8 cm" (texto para o cliente). */
+export function textoPersonalizacaoCliente(p: PersonalizacaoCliente): string {
+  const cm = (v: number) => v.toLocaleString('pt-BR', { maximumFractionDigits: 1 });
+  return `${p.tecnica} · arte ${cm(p.altura_cm)} × ${cm(p.largura_cm)} cm`;
+}
+
 /** Texto curto para a composição do preço e a folha interna. */
 export function descreverPersonalizacao(r: ResultadoPersonalizacao): string {
   const n = (v: number, c = 2) => v.toLocaleString('pt-BR', { minimumFractionDigits: c, maximumFractionDigits: 4 });
