@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { ETAPA_ALTERA_ENTREGA, formatarDataBr, formatBRL, FLUXO_PEDIDO, podeCancelar, proximoStatus, ROTULOS_STATUS_PEDIDO, type Pedido, type StatusPedido } from '@raizes/shared';
+import { ETAPA_ALTERA_ENTREGA, formatarDataBr, formatBRL, FLUXO_PEDIDO, podeAlterarFaturamento, podeCancelar, proximoStatus, ROTULOS_STATUS_PEDIDO, type Pedido, type StatusPedido } from '@raizes/shared';
 import { useApp } from '../../app/contexto';
 import { NomeUsuario } from '../../components/NomeUsuario';
 import { useSessao } from '../../app/sessao';
@@ -7,6 +7,8 @@ import { api } from '../../lib/api';
 import { erroDe } from '../../lib/dialogo';
 import { FolhaOrcamento } from '../orcamentos/FolhaOrcamento';
 import { ClienteVinculado } from '../clientes/ClienteVinculado';
+import { ResumoFaturamento } from '../clientes/FormularioFaturamento';
+import { ModalFaturamento } from '../clientes/ModalFaturamento';
 import { ChecklistPedido } from './ChecklistPedido';
 import { agoraLocal, duracao, formatarDataHora, TagStatusPedido, useAcoesPedido } from './comum';
 
@@ -157,6 +159,7 @@ export function DetalhePedido() {
       </div>
 
       <ChecklistPedido pedido={p} aoAlterar={atualizarPedidoAberto} />
+      <FaturamentoPedido pedido={p} aoSalvar={atualizarPedidoAberto} />
       <ObservacoesPedido pedido={p} aoSalvar={atualizarPedidoAberto} />
 
       <h3 className="pedido-secao">Movimentações</h3>
@@ -361,5 +364,42 @@ function EntregaPedido({ pedido: p, aoSalvar }: { pedido: Pedido; aoSalvar: (p: 
         </>
       )}
     </div>
+  );
+}
+
+/** Dados de faturamento e entrega: alteráveis enquanto o pedido está em andamento (cada mudança vira observação). */
+function FaturamentoPedido({ pedido, aoSalvar }: { pedido: Pedido; aoSalvar: (p: Pedido) => void }) {
+  const [editando, setEditando] = useState(false);
+  const pode = podeAlterarFaturamento(pedido.status);
+  return (
+    <section className="pedido-faturamento" id="pedido-faturamento">
+      <div className="pedido-checklist-topo">
+        <h3 className="pedido-secao">Faturamento e entrega</h3>
+        {pode && (
+          <button type="button" className="btn-back" id="btn-alterar-faturamento" onClick={() => setEditando(true)}>
+            {pedido.faturamento ? '✎ Alterar dados' : '+ Informar dados'}
+          </button>
+        )}
+      </div>
+      {pedido.faturamento ? (
+        <ResumoFaturamento dados={pedido.faturamento} />
+      ) : (
+        <p className="pedido-fat-vazio">Dados de faturamento não informados{pode ? ' — use "Informar dados".' : '.'}</p>
+      )}
+      {!pode && pedido.faturamento && <p className="pedido-fat-dica">Pedido {pedido.status === 'CANCELADO' ? 'cancelado' : 'encerrado'}: os dados não podem mais ser alterados.</p>}
+      <ModalFaturamento
+        aberto={editando}
+        titulo={`Faturamento e entrega · ${pedido.codigo}`}
+        subtitulo="Todos os campos com * são obrigatórios. Cada alteração fica registrada nas observações do pedido."
+        inicial={pedido.faturamento}
+        completo
+        textoSalvar="Salvar alterações"
+        fechar={() => setEditando(false)}
+        salvar={async (d) => {
+          if (!d) return;
+          aoSalvar(await api.alterarFaturamentoPedido(pedido.codigo, d));
+        }}
+      />
+    </section>
   );
 }

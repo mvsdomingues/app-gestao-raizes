@@ -131,6 +131,8 @@ export interface Pedido extends ResumoPedido {
   observacoes: ObservacaoPedido[];
   movimentos: MovimentoPedido[];
   orcamento: Orcamento;
+  /** Dados de faturamento e entrega (alteráveis enquanto o pedido está em andamento) */
+  faturamento: import('./faturamento').DadosFaturamento | null;
   /** Checklist de fechamento (copiado do cadastro quando o pedido entra em "Em Fechamento") */
   checklist: ItemChecklistPedido[];
 }
@@ -182,4 +184,9 @@ export interface FiltrosPedidos {
   meus?: string;
   /** Código do contato do Kommo */
   cliente?: string;
+}
+
+/** O pedido em andamento (não encerrado nem cancelado) aceita alterar os dados de faturamento. */
+export function podeAlterarFaturamento(status: StatusPedido): boolean {
+  return status !== 'ENCERRADO' && status !== 'CANCELADO';
 }

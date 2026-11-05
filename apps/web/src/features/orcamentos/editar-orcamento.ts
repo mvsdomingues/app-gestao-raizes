@@ -137,6 +137,7 @@ export function useEditarOrcamento() {
         o.observacao ?? '',
         o.cliente ?? null,
         o.entrega_prevista ?? null,
+        o.faturamento ?? null,
       );
       irPara('carrinho');
     } catch (e) {

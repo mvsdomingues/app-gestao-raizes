@@ -18,6 +18,7 @@ import { useEditarOrcamento } from './editar-orcamento';
 import { FolhaOrcamento } from './FolhaOrcamento';
 import { TagStatusOrcamento, useSituacaoOrcamento } from './situacao';
 import { ClienteVinculado } from '../clientes/ClienteVinculado';
+import { ResumoFaturamento } from '../clientes/FormularioFaturamento';
 import { useConfigClientes } from '../clientes/config';
 
 /** Aba "Detalhes": situação, ações e folha do orçamento selecionado. */
@@ -188,6 +189,19 @@ export function DetalheOrcamento() {
               ) : (
                 <span className="cliente-vazio">
                   Nenhum cliente vinculado{status === 'ABERTO' ? ' — escolha o cliente ao editar o orçamento (obrigatório para enviar).' : '.'}
+                </span>
+              )}
+            </div>
+          )}
+
+          {info && (
+            <div className={`orc-cliente-painel orc-faturamento-painel${info.faturamento ? '' : ' sem-cliente'}`} id="orc-faturamento">
+              <span className="orc-situacao-rotulo">Faturamento e entrega</span>
+              {info.faturamento ? (
+                <ResumoFaturamento dados={info.faturamento} />
+              ) : (
+                <span className="cliente-vazio">
+                  Não informado{status === 'ABERTO' || status === 'ENVIADO' ? ' — o cliente preenche ao aprovar pelo link (ou informe ao editar o orçamento).' : '.'}
                 </span>
               )}
             </div>

@@ -1,5 +1,14 @@
 import { useEffect, useState } from 'react';
-import { formatBRL, type OrcamentoPublico } from '@raizes/shared';
+import {
+  faturamentoVazio,
+  formatBRL,
+  normalizarFaturamento,
+  validarFaturamento,
+  type CampoFaturamento,
+  type DadosFaturamento,
+  type OrcamentoPublico,
+} from '@raizes/shared';
+import { FormularioFaturamento } from '../features/clientes/FormularioFaturamento';
 import { FolhaOrcamento } from '../features/orcamentos/FolhaOrcamento';
 
 type Estado = { tipo: 'carregando' } | { tipo: 'erro'; mensagem: string } | { tipo: 'ok'; o: OrcamentoPublico };
@@ -34,6 +43,8 @@ export function PaginaPublica() {
   const [texto, setTexto] = useState('');
   const [enviando, setEnviando] = useState(false);
   const [aviso, setAviso] = useState('');
+  const [fat, setFat] = useState<DadosFaturamento>(faturamentoVazio());
+  const [errosFat, setErrosFat] = useState<Partial<Record<CampoFaturamento, string>>>({});
 
   useEffect(() => {
     pedir(API).then(
@@ -68,6 +79,9 @@ export function PaginaPublica() {
     setPainel(p);
     setTexto('');
     setAviso('');
+    setErrosFat({});
+    // Aceite: dados de faturamento já informados pela Raízes vêm preenchidos para o cliente conferir
+    if (p === 'aceitar') setFat(o.faturamento ?? faturamentoVazio());
   };
 
   const responder = async () => {
@@ -75,12 +89,23 @@ export function PaginaPublica() {
       setAviso('Conte para nós o motivo (pelo menos 5 caracteres).');
       return;
     }
+    let faturamento: DadosFaturamento | null = null;
+    if (painel === 'aceitar') {
+      faturamento = normalizarFaturamento(fat);
+      const erros = validarFaturamento(faturamento ?? fat, true);
+      setErrosFat(erros);
+      if (Object.keys(erros).length) {
+        setAviso('Preencha os dados de faturamento e entrega destacados para confirmar o aceite.');
+        document.getElementById('pub-faturamento')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+        return;
+      }
+    }
     setEnviando(true);
     setAviso('');
     try {
       const novo =
         painel === 'aceitar'
-          ? await pedir(`${API}/aceitar`, { observacao: texto })
+          ? await pedir(`${API}/aceitar`, { observacao: texto, faturamento })
           : await pedir(`${API}/recusar`, { motivo: texto });
       setEstado({ tipo: 'ok', o: novo });
       setPainel(null);
@@ -149,13 +174,35 @@ export function PaginaPublica() {
               </>
             )}
           </p>
+          {painel === 'aceitar' && (
+            <section className="pub-faturamento" id="pub-faturamento">
+              <h3>Dados para faturamento e entrega</h3>
+              <p className="pub-faturamento-sub">
+                Confira e complete os dados abaixo — eles serão usados na nota fiscal e na entrega do pedido.
+              </p>
+              <FormularioFaturamento
+                valor={fat}
+                mudar={(v) => {
+                  setFat(v);
+                  if (Object.keys(errosFat).length) {
+                    const e = validarFaturamento(normalizarFaturamento(v) ?? v, true);
+                    setErrosFat(e);
+                    if (!Object.keys(e).length) setAviso('');
+                  }
+                }}
+                erros={errosFat}
+                obrigatorio
+                prefixo="pub-fat"
+              />
+            </section>
+          )}
           <label htmlFor="pub-texto">{painel === 'aceitar' ? 'Observação (opcional)' : 'Motivo ou alterações necessárias'}</label>
           <textarea
             id="pub-texto"
             className="custom-input"
             rows={4}
             maxLength={1000}
-            autoFocus
+            autoFocus={painel === 'recusar'}
             placeholder={
               painel === 'aceitar'
                 ? 'Ex.: entregar na portaria, ajuste de data…'

@@ -24,6 +24,22 @@ let cookie = '';
 let mock: KommoMock;
 let kommo: ServicoKommo;
 
+/** Dados de faturamento válidos (CNPJ com dígitos corretos) */
+const FATURAMENTO = {
+  tipo_pessoa: 'PJ',
+  nome: 'Thaís Lima Brindes Ltda',
+  contato: 'Thaís',
+  email: 'thais@exemplo.com.br',
+  documento: '11.222.333/0001-81',
+  cep: '01310-100',
+  logradouro: 'Avenida Paulista',
+  numero: '1000',
+  complemento: '',
+  bairro: 'Bela Vista',
+  cidade: 'São Paulo',
+  uf: 'SP',
+};
+
 const item = (n = 1) => ({
   nome: `Caneca ${n}`,
   codigo: `C${n}`,
@@ -216,7 +232,12 @@ describe('link do cliente', () => {
     const e = await enviado(300);
     await kommo.enviarNotas();
     const antes = mock.notas.length;
-    const r = await req('POST', `/api/publico/orcamentos/${e.codigo}/aceitar`, { observacao: 'Entregar na portaria' }, false);
+    // Sem os dados de faturamento (ou incompletos), o aceite é recusado
+    expect((await req('POST', `/api/publico/orcamentos/${e.codigo}/aceitar`, {}, false)).status).toBe(400);
+    const incompleto = await req('POST', `/api/publico/orcamentos/${e.codigo}/aceitar`, { faturamento: { ...FATURAMENTO, documento: '11222333000100', cidade: '' } }, false);
+    expect(incompleto.status).toBe(400);
+    expect(incompleto.json.erro).toMatch(/CNPJ \(cnpj inválido\).*Cidade/);
+    const r = await req('POST', `/api/publico/orcamentos/${e.codigo}/aceitar`, { observacao: 'Entregar na portaria', faturamento: FATURAMENTO }, false);
     expect(r.status).toBe(200);
     expect(r.json).toMatchObject({ situacao: 'ACEITO', resposta: { resposta: 'ACEITO', observacao: 'Entregar na portaria' } });
     expect(r.json.pedido).toMatch(/^PED-\d{6}$/);
@@ -228,7 +249,26 @@ describe('link do cliente', () => {
     const p = await req('GET', `/api/pedidos/${r.json.pedido}`);
     expect(p.json).toMatchObject({ status: 'CRIADO', observacao: 'Entregar na portaria', responsavel: { login: 'admin' } });
     expect(p.json.movimentos[0]).toMatchObject({ origem: 'CLIENTE', usuario: null });
-    expect(p.json.observacoes).toEqual([expect.objectContaining({ texto: 'Entregar na portaria', origem: 'CLIENTE', usuario: null })]);
+    expect(p.json.observacoes).toHaveLength(2);
+    expect(p.json.observacoes).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({ texto: 'Entregar na portaria', origem: 'CLIENTE', usuario: null }),
+        expect.objectContaining({ texto: expect.stringMatching(/^Dados de faturamento informados pelo cliente no aceite:\n• Tipo: Pessoa jurídica\n• Razão social/), origem: 'CLIENTE' }),
+      ]),
+    );
+    // Faturamento gravado no orçamento e no pedido
+    expect(p.json.faturamento).toMatchObject({ documento: '11222333000181', cep: '01310100', uf: 'SP', email: 'thais@exemplo.com.br' });
+    expect((await req('GET', `/api/orcamentos/${e.id}`)).json.faturamento).toEqual(p.json.faturamento);
+
+    // Alteração no pedido em andamento: registrada nas observações
+    const alt = await req('PUT', `/api/pedidos/${r.json.pedido}/faturamento`, { faturamento: { ...FATURAMENTO, numero: '1200', complemento: 'Sala 5' } });
+    expect(alt.status).toBe(200);
+    expect(alt.json.faturamento).toMatchObject({ numero: '1200', complemento: 'Sala 5' });
+    expect(alt.json.observacoes[0].texto).toBe('Dados de faturamento alterados:\n• Número: 1000 → 1200\n• Complemento: (vazio) → Sala 5');
+    expect(alt.json.observacoes[0].usuario).toMatchObject({ login: 'admin' });
+    // Sem mudança: nada é registrado; dados incompletos são recusados
+    expect((await req('PUT', `/api/pedidos/${r.json.pedido}/faturamento`, { faturamento: { ...FATURAMENTO, numero: '1200', complemento: 'Sala 5' } })).json.observacoes).toHaveLength(3);
+    expect((await req('PUT', `/api/pedidos/${r.json.pedido}/faturamento`, { faturamento: { ...FATURAMENTO, email: 'x' } })).status).toBe(400);
     expect(p.json.movimentos[0].observacao).toMatch(/Aceito pelo cliente pelo link/);
     const o = await req('GET', `/api/orcamentos/${e.id}`);
     expect(o.json).toMatchObject({ status: 'PEDIDO_GERADO', resposta_cliente: { resposta: 'ACEITO' } });
@@ -241,6 +281,9 @@ describe('link do cliente', () => {
     expect(mock.notas.slice(antes).map((n) => n.params.text)).toEqual([
       expect.stringContaining(`Cliente aceitou o orçamento ${e.numero} pelo link · pedido ${r.json.pedido}`),
     ]);
+    // Pedido cancelado: não altera mais
+    await req('POST', `/api/pedidos/${r.json.pedido}/cancelar`, { motivo: 'teste' });
+    expect((await req('PUT', `/api/pedidos/${r.json.pedido}/faturamento`, { faturamento: FATURAMENTO })).status).toBe(409);
   });
 
   it('recusar exige motivo, cancela o orçamento e registra nota', async () => {

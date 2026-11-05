@@ -15,6 +15,7 @@ import {
   avancarPedido,
   buscarPedido,
   cancelarPedido,
+  alterarFaturamentoPedido,
   criarPedido,
   listarPedidos,
   quadroPedidos,
@@ -24,6 +25,7 @@ import {
 import { corpoJson, ErroHttp } from '../lib/http';
 import { marcarItemChecklist } from '../db/repositorio-checklist';
 import { exigirUsuario } from '../lib/sessao';
+import { lerFaturamento } from '../lib/faturamento';
 import type { ServicoKommo } from '../kommo/servico';
 import { lerOrcamento } from './orcamentos';
 
@@ -131,6 +133,13 @@ export function rotasPedidos(db: Banco, kommo: ServicoKommo | null = null): Rout
     const data = v === null || v === '' ? null : dataValida(v) ? v : undefined;
     if (data === undefined) throw new ErroHttp(400, 'Data prevista de entrega inválida (use AAAA-MM-DD)');
     alterarEntregaPedido(db, String(req.params.codigo), data, exigirUsuario(res).id);
+    res.json(detalhe(String(req.params.codigo)));
+  });
+
+  /** Dados de faturamento do pedido em andamento: { faturamento } (cada mudança vira observação) */
+  r.put('/api/pedidos/:codigo/faturamento', (req, res) => {
+    const dados = lerFaturamento(corpoJson(req).faturamento, true)!;
+    alterarFaturamentoPedido(db, String(req.params.codigo), dados, exigirUsuario(res).id);
     res.json(detalhe(String(req.params.codigo)));
   });
 

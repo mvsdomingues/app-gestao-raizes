@@ -1,5 +1,7 @@
 import { useEffect, useState } from 'react';
-import { calcComParametros, formatBRL, montarItemOrcamento } from '@raizes/shared';
+import { calcComParametros, faturamentoPreenchido, faturamentoVazio, formatBRL, montarItemOrcamento } from '@raizes/shared';
+import { ResumoFaturamento } from '../clientes/FormularioFaturamento';
+import { ModalFaturamento } from '../clientes/ModalFaturamento';
 import { useApp } from '../../app/contexto';
 import { useSessao } from '../../app/sessao';
 import { api, ErroApi } from '../../lib/api';
@@ -12,8 +14,11 @@ import { SeletorCliente } from '../clientes/SeletorCliente';
 export function Carrinho() {
   const { tela, visitas, irPara, mostrarOrcamento, parametros } = useApp();
   const { pode, usuario } = useSessao();
-  const { estado, limpar, redesenhar, definirFrete, definirObservacao, definirCliente, definirEntregaPrevista } = useCarrinho();
-  const { frete, edicao, observacao, cliente, entregaPrevista } = estado;
+  const { estado, limpar, redesenhar, definirFrete, definirObservacao, definirCliente, definirEntregaPrevista, definirFaturamento } =
+    useCarrinho();
+  const { frete, edicao, observacao, cliente, entregaPrevista, faturamento } = estado;
+  const [editandoFaturamento, setEditandoFaturamento] = useState(false);
+  const temFaturamento = faturamentoPreenchido(faturamento);
   const kommo = useConfigClientes();
   const [gerando, setGerando] = useState(false);
 
@@ -65,6 +70,7 @@ export function Carrinho() {
       observacao: observacao.trim(),
       cliente_kommo_id: cliente?.id ?? null,
       entrega_prevista: entregaPrevista || null,
+      faturamento: temFaturamento ? faturamento : null,
     };
     try {
       // Alteração de orçamento salvo: mesmo número, data atualizada
@@ -216,6 +222,19 @@ export function Carrinho() {
                     />
                   </div>
                 </div>
+                <div className="cart-faturamento" id="cart-faturamento">
+                  <div className="cart-faturamento-topo">
+                    <span className="cart-field-label">Faturamento e entrega</span>
+                    <button type="button" className="link-botao" id="btn-faturamento-carrinho" onClick={() => setEditandoFaturamento(true)}>
+                      {temFaturamento ? 'Alterar' : '+ Informar'}
+                    </button>
+                  </div>
+                  {temFaturamento ? (
+                    <ResumoFaturamento dados={faturamento} />
+                  ) : (
+                    <span className="cart-faturamento-vazio">Opcional — o cliente confirma ou preenche ao aprovar o orçamento.</span>
+                  )}
+                </div>
                 <div className="cart-observacao">
                   <label className="cart-field-label" htmlFor="campo-observacao">
                     Observações
@@ -260,6 +279,16 @@ export function Carrinho() {
               <button className="btn-secondary" onClick={() => void limparTudo()}>
                 Limpar tudo
               </button>
+              <ModalFaturamento
+                aberto={editandoFaturamento}
+                titulo="Dados de faturamento e entrega"
+                subtitulo="Opcional no orçamento. Ao aprovar pelo link, o cliente confirma e completa estes dados (lá eles são obrigatórios)."
+                inicial={faturamento}
+                completo={false}
+                textoSalvar="Usar no orçamento"
+                fechar={() => setEditandoFaturamento(false)}
+                salvar={(d) => definirFaturamento(d ?? faturamentoVazio(faturamento.tipo_pessoa))}
+              />
             </div>
           </aside>
         </div>

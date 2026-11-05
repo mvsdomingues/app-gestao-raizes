@@ -118,6 +118,8 @@ export interface OrcamentoPublico {
   /** Aceite: código do pedido gerado */
   pedido: string | null;
   resposta: { resposta: RespostaCliente; em: string; observacao: string | null } | null;
+  /** Dados de faturamento e entrega já informados (o cliente confirma/completa no aceite) */
+  faturamento: import('./faturamento').DadosFaturamento | null;
   /** Mockups dos produtos (imagem servida pela rota pública do link), na ordem dos itens */
   mockups: { item: number; nome: string; imagem: string }[];
 }

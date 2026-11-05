@@ -17,11 +17,15 @@ import {
   ETAPA_CHECKLIST,
   ETAPA_ALTERA_ENTREGA,
   formatarDataBr,
+  diferencasFaturamento,
+  podeAlterarFaturamento,
+  type DadosFaturamento,
 } from '@raizes/shared';
 import { ErroHttp } from '../lib/http';
 import { registrarMovimentoOrcamento } from './repositorio-orcamentos';
 import { colunasResponsavel, extrairResponsavel } from './repositorio-usuarios';
 import { isoLocal } from '../lib/datas';
+import { faturamentoDoBanco } from '../lib/faturamento';
 import type { Banco } from './conexao';
 import { checklistDoPedido, copiarChecklistParaPedido } from './repositorio-checklist';
 
@@ -197,7 +201,14 @@ export function buscarPedido(db: Banco, codigo: string) {
     const usuario = extrairResponsavel(m, 'usr');
     return { ...m, usuario } as MovimentoPedido;
   });
-  return { ...resumo(l), movimentos, observacoes: observacoesDoPedido(db, l.id), checklist: checklistDoPedido(db, l.id) };
+  const fat = db.prepare('SELECT faturamento_json FROM pedidos WHERE id = ?').get(l.id) as { faturamento_json: string | null };
+  return {
+    ...resumo(l),
+    movimentos,
+    observacoes: observacoesDoPedido(db, l.id),
+    checklist: checklistDoPedido(db, l.id),
+    faturamento: faturamentoDoBanco(fat.faturamento_json),
+  };
 }
 
 function registrarMovimento(
@@ -235,9 +246,9 @@ export function criarPedido(
   // Movimentação feita pelo cliente não tem usuário
   const quemMovimenta = origem === 'CLIENTE' ? null : usuarioId;
   return db.transaction(() => {
-    const existe = db.prepare('SELECT status, entrega_prevista FROM orcamentos WHERE id = ?').get(orcamentoId) as
-      | { status: string; entrega_prevista: string | null }
-      | undefined;
+    const existe = db
+      .prepare('SELECT status, entrega_prevista, faturamento_json FROM orcamentos WHERE id = ?')
+      .get(orcamentoId) as { status: string; entrega_prevista: string | null; faturamento_json: string | null } | undefined;
     if (!existe) throw new ErroHttp(404, `Orçamento ${numeroOrcamento(orcamentoId)} não encontrado`);
     const ativo = pedidoAtivoDoOrcamento(db, orcamentoId);
     if (ativo) {
@@ -254,9 +265,9 @@ export function criarPedido(
     const codigo = codigoPedido(id);
     const agora = isoLocal();
     db.prepare(
-      `INSERT INTO pedidos (id, codigo, orcamento_id, status, observacao, criado, atualizado, usuario_id, entrega_prevista)
-       VALUES (?, ?, ?, 'CRIADO', ?, ?, ?, ?, ?)`,
-    ).run(id, codigo, orcamentoId, observacao, agora, agora, usuarioId, existe.entrega_prevista);
+      `INSERT INTO pedidos (id, codigo, orcamento_id, status, observacao, criado, atualizado, usuario_id, entrega_prevista, faturamento_json)
+       VALUES (?, ?, ?, 'CRIADO', ?, ?, ?, ?, ?, ?)`,
+    ).run(id, codigo, orcamentoId, observacao, agora, agora, usuarioId, existe.entrega_prevista, existe.faturamento_json);
     registrarMovimento(db, id, null, 'CRIADO', agora, opcoes.observacaoMovimento ?? observacao, quemMovimenta, origem);
     if (observacao) inserirObservacao(db, id, observacao, agora, quemMovimenta, origem);
     // Situação do orçamento passa a "Pedido gerado"
@@ -383,6 +394,34 @@ export function adicionarObservacaoPedido(db: Banco, codigo: string, texto: stri
   const p = db.prepare('SELECT id FROM pedidos WHERE codigo = ? COLLATE NOCASE').get(codigo) as { id: number } | undefined;
   if (!p) throw new ErroHttp(404, 'Pedido não encontrado');
   inserirObservacao(db, p.id, texto, isoLocal(), usuarioId);
+}
+
+/**
+ * Altera os dados de faturamento do pedido em andamento; cada mudança vira uma
+ * observação com o que foi alterado. Retorna false se nada mudou.
+ */
+export function alterarFaturamentoPedido(
+  db: Banco,
+  codigo: string,
+  dados: DadosFaturamento,
+  usuarioId: number | null,
+  origem: OrigemMovimento = 'USUARIO',
+  titulo = 'Dados de faturamento alterados',
+): boolean {
+  return db.transaction(() => {
+    const p = db.prepare('SELECT id, status, faturamento_json FROM pedidos WHERE codigo = ? COLLATE NOCASE').get(codigo) as
+      | { id: number; status: StatusPedido; faturamento_json: string | null }
+      | undefined;
+    if (!p) throw new ErroHttp(404, 'Pedido não encontrado');
+    if (!podeAlterarFaturamento(p.status)) {
+      throw new ErroHttp(409, 'Os dados de faturamento só podem ser alterados com o pedido em andamento.');
+    }
+    const mudancas = diferencasFaturamento(faturamentoDoBanco(p.faturamento_json), dados);
+    if (!mudancas.length) return false;
+    db.prepare('UPDATE pedidos SET faturamento_json = ? WHERE id = ?').run(JSON.stringify(dados), p.id);
+    inserirObservacao(db, p.id, `${titulo}:\n${mudancas.map((m) => `• ${m}`).join('\n')}`, isoLocal(), usuarioId, origem);
+    return true;
+  })();
 }
 
 /** Cancela o pedido (libera o orçamento para um novo pedido). */

@@ -1,0 +1,66 @@
+/* ══════════════════════════════════
+   DADOS DE FATURAMENTO E ENTREGA
+   (carrinho, orçamento, pedido e página do cliente)
+══════════════════════════════════ */
+.fat-form { display: flex; flex-direction: column; gap: 12px; }
+.fat-tipo { display: flex; gap: 8px; flex-wrap: wrap; }
+.fat-tipo-opcao {
+  display: inline-flex; align-items: center; gap: 6px; padding: 7px 12px; border: 1.5px solid var(--border, #DDD8CF);
+  border-radius: 8px; font-size: .84rem; cursor: pointer; background: #fff; user-select: none;
+}
+.fat-form .fat-tipo-opcao { text-transform: none; letter-spacing: normal; font-size: .84rem; font-weight: 500; margin: 0; color: var(--grafite, #1F2329); }
+.fat-form .fat-tipo-opcao.ativo { border-color: var(--uva, #5E3A73); background: #faf6fb; color: var(--berinjela, #3A183F); font-weight: 600; }
+.fat-tipo-opcao input { accent-color: var(--uva, #5E3A73); margin: 0; }
+.fat-grade { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 10px 12px; }
+.fat-campo { display: flex; flex-direction: column; gap: 4px; grid-column: span 2; min-width: 0; }
+.fat-campo.largo { grid-column: span 4; }
+.fat-cep, .fat-numero, .fat-uf { grid-column: span 1; }
+.fat-logradouro { grid-column: span 3; }
+.fat-form .fat-campo label { margin: 0; }
+.fat-campo label { font-size: .74rem; font-weight: 600; color: #5b544c; letter-spacing: .2px; }
+.fat-obrig { color: var(--danger, #C0392B); }
+.fat-opc { color: #8a8279; font-weight: 400; }
+.fat-campo input, .fat-campo select {
+  width: 100%; border: 1.5px solid var(--border, #DDD8CF); border-radius: 7px; padding: 8px 10px; font: inherit; font-size: .88rem;
+  background: #fff; color: var(--grafite, #1F2329); box-sizing: border-box;
+}
+.fat-campo input:focus, .fat-campo select:focus { outline: none; border-color: var(--uva, #5E3A73); box-shadow: 0 0 0 3px rgba(94, 58, 115, .12); }
+.fat-campo.com-erro input, .fat-campo.com-erro select { border-color: var(--danger, #C0392B); }
+.fat-erro { font-size: .72rem; color: var(--danger, #C0392B); }
+.fat-dica { font-size: .72rem; color: #8a8279; }
+.fat-subtitulo { font-size: .72rem; font-weight: 600; letter-spacing: 1px; text-transform: uppercase; color: #8a8279; margin-top: 4px; }
+@media (max-width: 620px) {
+  .fat-grade { grid-template-columns: 1fr 1fr; }
+  .fat-campo, .fat-campo.largo, .fat-logradouro { grid-column: span 2; }
+  .fat-cep, .fat-numero, .fat-uf { grid-column: span 1; }
+}
+
+.fat-modal { max-width: 680px; }
+
+/* Resumo */
+.fat-resumo { margin: 6px 0 0; display: flex; flex-direction: column; gap: 4px; font-size: .84rem; }
+.fat-resumo > div { display: grid; grid-template-columns: 72px 1fr; gap: 8px; }
+.fat-resumo dt { color: #8a8279; font-size: .76rem; }
+.fat-resumo dd { margin: 0; color: var(--grafite, #1F2329); line-height: 1.4; }
+.fat-resumo-doc { color: #5b544c; }
+
+/* Carrinho */
+.cart-faturamento { padding: 10px 0 4px; border-top: 1px dashed var(--border); margin-top: 6px; }
+.cart-faturamento-topo { display: flex; justify-content: space-between; align-items: center; }
+.cart-faturamento .link-botao { font-size: .8rem; }
+.cart-faturamento-vazio { display: block; font-size: .74rem; color: var(--muted); font-style: italic; margin-top: 4px; }
+.cart-faturamento .fat-resumo { font-size: .78rem; }
+.cart-faturamento .fat-resumo > div { grid-template-columns: 58px 1fr; }
+
+/* Orçamento e pedido */
+.orc-faturamento-painel { align-items: flex-start; }
+.orc-faturamento-painel .fat-resumo { margin: 0; }
+.pedido-faturamento { margin-top: 22px; padding: 16px 20px; border: 1px solid var(--border); border-radius: var(--radius-lg); background: var(--surface); }
+.pedido-fat-vazio { color: #8A5A00; font-size: .86rem; margin: 6px 0 0; }
+.pedido-fat-dica { color: var(--muted); font-size: .76rem; margin: 8px 0 0; font-style: italic; }
+
+/* Página do cliente */
+.pub-faturamento { margin: 6px 0 16px; padding: 16px; border: 1px solid #E5E0D8; border-radius: 10px; background: #fdfcfa; }
+.pub-faturamento h3 { margin: 0 0 4px; font-size: 1.02rem; color: #3A183F; }
+.pub-faturamento-sub { margin: 0 0 12px; font-size: .84rem; color: #5b544c; }
+@media print { .pedido-faturamento { break-inside: avoid; } }

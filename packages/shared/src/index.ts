@@ -8,3 +8,4 @@ export * from './orcamentos';
 export * from './clientes';
 export * from './catalogo';
 export * from './dashboards';
+export * from './faturamento';

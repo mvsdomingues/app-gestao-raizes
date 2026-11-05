@@ -130,8 +130,9 @@ export function rotasPublicas(db: Banco, imagensDir: string, kommo: ServicoKommo
     '/api/publico/orcamentos/:codigo/aceitar',
     comCodigo((req, res) => {
       const codigo = String(req.params.codigo);
-      const obs = corpoJson(req).observacao;
-      const { orcamentoId, pedido } = aceitarPeloLink(db, codigo, typeof obs === 'string' ? obs : null, rastro(req));
+      const corpo = corpoJson(req);
+      const obs = corpo.observacao;
+      const { orcamentoId, pedido } = aceitarPeloLink(db, codigo, typeof obs === 'string' ? obs : null, rastro(req), corpo.faturamento);
       const o = cliente(orcamentoId);
       if (kommo && o.cliente_kommo_id) {
         const p = buscarPedido(db, pedido);

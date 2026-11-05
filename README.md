@@ -213,6 +213,13 @@ Menu **Dashboards** (central de acompanhamento; novos painéis entram nesse grup
 - **Endereço do link**: `APP_URL_PUBLICA` no `.env`; sem ela, o endereço pelo qual a tela foi aberta (IP, domínio ou localhost). No Nginx não use senha (`auth_basic`), senão o cliente não abre o link: ver `deploy/nginx/raizes.conf`.
 - **Composição do preço** (custo, impostos, margem): não aparece nos detalhes do orçamento nem do pedido, na folha impressa ou na página do cliente; fica só na calculadora do carrinho. O **fornecedor** aparece só na tela interna (fora da impressão e da página do cliente).
 
+### Dados de faturamento e entrega
+
+- **No orçamento (opcional):** no carrinho, *Faturamento e entrega → + Informar* abre o formulário: empresa (CNPJ) ou pessoa física (CPF), nome/razão social, contato na empresa (opcional), e-mail, CNPJ/CPF e endereço de entrega (CEP, endereço, número, complemento, bairro, cidade, UF). O CEP completa o endereço automaticamente (ViaCEP). Só o que foi digitado é conferido (CPF/CNPJ com dígito verificador, e-mail, CEP); dá para enviar o orçamento sem esses dados. Os detalhes do orçamento mostram o resumo.
+- **No aceite pelo link (obrigatório):** ao clicar em *Aceitar orçamento*, o cliente vê o formulário já preenchido com o que foi informado e precisa completar todos os campos obrigatórios para confirmar.
+- **No pedido:** os dados confirmados pelo cliente são gravados no orçamento e copiados para o pedido (também quando o pedido é gerado internamente). Uma observação do pedido registra o que o cliente informou ou alterou.
+- **Alteração:** nos detalhes do pedido, *Faturamento e entrega → Alterar dados*, enquanto o pedido estiver em andamento (não encerrado nem cancelado). Cada alteração vira uma observação com o que mudou (campo: antes → depois) e quem alterou.
+
 ### Clientes do Kommo
 
 Com `KOMMO_SUBDOMINIO` e `KOMMO_TOKEN` no `.env`, o orçamento passa a ter **cliente**, escolhido entre os contatos do Kommo (o sistema não cria contatos no Kommo).
@@ -248,6 +255,7 @@ Todas as rotas exigem login, exceto as de `/api/auth`. Cada rota também exige a
 | `GET /api/produtos` · `GET /api/produto/:id` | Catálogo (fornecedores + próprios; próprios têm id negativo). Filtros: `q`, `fornecedor`, `categoria`, `cor`, `estoque`, `ordem`, `min`, `max`. O detalhe traz descrição, ficha, fotos, vídeo e faixas de preço |
 | `GET /api/orcamentos/:id/mockups` · `GET …/mockups/:item/cena` | Mockups do orçamento / cena do estúdio de um item |
 | `PUT /api/orcamentos/:id/mockups/:item` · `DELETE …/mockups/:item` | Grava (`{ imagem: data URL JPG/PNG, cena }`) ou exclui o mockup do item (só com o orçamento Aberto) |
+| `PUT /api/pedidos/:codigo/faturamento` | Altera os dados de faturamento do pedido em andamento (`{ faturamento }`; registra a mudança nas observações) |
 | `GET /api/dashboards/geral?de&ate&usuario` · `GET /api/dashboards/usuarios` | Indicadores da Visão geral / vendedores do filtro |
 | `GET /api/categorias` · `GET /api/cores` | Categorias / cores com a quantidade de produtos (`?fornecedor=`) |
 | `GET/POST /api/produtos-proprios` | Lista (`?q=` busca) / inclui produto próprio |

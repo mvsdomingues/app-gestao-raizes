@@ -4,6 +4,8 @@ import {
   DIAS_VALIDADE_LINK,
   numeroOrcamento,
   resumoDescricao,
+  diferencasFaturamento,
+  linhasFaturamento,
   type ItemOrcamento,
   type LinkOrcamento,
   type OrcamentoPublico,
@@ -12,6 +14,7 @@ import {
   type SituacaoPublica,
 } from '@raizes/shared';
 import { isoLocal } from '../lib/datas';
+import { faturamentoDoBanco, lerFaturamento } from '../lib/faturamento';
 import { ErroHttp } from '../lib/http';
 import type { Banco } from './conexao';
 import { SQL_STATUS_ORCAMENTO } from './repositorio-orcamentos';
@@ -126,6 +129,7 @@ interface LinhaPublica extends LinhaLink {
   total: number;
   observacao: string | null;
   entrega_prevista: string | null;
+  faturamento_json: string | null;
   cliente_nome: string | null;
   cliente_telefone: string | null;
   usuario_id: number | null;
@@ -136,7 +140,7 @@ function porCodigo(db: Banco, codigo: string): LinhaPublica {
   const l = codigoLinkValido(codigo)
     ? (db
         .prepare(
-          `SELECT id, data_hora, itens_json, subtotal, frete, total, observacao, entrega_prevista, cliente_nome, cliente_telefone, usuario_id,
+          `SELECT id, data_hora, itens_json, subtotal, frete, total, observacao, entrega_prevista, faturamento_json, cliente_nome, cliente_telefone, usuario_id,
                   ${COLUNAS_LINK}, ${SQL_STATUS_ORCAMENTO} AS situacao
              FROM orcamentos WHERE link_codigo = ?`,
         )
@@ -206,6 +210,7 @@ export function orcamentoPublico(db: Banco, codigo: string): OrcamentoPublico {
     total: l.total,
     observacao: l.observacao?.trim() || null,
     entrega_prevista: l.entrega_prevista,
+    faturamento: faturamentoDoBanco(l.faturamento_json),
     mockups,
     pedido,
     resposta:
@@ -235,12 +240,26 @@ function exigirDisponivel(l: LinhaPublica): void {
 }
 
 /** Aceite pelo link: gera o pedido (responsável = responsável pelo orçamento). Devolve o código do pedido. */
-export function aceitarPeloLink(db: Banco, codigo: string, observacao: string | null, rastro: Rastro): { orcamentoId: number; pedido: string } {
+export function aceitarPeloLink(
+  db: Banco,
+  codigo: string,
+  observacao: string | null,
+  rastro: Rastro,
+  faturamentoBruto: unknown,
+): { orcamentoId: number; pedido: string } {
   return db.transaction(() => {
     const l = porCodigo(db, codigo);
     exigirDisponivel(l);
+    // Dados de faturamento e entrega: obrigatórios no aceite
+    const faturamento = lerFaturamento(faturamentoBruto, true)!;
     const obs = observacao?.trim().slice(0, 1000) || null;
     const agora = isoLocal();
+    // Dados de faturamento confirmados pelo cliente: gravados no orçamento (e copiados para o pedido)
+    const antes = faturamentoDoBanco(
+      (db.prepare('SELECT faturamento_json FROM orcamentos WHERE id = ?').get(l.id) as { faturamento_json: string | null })
+        .faturamento_json,
+    );
+    db.prepare('UPDATE orcamentos SET faturamento_json = ? WHERE id = ?').run(JSON.stringify(faturamento), l.id);
     const pedido = criarPedido(db, l.id, obs, l.usuario_id, {
       origem: 'CLIENTE',
       observacaoMovimento: 'Aceito pelo cliente pelo link' + (obs ? ` — ${obs}` : ''),
@@ -249,6 +268,19 @@ export function aceitarPeloLink(db: Banco, codigo: string, observacao: string | 
       `UPDATE orcamentos SET resposta = 'ACEITO', resposta_em = ?, resposta_obs = ?, resposta_ip = ?, resposta_navegador = ?
         WHERE id = ?`,
     ).run(agora, obs, rastro.ip, rastro.navegador?.slice(0, 300) ?? null, l.id);
+    // Registro no pedido do que o cliente confirmou/alterou
+    const mudancas = diferencasFaturamento(antes, faturamento);
+    const pid = (db.prepare('SELECT id FROM pedidos WHERE codigo = ?').get(pedido) as { id: number }).id;
+    const texto = antes
+      ? mudancas.length
+        ? `Dados de faturamento alterados pelo cliente no aceite:\n${mudancas.map((m) => `• ${m}`).join('\n')}`
+        : 'Dados de faturamento confirmados pelo cliente no aceite (sem alterações).'
+      : `Dados de faturamento informados pelo cliente no aceite:\n${linhasFaturamento(faturamento).map((m) => `• ${m}`).join('\n')}`;
+    db.prepare("INSERT INTO pedidos_observacoes (pedido_id, texto, data_hora, usuario_id, origem) VALUES (?, ?, ?, NULL, 'CLIENTE')").run(
+      pid,
+      texto,
+      agora,
+    );
     return { orcamentoId: l.id, pedido };
   })();
 }

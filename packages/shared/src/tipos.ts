@@ -131,6 +131,8 @@ export interface Orcamento extends ResumoOrcamento {
   resposta_cliente?: import('./orcamentos').RespostaDoCliente | null;
   /** Mockups dos produtos (opcionais), na ordem dos itens */
   mockups?: import('./orcamentos').MockupOrcamento[];
+  /** Dados de faturamento e entrega do cliente (null = não informados) */
+  faturamento?: import('./faturamento').DadosFaturamento | null;
 }
 
 /** Corpo de POST /api/orcamentos */
@@ -145,6 +147,8 @@ export interface NovoOrcamento {
   cliente_kommo_id?: number | null;
   /** Data prevista de entrega (AAAA-MM-DD); null/vazio = sem data */
   entrega_prevista?: string | null;
+  /** Dados de faturamento (opcionais no orçamento; undefined = mantém, null = limpa) */
+  faturamento?: import('./faturamento').DadosFaturamento | null;
 }
 
 /** Resposta de POST /api/orcamentos */
