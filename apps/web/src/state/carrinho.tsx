@@ -285,7 +285,11 @@ export function subtotalCarrinho(itens: Itens, parametros: ParametrosCalculo, te
  * custo de personalização calculado pelas tabelas de material e mão de obra.
  */
 export function precoDoItem(item: ItemCarrinho, parametros: ParametrosCalculo, tecnicas: TecnicaComValores[] | null) {
-  const personalizacao = calcularPersonalizacao(item.personalizacao, item.qty, tecnicas);
+  // Sem técnica: material e mão de obra padrão de Parâmetros › Precificação (como no cálculo anterior)
+  const personalizacao = calcularPersonalizacao(item.personalizacao, item.qty, tecnicas, {
+    material_unit: parametros.mat_personalizacao,
+    mao_obra_unit: parametros.mo_personalizacao,
+  });
   const calc = calcComPersonalizacao(calcComParametros(item.calc, parametros), personalizacao);
   return { personalizacao, calc, res: calcPreco(item.produto.preco as number, item.qty, calc) };
 }

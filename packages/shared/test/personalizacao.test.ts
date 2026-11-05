@@ -68,7 +68,22 @@ describe('situações especiais', () => {
   it('sem técnica: valores digitados, aceitando zero', () => {
     expect(calcularPersonalizacao(personalizacaoVazia(), 10, TECNICAS)).toMatchObject({ material_valor: 0, mao_obra_unit: 0, erro: null });
     const r = calcularPersonalizacao({ ...personalizacaoVazia(), material_valor: 50, mao_obra_unit: 2 }, 10, TECNICAS);
-    expect(r).toMatchObject({ material_unit: 5, mao_obra_total: 20, material_ajustado: false });
+    expect(r).toMatchObject({ material_unit: 5, mao_obra_total: 20 });
+  });
+
+  it('sem técnica: usa os valores padrão de Parâmetros (mesmo preço do cálculo anterior)', () => {
+    const padrao = { material_unit: 1, mao_obra_unit: 3 };
+    const r = calcularPersonalizacao(personalizacaoVazia(), 50, TECNICAS, padrao);
+    expect(r).toMatchObject({ material_valor: 50, material_unit: 1, mao_obra_unit: 3, material_ajustado: false, mao_obra_ajustada: false });
+    // Produto CA0150T-VD (R$ 15,90), 50 un, parâmetros cadastrados: igual ao cálculo antigo
+    const params = { ...CALC_DEFAULTS, mat_personalizacao: 1, mo_personalizacao: 3, margem: 0.3 };
+    const antigo = calcPreco(15.9, 50, params);
+    const novo = calcPreco(15.9, 50, calcComPersonalizacao(params, r));
+    expect(novo.preco).toBeCloseTo(antigo.preco, 6);
+    expect(antigo.preco * 50).toBeCloseTo(1916.09, 2);
+    // Zero digitado é aceito e marca o ajuste
+    const zero = calcularPersonalizacao({ ...personalizacaoVazia(), material_valor: 0, mao_obra_unit: 0 }, 50, TECNICAS, padrao);
+    expect(zero).toMatchObject({ material_unit: 0, mao_obra_unit: 0, material_ajustado: true, mao_obra_ajustada: true });
   });
 
   it('cadastro incompleto ou arte sem medidas pedem correção', () => {

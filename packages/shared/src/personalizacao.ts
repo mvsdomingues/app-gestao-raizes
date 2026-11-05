@@ -10,7 +10,8 @@
 // Mão de obra:
 //   total = valor unitário da técnica × quantidade
 // O operador pode ajustar material (m² ou R$) e mão de obra; o item fica marcado.
-// Sem técnica: material (R$ do lote) e mão de obra (R$/un) digitados, aceitando zero.
+// Sem técnica: material (R$ do lote) e mão de obra (R$/un) sugeridos pelos valores padrão de
+// Parâmetros › Precificação (como no cálculo anterior); o operador pode digitar, inclusive zero.
 // ══════════════════════════════════════════════════════════
 
 /** Técnica com os valores das tabelas de material e mão de obra (null = não cadastrado). */
@@ -79,10 +80,17 @@ export function fracoesNecessarias(area: number, fracao: number): number {
   return Math.ceil(arred(area / fracao, 9) - 1e-9);
 }
 
+/** Valores padrão (R$/un) de quando o item não tem técnica: Parâmetros › Precificação. */
+export interface PadraoSemTecnica {
+  material_unit: number;
+  mao_obra_unit: number;
+}
+
 export function calcularPersonalizacao(
   p: PersonalizacaoItem,
   qty: number,
   tecnicas: TecnicaComValores[] | null,
+  padrao: PadraoSemTecnica = { material_unit: 0, mao_obra_unit: 0 },
 ): ResultadoPersonalizacao {
   const q = Math.max(1, qty);
   const base = {
@@ -92,10 +100,12 @@ export function calcularPersonalizacao(
     entrada: { ...p },
   };
 
-  // Sem personalização: valores digitados (zero é válido)
+  // Sem técnica: valores padrão por unidade, ou o que o operador digitou (zero é válido)
   if (p.tecnica_id === null) {
-    const material = Math.max(0, p.material_valor ?? 0);
-    const mo = Math.max(0, p.mao_obra_unit ?? 0);
+    const materialSugerido = dinheiro(Math.max(0, padrao.material_unit) * q);
+    const moSugerido = Math.max(0, padrao.mao_obra_unit);
+    const material = p.material_valor !== null ? Math.max(0, p.material_valor) : materialSugerido;
+    const mo = p.mao_obra_unit !== null ? Math.max(0, p.mao_obra_unit) : moSugerido;
     return {
       ...base,
       tecnica: null,
@@ -106,15 +116,15 @@ export function calcularPersonalizacao(
       area_necessaria_m2: 0,
       fracoes: 0,
       material_m2_sugerido: 0,
-      material_valor_sugerido: 0,
+      material_valor_sugerido: materialSugerido,
       material_m2: 0,
       material_valor: material,
       material_unit: material / q,
-      mao_obra_unit_sugerido: 0,
+      mao_obra_unit_sugerido: moSugerido,
       mao_obra_unit: mo,
       mao_obra_total: mo * q,
-      material_ajustado: false,
-      mao_obra_ajustada: false,
+      material_ajustado: p.material_valor !== null && dinheiro(p.material_valor) !== materialSugerido,
+      mao_obra_ajustada: p.mao_obra_unit !== null && dinheiro(p.mao_obra_unit) !== dinheiro(moSugerido),
       erro: null,
     };
   }
@@ -174,7 +184,10 @@ export function calcularPersonalizacao(
 /** Texto curto para a composição do preço e a folha interna. */
 export function descreverPersonalizacao(r: ResultadoPersonalizacao): string {
   const n = (v: number, c = 2) => v.toLocaleString('pt-BR', { minimumFractionDigits: c, maximumFractionDigits: 4 });
-  if (r.tecnica_id === null) return 'sem técnica de personalização';
+  if (r.tecnica_id === null) {
+    const ajustes = [r.material_ajustado && 'material ajustado', r.mao_obra_ajustada && 'mão de obra ajustada'].filter(Boolean);
+    return ['sem técnica de personalização', ...ajustes].join(' · ');
+  }
   const partes = [`${r.tecnica} · arte ${n(r.altura_cm ?? 0, 1)} × ${n(r.largura_cm ?? 0, 1)} cm`, `material ${n(r.material_m2)} m²`];
   if (r.material_ajustado) partes.push('material ajustado');
   if (r.mao_obra_ajustada) partes.push('mão de obra ajustada');

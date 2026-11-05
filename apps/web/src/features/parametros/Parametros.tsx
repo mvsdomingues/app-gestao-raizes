@@ -200,9 +200,19 @@ export function Parametros() {
             </div>
 
             <div className="calc-panel-inner param-form">
+              <div className="calc-section-title">Personalização sem técnica (R$/un)</div>
               <p className="param-nota">
-                Material e mão de obra da personalização vêm das <b>Tabelas gerais</b> (por técnica), calculados em cada item do carrinho.
+                Com técnica, material e mão de obra vêm das <b>Tabelas gerais</b>. Estes valores são o padrão dos itens sem técnica
+                (podem ser alterados no item).
               </p>
+              <div className="calc-row">
+                <span className="calc-label">Material (tinta, papel, adesivo…)</span>
+                {campo('mat_personalizacao', { step: '0.10' })}
+              </div>
+              <div className="calc-row">
+                <span className="calc-label">Mão de obra / serviço</span>
+                {campo('mo_personalizacao', { step: '0.50' })}
+              </div>
 
               <div className="calc-section-title">Imposto de Compra (sobre custo do fornecedor)</div>
               <div className="calc-row calc-row-check">

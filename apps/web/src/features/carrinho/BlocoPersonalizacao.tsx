@@ -114,15 +114,30 @@ export function BlocoPersonalizacao({ idItem, valor, resultado: r, tecnicas, qty
       </div>
 
       {valor.tecnica_id === null ? (
-        <div className="pers-linha">
-          <CampoNumero id={`${pref}-material-livre`} rotulo={`Material (R$ total p/ ${qty} un)`} valor={valor.material_valor}
-            mudar={(v) => alterar({ material_valor: v })} />
-          <CampoNumero id={`${pref}-mo-livre`} rotulo="Mão de obra (R$/un)" valor={valor.mao_obra_unit}
-            mudar={(v) => alterar({ mao_obra_unit: v })} />
-          <div className="pers-resumo">
-            Custo de personalização: <b>{formatBRL(r.material_unit + r.mao_obra_unit)}/un</b>
+        <>
+          <div className="pers-linha">
+            <CampoNumero id={`${pref}-material-livre`} rotulo={`Material (R$ total p/ ${qty} un)`} valor={valor.material_valor}
+              sugerido={r.material_valor_sugerido} ajustado={r.material_ajustado}
+              mudar={(v) => alterar({ material_valor: v })} />
+            <CampoNumero id={`${pref}-mo-livre`} rotulo="Mão de obra (R$/un)" valor={valor.mao_obra_unit}
+              sugerido={r.mao_obra_unit_sugerido} ajustado={r.mao_obra_ajustada}
+              mudar={(v) => alterar({ mao_obra_unit: v })} />
           </div>
-        </div>
+          <div className="pers-resumo">
+            <span>
+              Material {formatBRL(r.material_valor)} ({formatBRL(r.material_unit)}/un) · Mão de obra {formatBRL(r.mao_obra_total)} (
+              {formatBRL(r.mao_obra_unit)}/un)
+              <span className="pers-detalhe"> — padrão de Parâmetros › Precificação</span>
+            </span>
+            {r.material_ajustado && <span className="pers-badge">material ajustado</span>}
+            {r.mao_obra_ajustada && <span className="pers-badge">mão de obra ajustada</span>}
+            {(valor.material_valor !== null || valor.mao_obra_unit !== null) && (
+              <button type="button" className="pers-voltar" onClick={() => alterar({ material_valor: null, mao_obra_unit: null })}>
+                Voltar ao padrão
+              </button>
+            )}
+          </div>
+        </>
       ) : r.erro ? (
         <div className="pers-erro" role="alert" id={`${pref}-erro`}>
           ⚠ {r.erro}

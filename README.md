@@ -241,7 +241,7 @@ Cada item do carrinho tem uma técnica de personalização (uma por item) e as m
 - **Mão de obra** = valor unitário da técnica × quantidade.
 - Exemplo: 50 canecas, Sublimação (R$ 40/m², fração 0,25 m², folga 10%, mão de obra R$ 2,50), arte 10 × 8 cm → 0,008 m² × 50 × 1,10 = 0,44 m² → **0,5 m²** (2 frações) = **R$ 20,00** de material e R$ 125,00 de mão de obra.
 - O operador vê o sugerido e pode **ajustar** o material (m² ou R$ total) e a mão de obra (R$/un); o item fica marcado como *material ajustado* / *mão de obra ajustada* (*Voltar ao sugerido* desfaz). A técnica, as medidas, o material e a marcação ficam gravados no item do orçamento e aparecem só na tela interna da folha (nunca na impressão nem para o cliente).
-- **Sem personalização**: material (R$ total do lote) e mão de obra (R$/un) digitados, aceitando zero.
+- **Sem técnica**: material e mão de obra vêm dos valores padrão de **Parâmetros › Precificação** (R$/un, como no cálculo anterior — o preço fica idêntico ao antigo). O operador pode alterar (material como R$ total do lote, mão de obra em R$/un), inclusive para zero; o item fica marcado como ajustado.
 - O orçamento não é gerado enquanto algum item tiver técnica sem cadastro completo (Material e Mão de obra) ou arte sem medidas — a mensagem indica o que corrigir.
 - Orçamentos antigos reabertos para edição viram itens "sem personalização" com os valores que tinham.
 
