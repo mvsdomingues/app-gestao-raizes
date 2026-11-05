@@ -205,7 +205,7 @@ export function ParametrosTabelas({ visitas }: { visitas: number }) {
   const [tec, setTec] = useState<TecnicaPersonalizacao | 'novo' | null>(null);
   const [tecForm, setTecForm] = useState({ nome: '', descricao: '' });
   const [mat, setMat] = useState<ParametroMaterial | 'novo' | null>(null);
-  const [matForm, setMatForm] = useState({ tecnica_id: '', preco_m2: '', fracao_minima: '' });
+  const [matForm, setMatForm] = useState({ tecnica_id: '', preco_m2: '', fracao_minima: '', folga_percentual: '' });
   const [mo, setMo] = useState<ParametroMaoObra | 'novo' | null>(null);
   const [moForm, setMoForm] = useState({ tecnica_id: '', valor_unitario: '' });
 
@@ -262,22 +262,27 @@ export function ParametrosTabelas({ visitas }: { visitas: number }) {
       <SecaoTabela
         id="tab-material"
         titulo="Material"
-        sub="Valor do material por técnica: preço por metro quadrado e fração mínima cobrada."
-        colunas={[{ titulo: 'Técnica de personalização' }, { titulo: 'Preço por m²', num: true, largura: 150 }, { titulo: 'Fração mínima', num: true, largura: 150 }]}
+        sub="Valor do material por técnica: preço por metro quadrado, fração mínima cobrada e folga (sobra para não faltar material)."
+        colunas={[
+          { titulo: 'Técnica de personalização' },
+          { titulo: 'Preço por m²', num: true, largura: 140 },
+          { titulo: 'Fração mínima', num: true, largura: 140 },
+          { titulo: 'Folga', num: true, largura: 100 },
+        ]}
         linhas={material}
         vazio="Nenhum valor de material cadastrado."
         podeIncluir={!semTecnicas}
         avisoIncluir={semTecnicas ? avisoSemTecnicas : undefined}
         incluir={() => {
-          setMatForm({ tecnica_id: '', preco_m2: '', fracao_minima: '' });
+          setMatForm({ tecnica_id: '', preco_m2: '', fracao_minima: '', folga_percentual: '' });
           setMat('novo');
         }}
         alterar={(m) => {
-          setMatForm({ tecnica_id: String(m.tecnica_id), preco_m2: paraCampo(m.preco_m2), fracao_minima: paraCampo(m.fracao_minima) });
+          setMatForm({ tecnica_id: String(m.tecnica_id), preco_m2: paraCampo(m.preco_m2), fracao_minima: paraCampo(m.fracao_minima), folga_percentual: paraCampo(Math.round(m.folga * 10000) / 100) });
           setMat(m);
         }}
         excluir={(m) => void excluirCom(`Excluir o valor de material da técnica "${m.tecnica}"?`, () => api.excluirMaterial(m.id))}
-        render={(m) => [m.tecnica, formatBRL(m.preco_m2), `${numero(m.fracao_minima, 2)} m²`]}
+        render={(m) => [m.tecnica, formatBRL(m.preco_m2), `${numero(m.fracao_minima, 2)} m²`, `${numero(m.folga * 100, 0)}%`]}
       />
 
       <SecaoTabela
@@ -363,6 +368,14 @@ export function ParametrosTabelas({ visitas }: { visitas: number }) {
             valor={matForm.fracao_minima}
             mudar={(v) => setMatForm((f) => ({ ...f, fracao_minima: v }))}
             dica="Menor área cobrada (ex.: 0,01 m² = 10 × 10 cm)"
+          />
+          <CampoNumero
+            id="material-folga"
+            rotulo="Folga"
+            sufixo="%"
+            valor={matForm.folga_percentual}
+            mudar={(v) => setMatForm((f) => ({ ...f, folga_percentual: v }))}
+            dica="Acrescida à área antes do arredondamento (0 a 100)"
           />
         </div>
       </ModalRegistro>

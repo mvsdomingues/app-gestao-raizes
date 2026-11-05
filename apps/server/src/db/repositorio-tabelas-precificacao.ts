@@ -3,6 +3,7 @@ import {
   LIMITE_NOME_TECNICA,
   numeroNaoNegativo,
   type ParametroMaoObra,
+  type TecnicaComValores,
   type ParametroMaterial,
   type TecnicaPersonalizacao,
 } from '@raizes/shared';
@@ -99,11 +100,19 @@ function exigirTecnicaLivre(db: Banco, tabela: string, nomeTabela: string, tecni
 export function listarMaterial(db: Banco): ParametroMaterial[] {
   return db
     .prepare(
-      `SELECT m.id, m.tecnica_id, t.nome AS tecnica, m.preco_m2, m.fracao_minima, m.atualizado
+      `SELECT m.id, m.tecnica_id, t.nome AS tecnica, m.preco_m2, m.fracao_minima, m.folga, m.atualizado
          FROM parametros_material m JOIN tecnicas_personalizacao t ON t.id = m.tecnica_id
         ORDER BY t.nome COLLATE NOCASE`,
     )
     .all() as ParametroMaterial[];
+}
+
+/** Folga em % (0 a 100) → fração. */
+function folgaDoCorpo(v: unknown): number {
+  if (v === undefined || v === null || v === '') return 0;
+  const n = numeroNaoNegativo(v);
+  if (n === null || n > 100) throw new ErroHttp(400, 'Folga: informe um percentual de 0 a 100');
+  return Math.round(n * 100) / 10000;
 }
 
 function lerMaterial(db: Banco, corpo: Record<string, unknown>) {
@@ -111,6 +120,7 @@ function lerMaterial(db: Banco, corpo: Record<string, unknown>) {
     tecnica_id: tecnicaDoCorpo(db, corpo.tecnica_id),
     preco_m2: valor(corpo.preco_m2, 'Preço por m²'),
     fracao_minima: valor(corpo.fracao_minima, 'Fração mínima', true),
+    folga: folgaDoCorpo(corpo.folga_percentual),
   };
 }
 
@@ -121,18 +131,19 @@ export function salvarMaterial(db: Banco, corpo: Record<string, unknown>, id?: n
   let novoId = id;
   if (id === undefined) {
     novoId = Number(
-      db.prepare('INSERT INTO parametros_material (tecnica_id, preco_m2, fracao_minima, criado, atualizado) VALUES (?, ?, ?, ?, ?)').run(
+      db.prepare('INSERT INTO parametros_material (tecnica_id, preco_m2, fracao_minima, folga, criado, atualizado) VALUES (?, ?, ?, ?, ?, ?)').run(
         m.tecnica_id,
         m.preco_m2,
         m.fracao_minima,
+        m.folga,
         agora,
         agora,
       ).lastInsertRowid,
     );
   } else {
     const r = db
-      .prepare('UPDATE parametros_material SET tecnica_id = ?, preco_m2 = ?, fracao_minima = ?, atualizado = ? WHERE id = ?')
-      .run(m.tecnica_id, m.preco_m2, m.fracao_minima, agora, id);
+      .prepare('UPDATE parametros_material SET tecnica_id = ?, preco_m2 = ?, fracao_minima = ?, folga = ?, atualizado = ? WHERE id = ?')
+      .run(m.tecnica_id, m.preco_m2, m.fracao_minima, m.folga, agora, id);
     if (!r.changes) throw new ErroHttp(404, 'Registro não encontrado');
   }
   return listarMaterial(db).find((x) => x.id === novoId)!;
@@ -180,4 +191,20 @@ export function salvarMaoObra(db: Banco, corpo: Record<string, unknown>, id?: nu
 
 export function excluirMaoObra(db: Banco, id: number): void {
   if (!db.prepare('DELETE FROM parametros_mao_obra WHERE id = ?').run(id).changes) throw new ErroHttp(404, 'Registro não encontrado');
+}
+
+/** Técnicas com os valores de material e mão de obra (cálculo do carrinho). */
+export function tecnicasComValores(db: Banco): TecnicaComValores[] {
+  const material = new Map(listarMaterial(db).map((m) => [m.tecnica_id, m]));
+  const mo = new Map(listarMaoObra(db).map((m) => [m.tecnica_id, m]));
+  return listarTecnicas(db).map((t) => {
+    const m = material.get(t.id);
+    const o = mo.get(t.id);
+    return {
+      id: t.id,
+      nome: t.nome,
+      material: m ? { preco_m2: m.preco_m2, fracao_minima: m.fracao_minima, folga: m.folga } : null,
+      mao_obra: o ? { valor_unitario: o.valor_unitario } : null,
+    };
+  });
 }

@@ -8,7 +8,12 @@ import {
   type ParametrosCalculo,
   type Produto,
   faturamentoVazio,
+  calcComPersonalizacao,
+  calcularPersonalizacao,
+  personalizacaoVazia,
   type DadosFaturamento,
+  type PersonalizacaoItem,
+  type TecnicaComValores,
 } from '@raizes/shared';
 
 /** Produto no carrinho (do catálogo: fornecedor integrado ou produto próprio, id negativo). */
@@ -35,6 +40,8 @@ export interface ItemCarrinho {
   calc: ParametrosCalculo;
   /** Observação deste produto, gravada no item do orçamento. */
   observacao?: string;
+  /** Técnica, medidas da arte e ajustes de material / mão de obra */
+  personalizacao: PersonalizacaoItem;
 }
 
 /**
@@ -81,6 +88,7 @@ type Acao =
   | { tipo: 'qtd'; id: string; qty: number; redesenhar: boolean }
   | { tipo: 'calc'; id: string; campo: CampoNumerico; valor: number }
   | { tipo: 'observacaoItem'; id: string; valor: string }
+  | { tipo: 'personalizacao'; id: string; valor: PersonalizacaoItem }
   | { tipo: 'redesenhar' }
   | { tipo: 'frete'; valor: string }
   | { tipo: 'observacao'; valor: string }
@@ -114,7 +122,10 @@ function redutor(estado: EstadoCarrinho, acao: Acao): EstadoCarrinho {
         ...estado,
         ...redesenho,
         // Os ajustes de custo e margem começam com os parâmetros cadastrados
-        itens: { ...itens, [acao.produto.id]: { produto: acao.produto, qty: 1, calc: { ...acao.calc } } },
+        itens: {
+          ...itens,
+          [acao.produto.id]: { produto: acao.produto, qty: 1, calc: { ...acao.calc }, personalizacao: personalizacaoVazia() },
+        },
       };
     case 'remover':
       return { ...estado, ...redesenho, itens: semItem(itens, acao.id) };
@@ -149,6 +160,11 @@ function redutor(estado: EstadoCarrinho, acao: Acao): EstadoCarrinho {
       const item = itens[acao.id];
       if (!item) return estado;
       return { ...estado, itens: { ...itens, [acao.id]: { ...item, observacao: acao.valor } } };
+    }
+    case 'personalizacao': {
+      const item = itens[acao.id];
+      if (!item) return estado;
+      return { ...estado, itens: { ...itens, [acao.id]: { ...item, personalizacao: acao.valor } } };
     }
     case 'redesenhar':
       return { ...estado, ...redesenho };
@@ -186,6 +202,7 @@ interface ContextoCarrinho {
   definirQtd: (id: number | string, qty: number, redesenhar: boolean) => void;
   definirCalc: (id: number | string, campo: CampoNumerico, valor: number) => void;
   definirObservacaoItem: (id: number | string, valor: string) => void;
+  definirPersonalizacao: (id: number | string, valor: PersonalizacaoItem) => void;
   redesenhar: () => void;
   definirFrete: (valor: string) => void;
   definirObservacao: (valor: string) => void;
@@ -227,6 +244,7 @@ export function ProvedorCarrinho({ children }: { children: ReactNode }) {
       definirQtd: (id, qty, redesenhar) => despachar({ tipo: 'qtd', id: String(id), qty, redesenhar }),
       definirCalc: (id, campo, v) => despachar({ tipo: 'calc', id: String(id), campo, valor: v }),
       definirObservacaoItem: (id, valor) => despachar({ tipo: 'observacaoItem', id: String(id), valor }),
+      definirPersonalizacao: (id, valor) => despachar({ tipo: 'personalizacao', id: String(id), valor }),
       redesenhar: () => despachar({ tipo: 'redesenhar' }),
       definirFrete: (valor) => despachar({ tipo: 'frete', valor }),
       definirObservacao: (valor) => despachar({ tipo: 'observacao', valor }),
@@ -258,10 +276,16 @@ export function useCarrinho(): ContextoCarrinho {
 }
 
 /** Subtotal dos preços calculados (sem frete), com os parâmetros cadastrados. */
-export function subtotalCarrinho(itens: Itens, parametros: ParametrosCalculo): number {
-  return Object.values(itens).reduce(
-    (s, { produto: p, qty, calc }) =>
-      s + calcPreco(p.preco as number, qty, calcComParametros(calc, parametros)).preco * qty,
-    0,
-  );
+export function subtotalCarrinho(itens: Itens, parametros: ParametrosCalculo, tecnicas: TecnicaComValores[] | null): number {
+  return Object.values(itens).reduce((s, item) => s + precoDoItem(item, parametros, tecnicas).res.preco * item.qty, 0);
+}
+
+/**
+ * Preço do item: parâmetros cadastrados (impostos e margem), ajustes do item e o
+ * custo de personalização calculado pelas tabelas de material e mão de obra.
+ */
+export function precoDoItem(item: ItemCarrinho, parametros: ParametrosCalculo, tecnicas: TecnicaComValores[] | null) {
+  const personalizacao = calcularPersonalizacao(item.personalizacao, item.qty, tecnicas);
+  const calc = calcComPersonalizacao(calcComParametros(item.calc, parametros), personalizacao);
+  return { personalizacao, calc, res: calcPreco(item.produto.preco as number, item.qty, calc) };
 }

@@ -1,4 +1,5 @@
 import type {
+  TecnicaComValores,
   ParametroMaoObra,
   ParametroMaterial,
   TecnicaPersonalizacao,
@@ -266,6 +267,8 @@ export const api = {
   /** Marca/desmarca um item do checklist (só na etapa Em Fechamento) */
   marcarChecklistPedido: (codigo: string, item: number, feito: boolean) =>
     enviar<Pedido>('PUT', `/api/pedidos/${encodeURIComponent(codigo)}/checklist/${item}`, { feito }),
+  /** Técnicas com material e mão de obra (cálculo da personalização no carrinho) */
+  tecnicasPersonalizacao: () => enviar<TecnicaComValores[]>('GET', '/api/parametros/personalizacao'),
   // Parâmetros › Tabelas gerais (técnicas, material e mão de obra)
   tecnicas: () => enviar<TecnicaPersonalizacao[]>('GET', '/api/parametros/tecnicas'),
   salvarTecnica: (dados: { nome: string; descricao: string }, id?: number) =>
@@ -274,7 +277,7 @@ export const api = {
       : enviar<TecnicaPersonalizacao>('POST', '/api/parametros/tecnicas', dados),
   excluirTecnica: (id: number) => enviar<{ ok: boolean }>('DELETE', `/api/parametros/tecnicas/${id}`),
   parametrosMaterial: () => enviar<ParametroMaterial[]>('GET', '/api/parametros/material'),
-  salvarMaterial: (dados: { tecnica_id: number; preco_m2: string; fracao_minima: string }, id?: number) =>
+  salvarMaterial: (dados: { tecnica_id: number; preco_m2: string; fracao_minima: string; folga_percentual: string }, id?: number) =>
     id
       ? enviar<ParametroMaterial>('PUT', `/api/parametros/material/${id}`, dados)
       : enviar<ParametroMaterial>('POST', '/api/parametros/material', dados),

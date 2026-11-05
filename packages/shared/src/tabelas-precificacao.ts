@@ -19,6 +19,8 @@ export interface ParametroMaterial {
   tecnica: string;
   preco_m2: number;
   fracao_minima: number;
+  /** Folga de material (fração: 0,10 = 10%), aplicada antes do arredondamento */
+  folga: number;
   atualizado: string;
 }
 

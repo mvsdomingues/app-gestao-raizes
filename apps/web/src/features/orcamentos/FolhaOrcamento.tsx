@@ -3,6 +3,7 @@ import {
   formatarDataBr,
   formatarDocumento,
   formatarTelefone,
+  descreverPersonalizacao,
   formatBRL,
   resumoDescricao,
   type DadosFaturamento,
@@ -18,7 +19,7 @@ const cinza = { fontSize: '.82rem', color: '#7A7167' } as const;
 /** Dados da folha: os do orçamento interno ou os da página do cliente (sem custos nem fornecedor). */
 export type DadosFolhaOrcamento = Pick<DadosFolha, 'id' | 'numero' | 'dataHora' | 'subtotal' | 'frete' | 'total' | 'observacao' | 'cliente' | 'entregaPrevista'> & {
   itens: (Pick<ItemOrcamento, 'nome' | 'codigo' | 'qty' | 'preco' | 'imagem_url'> &
-    Partial<Pick<ItemOrcamento, 'fornecedor' | 'origem'>> & {
+    Partial<Pick<ItemOrcamento, 'fornecedor' | 'origem' | 'personalizacao'>> & {
       observacao?: string | null;
       descricao?: string | null;
       medidas?: string | null;
@@ -151,6 +152,11 @@ export function FolhaOrcamento({
                     </div>
                     <div className="orc-prod-code">Cód: {item.codigo || '–'}</div>
                     {item.descricao && <div className="orc-prod-desc">{resumoDescricao(item.descricao)}</div>}
+                    {!publico && item.personalizacao && item.personalizacao.tecnica_id !== null && (
+                      <div className="orc-prod-pers so-tela" title="Só na tela interna (não sai na impressão nem para o cliente)">
+                        {descreverPersonalizacao(item.personalizacao)}
+                      </div>
+                    )}
                     {(item.medidas || item.material) && (
                       <div className="orc-prod-ficha">
                         {item.medidas && (

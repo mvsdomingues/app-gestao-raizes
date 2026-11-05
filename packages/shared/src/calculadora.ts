@@ -7,6 +7,7 @@ import { resumoDescricao } from './catalogo';
 // ══════════════════════════════════════════════════════════
 import { formatBRL } from './formatacao';
 import type { ItemOrcamento, OrigemProduto } from './tipos';
+import type { ResultadoPersonalizacao } from './personalizacao';
 
 export interface ParametrosCalculo {
   /** R$/un — tinta, papel, adesivo, embalagem */
@@ -167,8 +168,10 @@ export interface ProdutoCalculavel {
 export function montarItemOrcamento(
   p: ProdutoCalculavel,
   qty: number,
-  calc: ParametrosCalculo,
+  calcBase: ParametrosCalculo,
+  personalizacao?: ResultadoPersonalizacao,
 ): ItemOrcamento {
+  const calc = personalizacao ? calcComPersonalizacao(calcBase, personalizacao) : calcBase;
   const res = calcPreco(p.preco as number, qty, calc);
   return {
     nome: p.nome as string,
@@ -183,7 +186,16 @@ export function montarItemOrcamento(
     custo: p.preco as number,
     calc: { ...calc },
     ...resumoProdutoItem(p),
+    ...(personalizacao ? { personalizacao } : {}),
   };
+}
+
+/**
+ * Parâmetros do item com o custo de personalização vindo das tabelas
+ * (material e mão de obra por unidade).
+ */
+export function calcComPersonalizacao(calc: ParametrosCalculo, r: ResultadoPersonalizacao): ParametrosCalculo {
+  return { ...calc, mat_personalizacao: r.material_unit, mo_personalizacao: r.mao_obra_unit };
 }
 
 /** Resumo do produto guardado no item (descrição curta, medidas e material), sem campos vazios. */

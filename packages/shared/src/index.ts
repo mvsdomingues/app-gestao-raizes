@@ -10,3 +10,4 @@ export * from './catalogo';
 export * from './dashboards';
 export * from './faturamento';
 export * from './tabelas-precificacao';
+export * from './personalizacao';

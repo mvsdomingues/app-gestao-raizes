@@ -1,10 +1,11 @@
 import { useEffect, useRef, useState, type FocusEvent, type FormEvent } from 'react';
-import { calcComParametros, calcPreco, formatBRL, getFaixa, type CampoNumerico } from '@raizes/shared';
+import { formatBRL, getFaixa, type CampoNumerico } from '@raizes/shared';
 import { useApp } from '../../app/contexto';
 import { useSessao } from '../../app/sessao';
 import { classeFornecedor } from '../../lib/fornecedor';
 import { ImagemProduto } from '../../components/ImagemProduto';
-import { useCarrinho, type ItemCarrinho as Item } from '../../state/carrinho';
+import { precoDoItem, useCarrinho, type ItemCarrinho as Item } from '../../state/carrinho';
+import { BlocoPersonalizacao } from './BlocoPersonalizacao';
 
 /**
  * Item do carrinho com a calculadora de preço.
@@ -12,14 +13,14 @@ import { useCarrinho, type ItemCarrinho as Item } from '../../state/carrinho';
  * redesenhada (mesmo comportamento da versão anterior).
  */
 export function ItemCarrinho({ item }: { item: Item }) {
-  const { parametros } = useApp();
+  const { parametros, tecnicas } = useApp();
   const { pode } = useSessao();
-  const { remover, definirQtd, definirCalc, definirObservacaoItem } = useCarrinho();
+  const { remover, definirQtd, definirCalc, definirObservacaoItem, definirPersonalizacao } = useCarrinho();
   const { produto: p, qty, calc: c } = item;
   const id = p.id;
 
-  // Imposto de compra, imposto sobre venda e margem vêm sempre dos Parâmetros cadastrados
-  const res = calcPreco(p.preco as number, qty, calcComParametros(c, parametros));
+  // Impostos e margem dos Parâmetros; material e mão de obra pelas tabelas da técnica
+  const { res, personalizacao } = precoDoItem(item, parametros, tecnicas);
   const faixa = getFaixa(qty);
   // A faixa ao lado da quantidade é fixada quando o item é desenhado
   const [faixaInicial] = useState(faixa.nome);
@@ -99,6 +100,14 @@ export function ItemCarrinho({ item }: { item: Item }) {
             onChange={(e) => definirObservacaoItem(id, e.target.value)}
           />
         </div>
+        <BlocoPersonalizacao
+          idItem={id}
+          valor={item.personalizacao}
+          resultado={personalizacao}
+          tecnicas={tecnicas}
+          qty={qty}
+          mudar={(v) => definirPersonalizacao(id, v)}
+        />
         <div className="calc-section calc-section-result">
           <div className="calc-result-row">
             <div>
@@ -120,19 +129,8 @@ export function ItemCarrinho({ item }: { item: Item }) {
         </div>
 
         <details className="calc-details">
-          <summary>⚙ Ajustar custos e margem</summary>
+          <summary>⚙ Ajustar custos fixos</summary>
           <div className="calc-panel-inner">
-            <div className="calc-section-title">Custos de Personalização (R$/un)</div>
-            <div className="calc-row">
-              <span className="calc-label">Material (tinta, papel, adesivo…)</span>
-              <input className="calc-input" type="number" min="0" step="0.10"
-                defaultValue={c.mat_personalizacao.toFixed(2)} {...campo('mat_personalizacao')} />
-            </div>
-            <div className="calc-row">
-              <span className="calc-label">Mão de obra / serviço</span>
-              <input className="calc-input" type="number" min="0" step="0.50"
-                defaultValue={c.mo_personalizacao.toFixed(2)} {...campo('mo_personalizacao')} />
-            </div>
             <div className="calc-section-title">Custos Fixos por Pedido (R$ total, rateado pela qtd)</div>
             <div className="calc-row">
               <span className="calc-label">Designer / mockup</span>

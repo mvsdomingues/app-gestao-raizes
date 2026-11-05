@@ -221,6 +221,7 @@ export function garantirEsquema(db: Database.Database): void {
       tecnica_id    INTEGER NOT NULL UNIQUE REFERENCES tecnicas_personalizacao(id),
       preco_m2      REAL NOT NULL,
       fracao_minima REAL NOT NULL,
+      folga         REAL NOT NULL DEFAULT 0,
       criado        TEXT NOT NULL,
       atualizado    TEXT NOT NULL
     );
@@ -353,6 +354,10 @@ function migrarColunas(db: Database.Database): void {
   // Data prevista de entrega: no orçamento e copiada para o pedido (alterável na etapa Criado)
   if (!colunas(db, 'orcamentos').includes('entrega_prevista')) db.exec('ALTER TABLE orcamentos ADD COLUMN entrega_prevista TEXT');
   if (!colunas(db, 'pedidos').includes('entrega_prevista')) db.exec('ALTER TABLE pedidos ADD COLUMN entrega_prevista TEXT');
+  // Folga de material por técnica (fração)
+  if (!colunas(db, 'parametros_material').includes('folga')) {
+    db.exec('ALTER TABLE parametros_material ADD COLUMN folga REAL NOT NULL DEFAULT 0');
+  }
   // Dados de faturamento e entrega do cliente (JSON)
   for (const tabela of ['orcamentos', 'pedidos']) {
     if (!colunas(db, tabela).includes('faturamento_json')) db.exec(`ALTER TABLE ${tabela} ADD COLUMN faturamento_json TEXT`);

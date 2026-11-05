@@ -59,7 +59,22 @@ describe('tabelas gerais de precificação', () => {
     expect((await req('POST', '/api/parametros/material', { tecnica_id: laser, preco_m2: -1, fracao_minima: 1 })).status).toBe(400);
     expect((await req('POST', '/api/parametros/material', { tecnica_id: laser, preco_m2: 10, fracao_minima: 0 })).status).toBe(400);
     const alt = await req('PUT', `/api/parametros/material/${m.json.id}`, { tecnica_id: silk, preco_m2: 90, fracao_minima: 0.02 });
-    expect(alt.json).toMatchObject({ preco_m2: 90, fracao_minima: 0.02 });
+    expect(alt.json).toMatchObject({ preco_m2: 90, fracao_minima: 0.02, folga: 0 });
+  });
+
+  it('material: folga em percentual (0 a 100) gravada como fração', async () => {
+    const lista = (await req('GET', '/api/parametros/material')).json;
+    const id = lista[0].id;
+    const r = await req('PUT', `/api/parametros/material/${id}`, { tecnica_id: silk, preco_m2: 90, fracao_minima: 0.02, folga_percentual: '12,5' });
+    expect(r.json.folga).toBeCloseTo(0.125);
+    expect((await req('PUT', `/api/parametros/material/${id}`, { tecnica_id: silk, preco_m2: 90, fracao_minima: 0.02, folga_percentual: 101 })).status).toBe(400);
+    expect((await req('PUT', `/api/parametros/material/${id}`, { tecnica_id: silk, preco_m2: 90, fracao_minima: 0.02, folga_percentual: -1 })).status).toBe(400);
+    // Valores por técnica para o cálculo do carrinho
+    const pers = (await req('GET', '/api/parametros/personalizacao')).json;
+    const s = pers.find((t: { id: number }) => t.id === silk);
+    expect(s.material).toMatchObject({ preco_m2: 90, fracao_minima: 0.02 });
+    expect(s.material.folga).toBeCloseTo(0.125);
+    expect(s.mao_obra).toBeNull();
   });
 
   it('mão de obra: inclui, altera e exclui', async () => {

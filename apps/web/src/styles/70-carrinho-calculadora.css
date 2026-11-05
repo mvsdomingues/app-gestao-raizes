@@ -239,3 +239,53 @@
   cursor: pointer;
 }
 
+
+/* ── Personalização do item (técnica, arte, material e mão de obra pelas tabelas) ── */
+.pers-bloco {
+  margin: 8px 0 6px;
+  padding: 10px 12px;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: #fbf8f4;
+  font-size: .76rem;
+}
+.pers-topo, .pers-linha { display: flex; flex-wrap: wrap; gap: 8px 12px; align-items: flex-end; }
+.pers-linha { margin-top: 8px; }
+.pers-campo { display: flex; flex-direction: column; gap: 3px; color: var(--muted); font-size: .68rem; letter-spacing: .02em; }
+.pers-campo .calc-input { width: 120px; }
+.pers-tecnica { flex: 1 1 220px; min-width: 0; }
+.pers-tecnica select {
+  background: var(--creme);
+  border: 1px solid var(--border);
+  border-radius: 5px;
+  color: var(--text);
+  font-family: var(--font-body);
+  font-size: .82rem;
+  padding: 5px 8px;
+  width: 100%;
+}
+.pers-campo.ajustado .calc-input { border-color: #eb6834; background: #fff4ec; }
+.pers-sugestao { margin-top: 8px; color: var(--text); line-height: 1.45; }
+.pers-detalhe { color: var(--muted); }
+.pers-resumo { margin-top: 8px; display: flex; flex-wrap: wrap; gap: 6px 10px; align-items: center; color: var(--text); }
+.pers-linha .pers-resumo { margin-top: 0; align-self: center; }
+.pers-badge {
+  background: #fde6d6;
+  color: #9a3f12;
+  border-radius: 999px;
+  padding: 1px 8px;
+  font-size: .66rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: .04em;
+}
+.pers-voltar {
+  background: none;
+  border: none;
+  color: var(--uva);
+  cursor: pointer;
+  font: inherit;
+  text-decoration: underline;
+  padding: 0;
+}
+.pers-erro { margin-top: 8px; color: #9a3f12; background: #fff4ec; border-radius: 6px; padding: 6px 8px; }

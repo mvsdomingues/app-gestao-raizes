@@ -5,14 +5,14 @@ import { ModalFaturamento } from '../clientes/ModalFaturamento';
 import { useApp } from '../../app/contexto';
 import { useSessao } from '../../app/sessao';
 import { api, ErroApi } from '../../lib/api';
-import { subtotalCarrinho, useCarrinho } from '../../state/carrinho';
+import { precoDoItem, subtotalCarrinho, useCarrinho } from '../../state/carrinho';
 import { ItemCarrinho } from './ItemCarrinho';
 import { avisar, confirmar, erro } from '../../lib/dialogo';
 import { useConfigClientes } from '../clientes/config';
 import { SeletorCliente } from '../clientes/SeletorCliente';
 
 export function Carrinho() {
-  const { tela, visitas, irPara, mostrarOrcamento, parametros } = useApp();
+  const { tela, visitas, irPara, mostrarOrcamento, parametros, tecnicas, carregarParametros } = useApp();
   const { pode, usuario } = useSessao();
   const { estado, limpar, redesenhar, definirFrete, definirObservacao, definirCliente, definirEntregaPrevista, definirFaturamento } =
     useCarrinho();
@@ -24,12 +24,16 @@ export function Carrinho() {
 
   // Abrir a aba redesenha a lista (reinicia campos e fecha os painéis)
   useEffect(() => {
-    if (visitas.carrinho > 0) redesenhar();
+    if (visitas.carrinho > 0) {
+      redesenhar();
+      // Tabelas de material e mão de obra atualizadas a cada abertura do carrinho
+      void carregarParametros();
+    }
   }, [visitas.carrinho]);
 
   const itens = Object.values(estado.itens);
   const count = itens.length;
-  const subtotal = subtotalCarrinho(estado.itens, parametros);
+  const subtotal = subtotalCarrinho(estado.itens, parametros, tecnicas);
   const valorFrete = Math.max(0, Number.parseFloat(frete) || 0);
   const total = subtotal + valorFrete;
   const unidades = itens.reduce((s, i) => s + i.qty, 0);
@@ -48,9 +52,22 @@ export function Carrinho() {
       void avisar('Adicione produtos ao carrinho antes de gerar o orçamento.', { tipo: 'aviso', titulo: 'Carrinho vazio' });
       return;
     }
+    // Custo de personalização pelas tabelas: cadastro incompleto ou arte sem medidas impedem gerar
+    const pendencias = itens
+      .map((i) => ({ nome: i.produto.nome ?? i.produto.codigo ?? 'Produto', erro: precoDoItem(i, parametros, tecnicas).personalizacao.erro }))
+      .filter((x) => x.erro);
+    if (pendencias.length) {
+      void avisar(
+        `Corrija a personalização antes de gerar o orçamento:\n\n${pendencias.map((x) => `• ${x.nome}: ${x.erro}`).join('\n')}`,
+        { tipo: 'aviso', titulo: 'Personalização incompleta' },
+      );
+      return;
+    }
     // Imposto de compra, imposto sobre venda e margem: sempre os Parâmetros cadastrados
-    const snapshot = itens.map(({ produto, qty, calc, observacao: obsItem }) => {
-      const item = montarItemOrcamento(produto, qty, calcComParametros(calc, parametros));
+    const snapshot = itens.map((itemCarrinho) => {
+      const { produto, qty, observacao: obsItem } = itemCarrinho;
+      const { personalizacao } = precoDoItem(itemCarrinho, parametros, tecnicas);
+      const item = montarItemOrcamento(produto, qty, calcComParametros(itemCarrinho.calc, parametros), personalizacao);
       // Observação de cada produto vai junto com o item do orçamento
       const obs = obsItem?.trim();
       return obs ? { ...item, observacao: obs } : item;

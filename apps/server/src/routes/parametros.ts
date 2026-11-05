@@ -21,6 +21,7 @@ import {
   listarTecnicas,
   salvarMaoObra,
   salvarMaterial,
+  tecnicasComValores,
 } from '../db/repositorio-tabelas-precificacao';
 
 const CHAVES = Object.keys(CALC_DEFAULTS) as (keyof ParametrosCalculo)[];
@@ -55,6 +56,10 @@ export function rotasParametros(db: Banco): Router {
     if (!Number.isInteger(n) || n <= 0) throw new ErroHttp(404, 'Registro não encontrado');
     return n;
   };
+  // Técnicas com material e mão de obra (cálculo do custo de personalização no carrinho)
+  r.get('/api/parametros/personalizacao', (_req, res) => {
+    res.json(tecnicasComValores(db));
+  });
   r.get('/api/parametros/tecnicas', (_req, res) => {
     res.json(listarTecnicas(db));
   });

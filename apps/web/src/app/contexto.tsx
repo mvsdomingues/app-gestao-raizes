@@ -21,6 +21,7 @@ import {
   type StatusOrcamento,
   type UsuarioResumo,
   type ClienteVinculado,
+  type TecnicaComValores,
 } from '@raizes/shared';
 import { api } from '../lib/api';
 import { useSessao } from './sessao';
@@ -77,6 +78,8 @@ interface ContextoApp {
   parametros: ParametrosCalculo;
   parametrosAtualizado: string | null;
   carregarParametros: () => Promise<void>;
+  /** Técnicas com material e mão de obra (Parâmetros › Tabelas gerais); null = carregando */
+  tecnicas: TecnicaComValores[] | null;
   definirParametros: (valores: ParametrosCalculo, atualizado: string | null) => void;
 
   /** Incrementado quando produtos próprios mudam (o catálogo recarrega). */
@@ -132,6 +135,7 @@ export function ProvedorApp({ children }: { children: ReactNode }) {
   const [imagemAmpliada, setImagemAmpliada] = useState<string | null>(null);
   const [parametros, setParametros] = useState<ParametrosCalculo>({ ...CALC_DEFAULTS });
   const [parametrosAtualizado, setParametrosAtualizado] = useState<string | null>(null);
+  const [tecnicas, setTecnicas] = useState<TecnicaComValores[] | null>(null);
   const [versaoCatalogo, setVersaoCatalogo] = useState(0);
   const [folha, setFolha] = useState<FolhaOrcamento | null>(null);
   const [abaOrcamentos, setAbaOrcamentos] = useState<AbaOrcamentos>('lista');
@@ -181,6 +185,11 @@ export function ProvedorApp({ children }: { children: ReactNode }) {
     } catch {
       /* mantém os valores atuais */
     }
+    try {
+      setTecnicas(await api.tecnicasPersonalizacao());
+    } catch {
+      /* mantém as atuais */
+    }
   }, []);
 
   useEffect(() => {
@@ -207,6 +216,7 @@ export function ProvedorApp({ children }: { children: ReactNode }) {
       parametros,
       parametrosAtualizado,
       carregarParametros,
+      tecnicas,
       definirParametros: (valores, atualizado) => {
         setParametros(valores);
         setParametrosAtualizado(atualizado);
@@ -258,7 +268,7 @@ export function ProvedorApp({ children }: { children: ReactNode }) {
         irPara('mockup');
       },
     }),
-    [tela, visitas, irPara, fornecedores, carregarFornecedores, status, carregarStatus, imagemAmpliada, parametros, parametrosAtualizado, carregarParametros, versaoCatalogo, folha, abaOrcamentos, pedidoAberto, abaPedidos, usuarioAcessos, versaoOrcamentos],
+    [tela, visitas, irPara, fornecedores, carregarFornecedores, status, carregarStatus, imagemAmpliada, parametros, parametrosAtualizado, carregarParametros, tecnicas, versaoCatalogo, folha, abaOrcamentos, pedidoAberto, abaPedidos, usuarioAcessos, versaoOrcamentos],
   );
 
   return <Ctx.Provider value={valor}>{children}</Ctx.Provider>;

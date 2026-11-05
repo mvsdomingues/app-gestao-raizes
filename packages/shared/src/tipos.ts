@@ -59,6 +59,8 @@ export interface ItemOrcamento {
   calc?: import('./calculadora').ParametrosCalculo;
   /** Observação específica deste produto (cor, gravação, posição do logo…). */
   observacao?: string;
+  /** Custo de personalização calculado pelas tabelas (uso interno; nunca vai para o cliente) */
+  personalizacao?: import('./personalizacao').ResultadoPersonalizacao;
   /** Resumo da descrição (até ~200 caracteres), mostrado na folha e na página do cliente. */
   descricao?: string;
   medidas?: string;

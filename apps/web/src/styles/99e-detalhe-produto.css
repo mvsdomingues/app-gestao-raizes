@@ -164,3 +164,4 @@ button.tag-produto:hover { border-color: var(--uva); color: var(--uva); }
 .orc-prod-desc { margin-top: 3px; font-size: .72rem; color: #5b544c; line-height: 1.4; max-width: 520px; }
 .orc-prod-ficha { margin-top: 2px; font-size: .7rem; color: var(--muted); display: flex; flex-wrap: wrap; gap: 2px 12px; }
 .orc-prod-ficha b { font-weight: 600; color: #5b544c; }
+.orc-prod-pers { margin-top: 3px; font-size: .68rem; color: #9a3f12; }
