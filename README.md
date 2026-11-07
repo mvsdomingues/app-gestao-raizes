@@ -239,19 +239,19 @@ Em **Parâmetros › Tabelas gerais** (incluir, alterar e excluir; duplo clique 
 
 ### Custo de personalização no carrinho
 
-Cada item do carrinho tem uma técnica de personalização (uma por item) e as medidas da arte em centímetros. As tabelas acima são lidas a cada abertura do carrinho.
+Cada item do carrinho pode ter **até 5 personalizações** (aplicações), cada uma com técnica, local opcional (tampa, frente, verso…) e as medidas da arte em centímetros — ex.: Corte Laser na tampa + Sublimação no corpo. Cada aplicação é calculada como abaixo e o item **soma** o material e a mão de obra de todas. A mesma técnica pode se repetir no item (frente e verso): o material é somado e a mão de obra é cobrada em cada aplicação. As tabelas acima são lidas a cada abertura do carrinho.
 
 - **Material**
   - área da arte (m²) = altura × largura ÷ 10.000
   - área necessária = quantidade × área da arte × (1 + folga da técnica) — a folga entra **antes** do arredondamento
-  - material sugerido = área necessária arredondada para cima em frações mínimas — **somando todos os itens da mesma técnica no orçamento** (arredonda uma vez só; cada item fica com a parte proporcional à sua área). Ex.: 5 cores × 20 un da mesma caneca em DTF UV (arte 8 × 8 cm) = 0,704 m² → 1 m² = R$ 60 para o orçamento, R$ 12 por cor (e não 1 m² por cor)
+  - material sugerido = área necessária arredondada para cima em frações mínimas — **somando todas as aplicações da mesma técnica no orçamento** (do mesmo item ou de itens diferentes) (arredonda uma vez só; cada item fica com a parte proporcional à sua área). Ex.: 5 cores × 20 un da mesma caneca em DTF UV (arte 8 × 8 cm) = 0,704 m² → 1 m² = R$ 60 para o orçamento, R$ 12 por cor (e não 1 m² por cor)
   - valor = material × preço por m²
 - **Mão de obra** = valor unitário da técnica × quantidade.
 - Exemplo: 50 canecas, Sublimação (R$ 40/m², fração 0,25 m², folga 10%, mão de obra R$ 2,50), arte 10 × 8 cm → 0,008 m² × 50 × 1,10 = 0,44 m² → **0,5 m²** (2 frações) = **R$ 20,00** de material e R$ 125,00 de mão de obra.
-- O operador vê o sugerido e pode **ajustar** o material (m² ou R$ total) e a mão de obra (R$/un); o item fica marcado como *material ajustado* / *mão de obra ajustada* (*Voltar ao sugerido* desfaz). A técnica e as medidas da arte aparecem para o cliente (link e impressão), na linha *Personalização* do produto; o material usado, os valores e a marcação de ajuste aparecem só na tela interna da folha.
-- **Sem técnica**: material e mão de obra vêm dos valores padrão de **Parâmetros › Precificação** (R$/un, como no cálculo anterior — o preço fica idêntico ao antigo). O operador pode alterar (material como R$ total do lote, mão de obra em R$/un), inclusive para zero; o item fica marcado como ajustado.
-- O orçamento não é gerado enquanto algum item tiver técnica sem cadastro completo (Material e Mão de obra) ou arte sem medidas — a mensagem indica o que corrigir.
-- Orçamentos antigos reabertos para edição viram itens "sem personalização" com os valores que tinham.
+- O operador vê o sugerido e pode **ajustar** o material (m² ou R$ total) e a mão de obra (R$/un); o item fica marcado como *material ajustado* / *mão de obra ajustada* (*Voltar ao sugerido* desfaz). A técnica, o local e as medidas de cada aplicação aparecem para o cliente (link e impressão), numa linha *Personalização* por aplicação; o material usado, os valores e a marcação de ajuste aparecem só na tela interna da folha.
+- **Sem técnica** (item sem nenhuma aplicação): material e mão de obra vêm dos valores padrão de **Parâmetros › Precificação** (R$/un, como no cálculo anterior — o preço fica idêntico ao antigo). O operador pode alterar (material como R$ total do lote, mão de obra em R$/un), inclusive para zero; o item fica marcado como ajustado.
+- O orçamento não é gerado enquanto alguma aplicação estiver sem técnica escolhida, com técnica sem cadastro completo (Material e Mão de obra) ou com arte sem medidas — a mensagem indica o item e a aplicação.
+- Orçamentos anteriores reabertos para edição: item com uma técnica volta com uma aplicação; item sem técnica (ou de antes das tabelas) volta "sem técnica" com os valores que tinha.
 
 ### Impressão do orçamento
 

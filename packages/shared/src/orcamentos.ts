@@ -98,8 +98,8 @@ export interface ItemPublico {
   descricao: string | null;
   medidas: string | null;
   material: string | null;
-  /** Técnica e medidas da arte (sem valores nem quantidade de material); null = sem técnica */
-  personalizacao: PersonalizacaoCliente | null;
+  /** Técnica, local e medidas de cada aplicação (sem valores nem material); vazio = sem técnica */
+  personalizacoes: PersonalizacaoCliente[];
   /** Endereço da foto (rota pública amarrada ao link) ou null */
   imagem: string | null;
 }

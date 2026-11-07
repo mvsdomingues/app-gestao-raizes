@@ -7,7 +7,7 @@ import { resumoDescricao } from './catalogo';
 // ══════════════════════════════════════════════════════════
 import { formatBRL } from './formatacao';
 import type { ItemOrcamento, OrigemProduto } from './tipos';
-import type { ResultadoPersonalizacao } from './personalizacao';
+import type { PersonalizacaoCalculada, ResultadoPersonalizacao } from './personalizacao';
 
 export interface ParametrosCalculo {
   /** R$/un — tinta, papel, adesivo, embalagem */
@@ -169,7 +169,7 @@ export function montarItemOrcamento(
   p: ProdutoCalculavel,
   qty: number,
   calcBase: ParametrosCalculo,
-  personalizacao?: ResultadoPersonalizacao,
+  personalizacao?: ResultadoPersonalizacao | PersonalizacaoCalculada,
 ): ItemOrcamento {
   const calc = personalizacao ? calcComPersonalizacao(calcBase, personalizacao) : calcBase;
   const res = calcPreco(p.preco as number, qty, calc);
@@ -186,7 +186,8 @@ export function montarItemOrcamento(
     custo: p.preco as number,
     calc: { ...calc },
     ...resumoProdutoItem(p),
-    ...(personalizacao ? { personalizacao } : {}),
+    // Várias aplicações (formato atual) ou uma técnica só (formato anterior)
+    ...(personalizacao ? ('aplicacoes' in personalizacao ? { personalizacoes: personalizacao } : { personalizacao }) : {}),
   };
 }
 
@@ -194,7 +195,10 @@ export function montarItemOrcamento(
  * Parâmetros do item com o custo de personalização vindo das tabelas
  * (material e mão de obra por unidade).
  */
-export function calcComPersonalizacao(calc: ParametrosCalculo, r: ResultadoPersonalizacao): ParametrosCalculo {
+export function calcComPersonalizacao(
+  calc: ParametrosCalculo,
+  r: Pick<ResultadoPersonalizacao, 'material_unit' | 'mao_obra_unit'>,
+): ParametrosCalculo {
   return { ...calc, mat_personalizacao: r.material_unit, mo_personalizacao: r.mao_obra_unit };
 }
 

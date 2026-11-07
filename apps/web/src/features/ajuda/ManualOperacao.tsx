@@ -61,8 +61,8 @@ export function ManualOperacao() {
             'Abra o endereço do sistema no navegador (computador ou celular).',
             'Informe o login (só letras e números, sem diferenciar maiúsculas) e a senha.',
             <>
-              No primeiro acesso de um usuário criado pelo administrador, troque a senha em <Bt>ícone do usuário</Bt> (canto superior
-              direito) › <Bt>Meus dados</Bt>. Enquanto a senha inicial não for trocada, o sistema mostra um aviso.
+              No primeiro acesso de um usuário criado pelo administrador, troque a senha em <Bt>ícone do usuário</Bt> (canto
+              superior direito) › <Bt>Meus dados</Bt>. Enquanto a senha inicial não for trocada, o sistema mostra um aviso.
             </>,
           ]}
         />
@@ -77,13 +77,14 @@ export function ManualOperacao() {
         />
         <h4>O menu</h4>
         <p>
-          O menu fica na barra lateral, em grupos: <b>Dashboards</b>, <b>Vendas</b>, <b>Cadastros</b>, <b>Sistema</b> e <b>Ajuda</b>.
-          Cada usuário vê só as telas liberadas para ele. O botão <Bt>Recolher menu</Bt>, no rodapé da barra, deixa só os ícones (a
-          escolha fica guardada no navegador). O número ao lado de <b>Carrinho</b> mostra quantos produtos estão nele.
+          O menu fica na barra lateral, em grupos: <b>Dashboards</b>, <b>Vendas</b>, <b>Cadastros</b>, <b>Sistema</b> e{' '}
+          <b>Ajuda</b>. Cada usuário vê só as telas liberadas para ele. O botão <Bt>Recolher menu</Bt>, no rodapé da barra, deixa
+          só os ícones (a escolha fica guardada no navegador). O número ao lado de <b>Carrinho</b> mostra quantos produtos estão
+          nele.
         </p>
         <Dica>
-          Todas as mensagens e confirmações do sistema aparecem em janelas próprias. Leia antes de confirmar: ações como cancelar ou
-          gerar pedido ficam registradas no histórico com o seu nome.
+          Todas as mensagens e confirmações do sistema aparecem em janelas próprias. Leia antes de confirmar: ações como cancelar
+          ou gerar pedido ficam registradas no histórico com o seu nome.
         </Dica>
       </Secao>
 
@@ -92,11 +93,17 @@ export function ManualOperacao() {
         <div className="ajuda-fluxo vertical">
           {[
             ['Catálogo', 'Encontre os produtos e coloque no carrinho.'],
-            ['Carrinho', 'Quantidades, técnica e tamanho da arte, cliente, faturamento, entrega e frete. O preço é calculado na hora.'],
+            [
+              'Carrinho',
+              'Quantidades, técnica e tamanho da arte, cliente, faturamento, entrega e frete. O preço é calculado na hora.',
+            ],
             ['Gerar Orçamento', 'Grava o orçamento (ORC-0001…) na situação Aberto.'],
             ['Mockups (opcional)', 'Com o orçamento Aberto, monte a imagem de cada produto com a logo do cliente.'],
             ['Enviar para o cliente', 'Gera o link secreto; envie por WhatsApp ou copie. O orçamento fica Enviado.'],
-            ['Cliente aceita', 'Pelo link, o cliente completa os dados de faturamento e aceita: o pedido (PED-000001…) nasce na hora.'],
+            [
+              'Cliente aceita',
+              'Pelo link, o cliente completa os dados de faturamento e aceita: o pedido (PED-000001…) nasce na hora.',
+            ],
             ['Pedido', 'Criado → Em Fechamento → Em Produção → Produzido → Faturado → Enviado → Encerrado.'],
           ].map(([t, d], i) => (
             <div key={t} className="ajuda-fluxo-passo">
@@ -117,27 +124,30 @@ export function ManualOperacao() {
       {/* ─────────────────────────────── 3 */}
       <Secao id="man-catalogo" titulo="Catálogo" numero={3}>
         <p>
-          Reúne os produtos de todos os fornecedores integrados (Asia Import, So Marcas, Spot Gifts, XBZ) e os produtos próprios da
-          empresa. <Ir tela="catalogo">Abrir o Catálogo</Ir>
+          Reúne os produtos de todos os fornecedores integrados (Asia Import, So Marcas, Spot Gifts, XBZ) e os produtos próprios
+          da empresa. <Ir tela="catalogo">Abrir o Catálogo</Ir>
         </p>
         <h4>Buscar</h4>
         <ul>
           <li>
-            Digite nome, código ou parte da descrição. <b>Cada palavra</b> digitada precisa aparecer no produto (ex.: “caneca azul 400”).
+            Digite nome, código ou parte da descrição. <b>Cada palavra</b> digitada precisa aparecer no produto (ex.: “caneca azul
+            400”).
           </li>
           <li>
-            Filtros: <b>fornecedor</b>, <b>categoria</b>, <b>cor</b> (as grafias de cada fornecedor são unificadas: “AZUL” e “Azul” são a
-            mesma cor) e <b>estoque</b>.
+            Filtros: <b>fornecedor</b>, <b>categoria</b>, <b>cor</b> (as grafias de cada fornecedor são unificadas: “AZUL” e
+            “Azul” são a mesma cor) e <b>estoque</b>.
           </li>
           <li>
-            <b>Faixa de preço</b>: faixas prontas (até R$ 5 … acima de R$ 200) ou mínimo e máximo digitados. Produtos sem preço ficam fora
-            das faixas.
+            <b>Faixa de preço</b>: faixas prontas (até R$ 5 … acima de R$ 200) ou mínimo e máximo digitados. Produtos sem preço
+            ficam fora das faixas.
           </li>
           <li>
-            <b>Ordenação</b>: por fornecedor (padrão, agrupado), menor preço, maior preço ou nome. Ordenando por preço ou nome, a lista
-            deixa de ser agrupada por fornecedor; produtos sem preço vão para o fim.
+            <b>Ordenação</b>: por fornecedor (padrão, agrupado), menor preço, maior preço ou nome. Ordenando por preço ou nome, a
+            lista deixa de ser agrupada por fornecedor; produtos sem preço vão para o fim.
           </li>
-          <li>Alterne entre visualização em <b>grade</b> ou <b>lista</b>.</li>
+          <li>
+            Alterne entre visualização em <b>grade</b> ou <b>lista</b>.
+          </li>
         </ul>
         <h4>Detalhes do produto</h4>
         <p>
@@ -147,19 +157,20 @@ export function ManualOperacao() {
         </p>
         <h4>Colocar no carrinho</h4>
         <p>
-          Clique no botão de adicionar do cartão. O produto entra com 1 unidade; quantidade e personalização são definidas no carrinho.
+          Clique no botão de adicionar do cartão. O produto entra com 1 unidade; quantidade e personalização são definidas no
+          carrinho.
         </p>
         <Dica tipo="regra">
-          Para o cliente vão apenas o resumo da descrição (até ~200 caracteres), as medidas e o material. Fornecedor, marca, custo e tipo
-          de gravação nunca aparecem na folha nem no link.
+          Para o cliente vão apenas o resumo da descrição (até ~200 caracteres), as medidas e o material. Fornecedor, marca, custo
+          e tipo de gravação nunca aparecem na folha nem no link.
         </Dica>
       </Secao>
 
       {/* ─────────────────────────────── 4 */}
       <Secao id="man-carrinho" titulo="Carrinho" numero={4}>
         <p>
-          É onde o orçamento é montado. Cada item mostra a foto, o nome, o código, o fornecedor e o custo do fornecedor, além do preço de
-          venda calculado. <Ir tela="carrinho">Abrir o Carrinho</Ir>
+          É onde o orçamento é montado. Cada item mostra a foto, o nome, o código, o fornecedor e o custo do fornecedor, além do
+          preço de venda calculado. <Ir tela="carrinho">Abrir o Carrinho</Ir>
         </p>
         <h4>Em cada item</h4>
         <Tabela
@@ -169,7 +180,10 @@ export function ManualOperacao() {
             ['Observação do produto', 'Cor, posição do logo, gravação… Vai para a folha e para o cliente.'],
             ['Técnica de personalização', 'Escolha a técnica; veja a seção “Personalização no carrinho”.'],
             ['Preço de venda calculado', 'Preço por unidade, com a faixa, o custo total/un e a margem real.'],
-            [<Bt key="b">⚙ Ajustar custos fixos</Bt>, 'Designer/mockup e logística deste item (R$ por pedido, divididos pela quantidade).'],
+            [
+              <Bt key="b">⚙ Ajustar custos fixos</Bt>,
+              'Designer/mockup e logística deste item (R$ por pedido, divididos pela quantidade).',
+            ],
             [<Bt key="b">✕</Bt>, 'Remove o item.'],
           ]}
         />
@@ -181,51 +195,86 @@ export function ManualOperacao() {
           </li>
           <li>Subtotal (soma dos itens), frete e total.</li>
           <li>
-            <Bt>Gerar Orçamento</Bt> (ou <Bt>Salvar ORC-…</Bt> quando você está alterando um orçamento) e <Bt>Limpar carrinho</Bt>.
+            <Bt>Gerar Orçamento</Bt> (ou <Bt>Salvar ORC-…</Bt> quando você está alterando um orçamento) e <Bt>Limpar carrinho</Bt>
+            .
           </li>
         </ul>
         <Dica tipo="regra">
-          Imposto de compra, imposto sobre venda e margem não aparecem no carrinho: valem sempre os cadastrados em Parâmetros. As contas
-          completas estão em <Menu>Ajuda › Memórias de cálculo</Menu>.
+          Imposto de compra, imposto sobre venda e margem não aparecem no carrinho: valem sempre os cadastrados em Parâmetros. As
+          contas completas estão em <Menu>Ajuda › Memórias de cálculo</Menu>.
         </Dica>
       </Secao>
 
       {/* ─────────────────────────────── 5 */}
-      <Secao id="man-personalizacao" titulo="Personalização no carrinho (técnica, arte, material e mão de obra)" numero={5}>
+      <Secao id="man-personalizacao" titulo="Personalização no carrinho (técnicas, arte, material e mão de obra)" numero={5}>
+        <p>
+          Cada item pode ter <b>até 5 personalizações</b> (aplicações) — por exemplo, Corte Laser na tampa e Sublimação no corpo
+          da caneca. Cada aplicação é calculada pelas tabelas da sua técnica e o item soma o material e a mão de obra de todas.
+        </p>
         <Passos
           itens={[
             <>
-              Em <Bt>Técnica de personalização</Bt>, escolha a técnica do item (uma por item). Técnicas marcadas como “cadastro incompleto”
-              ainda não têm valor na tabela Material ou Mão de obra.
+              No bloco <b>Personalização</b> do item, clique em <Bt>+ Adicionar personalização</Bt>.
+            </>,
+            <>
+              Em <Bt>Técnica</Bt>, escolha a técnica. Técnicas marcadas como “cadastro incompleto” ainda não têm valor na tabela
+              Material ou Mão de obra.
+            </>,
+            <>
+              Em <Bt>Local (opcional)</Bt>, diga onde vai a arte (tampa, frente, verso…). O local aparece para o cliente.
             </>,
             <>
               Informe <Bt>Altura da arte (cm)</Bt> e <Bt>Largura da arte (cm)</Bt> — o tamanho da área personalizada em cada peça.
             </>,
             <>
-              Confira o <b>material sugerido</b> (m², frações, folga e valor) e a <b>mão de obra</b>. Quando outros itens usam a mesma
-              técnica, aparece o quadro roxo com o material somado do orçamento e a parte deste item.
+              Confira o <b>material sugerido</b> (m², frações, folga e valor) e a <b>mão de obra</b>. Quando outras aplicações do
+              orçamento usam a mesma técnica, aparece o quadro roxo com o material somado e a parte desta aplicação.
             </>,
             <>
-              Se precisar, altere <Bt>Material (m²)</Bt>, <Bt>Material (R$ total)</Bt> ou <Bt>Mão de obra (R$/un)</Bt>. O item ganha o
-              selo <b>MATERIAL AJUSTADO</b> / <b>MÃO DE OBRA AJUSTADA</b>; <Bt>Voltar ao sugerido</Bt> desfaz.
+              Se precisar, altere <Bt>Material (m²)</Bt>, <Bt>Material (R$ total)</Bt> ou <Bt>Mão de obra (R$/un)</Bt> da
+              aplicação. Ela ganha o selo <b>MATERIAL AJUSTADO</b> / <b>MÃO DE OBRA AJUSTADA</b>; <Bt>Voltar ao sugerido</Bt>{' '}
+              desfaz.
             </>,
+            <>
+              Para outra técnica no mesmo item, clique de novo em <Bt>+ Adicionar personalização</Bt>. Com duas ou mais, aparece o
+              total do item. O <Bt>✕</Bt> de cada cartão remove a aplicação.
+            </>,
+          ]}
+        />
+        <Tabela
+          colunas={['Regra', 'Como funciona']}
+          linhas={[
+            [
+              'Mesma técnica duas vezes',
+              'Permitido (ex.: Sublimação na frente e no verso). A mão de obra é cobrada em cada aplicação.',
+            ],
+            [
+              'Material da mesma técnica',
+              'Somado entre todas as aplicações do orçamento (do mesmo item ou de itens diferentes) e arredondado uma vez só.',
+            ],
+            ['Trocar a técnica', 'Descarta os ajustes da aplicação; local e medidas ficam.'],
+            ['Limite', 'Até 5 personalizações por item.'],
           ]}
         />
         <h4>Sem técnica</h4>
         <p>
-          Deixe <Bt>Sem personalização (valores digitados)</Bt>: o material (R$ total do lote) e a mão de obra (R$/un) começam com os
-          valores padrão de <Menu>Parâmetros › Precificação</Menu> e podem ser alterados — inclusive para zero. <Bt>Voltar ao padrão</Bt>{' '}
-          desfaz.
+          Item sem nenhuma aplicação fica <b>sem técnica</b>: o material (R$ total do lote) e a mão de obra (R$/un) começam com os
+          valores padrão de <Menu>Parâmetros › Precificação</Menu> e podem ser alterados — inclusive para zero.{' '}
+          <Bt>Voltar ao padrão</Bt> desfaz. Ao adicionar a primeira personalização, esses valores deixam de valer (não se misturam
+          com as técnicas).
         </p>
         <Dica tipo="atencao">
-          O orçamento <b>não é gerado</b> enquanto algum item tiver técnica sem cadastro completo ou arte sem medida. A mensagem lista os
-          itens e o que corrigir (ex.: “Cadastre a técnica "Laser" na tabela Mão de obra”). A correção do cadastro é feita em{' '}
-          <Menu>Parâmetros › Tabelas gerais</Menu>; ao voltar ao carrinho, as tabelas são relidas.
+          O orçamento <b>não é gerado</b> enquanto alguma aplicação estiver sem técnica escolhida, com técnica sem cadastro
+          completo ou com a arte sem medida. A mensagem lista o item e a aplicação (ex.: “Caneca Verde: aplicação 2 (Sublimação ·
+          Corpo): informe a altura e a largura”). A correção do cadastro é feita em <Menu>Parâmetros › Tabelas gerais</Menu>; ao
+          voltar ao carrinho, as tabelas são relidas.
         </Dica>
         <Dica>
-          A técnica e as medidas da arte aparecem para o cliente (link e impressão) na linha <i>Personalização</i> do produto — sem
-          valores nem quantidade de material. O material usado e os ajustes ficam só na tela interna (linha laranja <i>Interno</i>).
-          Ao editar o orçamento, tudo volta para o carrinho como estava.
+          Para o cliente (link e impressão), cada aplicação aparece numa linha <i>Personalização</i> do produto — técnica, local e
+          medidas, sem valores nem quantidade de material. O material usado e os ajustes de cada aplicação ficam só na tela
+          interna (linhas laranja <i>Interno</i>
+          ). Ao editar o orçamento, tudo volta para o carrinho como estava; orçamentos anteriores com uma técnica voltam com uma
+          aplicação.
         </Dica>
       </Secao>
 
@@ -233,9 +282,10 @@ export function ManualOperacao() {
       <Secao id="man-cliente" titulo="Cliente, faturamento e previsão de entrega" numero={6}>
         <h4>Cliente (Kommo)</h4>
         <p>
-          Com a integração do Kommo ligada, o campo <b>Cliente</b> tem uma busca única que reconhece o que foi digitado: telefone (qualquer
-          formato, com ou sem +55), parte do nome (sem acento), e-mail ou <b>#código</b> do Kommo. Use as setas e Enter para escolher.
-          A lista mostra telefones, código, data de criação, quantos orçamentos o cliente tem e o aviso <i>telefone repetido</i>.
+          Com a integração do Kommo ligada, o campo <b>Cliente</b> tem uma busca única que reconhece o que foi digitado: telefone
+          (qualquer formato, com ou sem +55), parte do nome (sem acento), e-mail ou <b>#código</b> do Kommo. Use as setas e Enter
+          para escolher. A lista mostra telefones, código, data de criação, quantos orçamentos o cliente tem e o aviso{' '}
+          <i>telefone repetido</i>.
         </p>
         <ul>
           <li>
@@ -261,13 +311,14 @@ export function ManualOperacao() {
           ]}
         />
         <p>
-          No orçamento esses dados são <b>opcionais</b> (só o que foi digitado é conferido: CPF/CNPJ com dígito verificador, e-mail e CEP).
-          No aceite pelo link eles passam a ser <b>obrigatórios</b> para o cliente. Aparecem no início da folha impressa.
+          No orçamento esses dados são <b>opcionais</b> (só o que foi digitado é conferido: CPF/CNPJ com dígito verificador,
+          e-mail e CEP). No aceite pelo link eles passam a ser <b>obrigatórios</b> para o cliente. Aparecem no início da folha
+          impressa.
         </p>
         <h4>Previsão de entrega e frete</h4>
         <p>
-          A <b>previsão de entrega</b> vai para a folha, para o link do cliente e passa para o pedido (base do calendário e dos atrasos).
-          O <b>frete</b> é somado ao total, sem margem.
+          A <b>previsão de entrega</b> vai para a folha, para o link do cliente e passa para o pedido (base do calendário e dos
+          atrasos). O <b>frete</b> é somado ao total, sem margem.
         </p>
       </Secao>
 
@@ -275,8 +326,8 @@ export function ManualOperacao() {
       <Secao id="man-gerar" titulo="Gerar e alterar orçamentos" numero={7}>
         <h4>Gerar</h4>
         <p>
-          <Bt>Gerar Orçamento</Bt> grava o orçamento com o próximo número (ORC-0001, ORC-0002…), esvazia o carrinho e abre os detalhes. O
-          orçamento nasce <b>Aberto</b> e guarda você como responsável.
+          <Bt>Gerar Orçamento</Bt> grava o orçamento com o próximo número (ORC-0001, ORC-0002…), esvazia o carrinho e abre os
+          detalhes. O orçamento nasce <b>Aberto</b> e guarda você como responsável.
         </p>
         <h4>Alterar</h4>
         <Passos
@@ -286,18 +337,18 @@ export function ManualOperacao() {
             </>,
             'O carrinho precisa estar vazio.',
             <>
-              Clique em <Bt>✎ Editar</Bt> (na lista ou nos detalhes): os itens, quantidades, personalização, cliente, faturamento, frete,
-              observações e previsão voltam ao carrinho.
+              Clique em <Bt>✎ Editar</Bt> (na lista ou nos detalhes): os itens, quantidades, personalização, cliente, faturamento,
+              frete, observações e previsão voltam ao carrinho.
             </>,
             <>
-              Faça as mudanças e clique em <Bt>Salvar ORC-…</Bt>. O número continua o mesmo e a data da alteração e o usuário que alterou
-              ficam registrados. Não há limite de alterações.
+              Faça as mudanças e clique em <Bt>Salvar ORC-…</Bt>. O número continua o mesmo e a data da alteração e o usuário que
+              alterou ficam registrados. Não há limite de alterações.
             </>,
           ]}
         />
         <Dica>
-          Desistiu? <Bt>Limpar carrinho</Bt> sai da alteração sem modificar o orçamento salvo. Mockups acompanham o produto; o mockup de um
-          produto removido é apagado.
+          Desistiu? <Bt>Limpar carrinho</Bt> sai da alteração sem modificar o orçamento salvo. Mockups acompanham o produto; o
+          mockup de um produto removido é apagado.
         </Dica>
       </Secao>
 
@@ -310,8 +361,8 @@ export function ManualOperacao() {
         <ul>
           <li>Lista paginada (20 por página), do mais recente para o mais antigo.</li>
           <li>
-            Filtros: número (<i>ORC-0005</i> ou <i>5</i>), produto (descrição ou código de qualquer item), cliente, período, faixa de valor
-            total, situação e <Bt>Somente os meus</Bt>.
+            Filtros: número (<i>ORC-0005</i> ou <i>5</i>), produto (descrição ou código de qualquer item), cliente, período, faixa
+            de valor total, situação e <Bt>Somente os meus</Bt>.
           </li>
           <li>Clique na linha para abrir os detalhes. Na própria linha há atalhos para editar e enviar.</li>
         </ul>
@@ -332,15 +383,24 @@ export function ManualOperacao() {
         <Tabela
           colunas={['Situação', 'Quando', 'O que pode ser feito']}
           linhas={[
-            ['Aberto', 'Ao gerar; ao voltar de Enviado; ao reabrir um cancelado', 'Editar, criar mockups, enviar, gerar pedido, cancelar'],
+            [
+              'Aberto',
+              'Ao gerar; ao voltar de Enviado; ao reabrir um cancelado',
+              'Editar, criar mockups, enviar, gerar pedido, cancelar',
+            ],
             ['Enviado', 'Ao clicar em Enviar para o Cliente', 'Voltar para aberto, gerar pedido, cancelar, gerar novo link'],
-            ['Pedido gerado', 'Automático ao gerar o pedido (pelo sistema ou pelo aceite do cliente)', 'Só consulta; o código PED-… é clicável'],
+            [
+              'Pedido gerado',
+              'Automático ao gerar o pedido (pelo sistema ou pelo aceite do cliente)',
+              'Só consulta; o código PED-… é clicável',
+            ],
             ['Cancelado', 'Cancelamento manual (com motivo) ou recusa do cliente pelo link', 'Reabrir (volta para Aberto)'],
           ]}
         />
         <Dica tipo="regra">
-          Só orçamento <b>Aberto</b> pode ser alterado. Orçamento com pedido gerado nunca é alterado nem cancelado — cancela-se o pedido, e
-          o orçamento volta para a situação que tinha antes (Aberto ou Enviado). Toda mudança de situação fica no histórico.
+          Só orçamento <b>Aberto</b> pode ser alterado. Orçamento com pedido gerado nunca é alterado nem cancelado — cancela-se o
+          pedido, e o orçamento volta para a situação que tinha antes (Aberto ou Enviado). Toda mudança de situação fica no
+          histórico.
         </Dica>
       </Secao>
 
@@ -373,16 +433,18 @@ export function ManualOperacao() {
       {/* ─────────────────────────────── 11 */}
       <Secao id="man-pagina-cliente" titulo="O que o cliente vê no link" numero={11}>
         <ul>
-          <li>A mesma folha impressa: produtos, fotos, quantidades, preço unitário e total, frete, previsão de entrega e mockups.</li>
+          <li>
+            A mesma folha impressa: produtos, fotos, quantidades, preço unitário e total, frete, previsão de entrega e mockups.
+          </li>
           <li>
             <b>Nunca</b>: custo, composição do preço, fornecedor, usuários ou dados internos.
           </li>
-          <li>A técnica de personalização e as medidas da arte de cada produto (sem valores nem material).</li>
+          <li>Cada personalização do produto — técnica, local e medidas da arte — sem valores nem material.</li>
           <li>As instruções especiais de Parâmetros › Impressão, logo após os valores e mockups.</li>
           <li>Botão de imprimir/salvar PDF.</li>
           <li>
-            <Bt>Aceitar orçamento</Bt>: abre o formulário de faturamento já preenchido com o que foi informado; o cliente completa os
-            campos obrigatórios e confirma (observação opcional). O pedido é gerado na hora e a movimentação aparece como{' '}
+            <Bt>Aceitar orçamento</Bt>: abre o formulário de faturamento já preenchido com o que foi informado; o cliente completa
+            os campos obrigatórios e confirma (observação opcional). O pedido é gerado na hora e a movimentação aparece como{' '}
             <i>Cliente (link)</i>.
           </li>
           <li>
@@ -395,14 +457,14 @@ export function ManualOperacao() {
       {/* ─────────────────────────────── 12 */}
       <Secao id="man-mockups" titulo="Mockups" numero={12}>
         <p>
-          Imagem de cada produto com a logo do cliente. É opcional e só pode ser criada ou alterada com o orçamento <b>Aberto</b> (depois
-          de enviado, fica para consulta; voltar para Aberto libera de novo). <Ir tela="mockup">Abrir Mockups</Ir>
+          Imagem de cada produto com a logo do cliente. É opcional e só pode ser criada ou alterada com o orçamento <b>Aberto</b>{' '}
+          (depois de enviado, fica para consulta; voltar para Aberto libera de novo). <Ir tela="mockup">Abrir Mockups</Ir>
         </p>
         <Passos
           itens={[
             <>
-              Gere o orçamento. Nos detalhes, clique em <Bt>🎨 Mockups</Bt> (ou abra <Menu>Vendas › Mockups</Menu> e escolha um orçamento
-              Aberto).
+              Gere o orçamento. Nos detalhes, clique em <Bt>🎨 Mockups</Bt> (ou abra <Menu>Vendas › Mockups</Menu> e escolha um
+              orçamento Aberto).
             </>,
             'Escolha o produto e a foto de fundo (galeria do fornecedor).',
             'Adicione uma ou várias logos (arquivo de imagem) e textos (fonte, cor, negrito, itálico).',
@@ -410,14 +472,14 @@ export function ManualOperacao() {
             'Ajuste mesclagem (multiplicar, normal, sobrepor, tela), acabamento (original, branco, preto, dourado), opacidade, curvatura (canecas, garrafas) e perspectiva.',
             'Organize as camadas (frente/trás, duplicar, remover). Ctrl+Z desfaz e Ctrl+Y refaz.',
             <>
-              <Bt>Salvar no ORC-…</Bt> grava a imagem no item (a edição fica guardada para continuar depois). <Bt>Baixar PNG</Bt> baixa o
-              arquivo.
+              <Bt>Salvar no ORC-…</Bt> grava a imagem no item (a edição fica guardada para continuar depois). <Bt>Baixar PNG</Bt>{' '}
+              baixa o arquivo.
             </>,
           ]}
         />
         <Dica>
-          Os mockups aparecem na folha (tela, impressão, link do cliente e pedido) numa seção depois dos valores. Use logos em PNG com
-          fundo transparente para o melhor resultado.
+          Os mockups aparecem na folha (tela, impressão, link do cliente e pedido) numa seção depois dos valores. Use logos em PNG
+          com fundo transparente para o melhor resultado.
         </Dica>
       </Secao>
 
@@ -439,8 +501,8 @@ export function ManualOperacao() {
           ]}
         />
         <p>
-          Instruções especiais e rodapé são cadastrados em <Menu>Parâmetros › Impressão</Menu> e valem para todos os orçamentos, inclusive
-          os já enviados.
+          Instruções especiais e rodapé são cadastrados em <Menu>Parâmetros › Impressão</Menu> e valem para todos os orçamentos,
+          inclusive os já enviados.
         </p>
       </Secao>
 
@@ -453,8 +515,8 @@ export function ManualOperacao() {
         <Passos
           itens={[
             <>
-              Nos detalhes do orçamento (Aberto ou Enviado), clique em <Bt>📦 Gerar pedido</Bt> — ou, em Pedidos, <Bt>+ Novo pedido</Bt> e
-              escolha o orçamento.
+              Nos detalhes do orçamento (Aberto ou Enviado), clique em <Bt>📦 Gerar pedido</Bt> — ou, em Pedidos,{' '}
+              <Bt>+ Novo pedido</Bt> e escolha o orçamento.
             </>,
             'Informe uma observação, se quiser (vira o primeiro registro do histórico do pedido).',
             'Confirme. O orçamento passa para Pedido gerado e os dados de faturamento são copiados para o pedido.',
@@ -463,7 +525,10 @@ export function ManualOperacao() {
         <Tabela
           colunas={['Aba', 'Para que serve']}
           linhas={[
-            ['Todos os pedidos', 'Lista paginada com filtros por código, orçamento, cliente, situação (inclui “Em andamento”), período e Somente os meus.'],
+            [
+              'Todos os pedidos',
+              'Lista paginada com filtros por código, orçamento, cliente, situação (inclui “Em andamento”), período e Somente os meus.',
+            ],
             ['Quadro', 'Kanban por etapa, para mover os pedidos no dia a dia.'],
             ['Calendário', 'Entregas previstas por semana ou mês (só consulta).'],
             ['Detalhes', 'Tudo sobre um pedido: etapas, checklist, observações, faturamento e itens.'],
@@ -471,7 +536,8 @@ export function ManualOperacao() {
         />
         <Dica tipo="regra">
           Pedidos não são editados. Se algo estiver errado, <Bt>Cancelar pedido</Bt> (com motivo): o orçamento fica livre para ser
-          corrigido e gerar outro pedido. Nunca há dois pedidos ativos para o mesmo orçamento; pedido encerrado não pode ser cancelado.
+          corrigido e gerar outro pedido. Nunca há dois pedidos ativos para o mesmo orçamento; pedido encerrado não pode ser
+          cancelado.
         </Dica>
       </Secao>
 
@@ -493,9 +559,9 @@ export function ManualOperacao() {
         </ul>
         <h4>Checklist de fechamento</h4>
         <p>
-          Ao entrar em <b>Em Fechamento</b>, o pedido recebe a lista de <Menu>Parâmetros › Checklist de fechamento</Menu>. Marque cada item
-          nos detalhes (grava data, hora e usuário). Só pode ser marcado nessa etapa e não trava o fluxo: o pedido avança mesmo com itens
-          em aberto. O cartão do Quadro mostra o progresso (☑ 2/3).
+          Ao entrar em <b>Em Fechamento</b>, o pedido recebe a lista de <Menu>Parâmetros › Checklist de fechamento</Menu>. Marque
+          cada item nos detalhes (grava data, hora e usuário). Só pode ser marcado nessa etapa e não trava o fluxo: o pedido
+          avança mesmo com itens em aberto. O cartão do Quadro mostra o progresso (☑ 2/3).
         </p>
       </Secao>
 
@@ -516,7 +582,9 @@ export function ManualOperacao() {
           <li>
             <Bt>‹ Hoje ›</Bt> navega; também dá para escolher mês/ano. Entregas vencidas aparecem como <i>atrasado</i>.
           </li>
-          <li>Pedidos sem data ficam numa lista abaixo. Clique no cartão para abrir os detalhes; nada é movimentado no calendário.</li>
+          <li>
+            Pedidos sem data ficam numa lista abaixo. Clique no cartão para abrir os detalhes; nada é movimentado no calendário.
+          </li>
         </ul>
       </Secao>
 
@@ -526,10 +594,24 @@ export function ManualOperacao() {
           colunas={['Bloco', 'O que faz']}
           linhas={[
             ['Etapas', 'Data e hora de cada etapa, tempo total e tempo em cada etapa.'],
-            ['Entrega prevista', 'Pode ser alterada só na etapa Criado; cada mudança vira uma observação (“alterada de … para …”).'],
-            ['Faturamento e entrega', <span key="f">Alterável com o pedido em andamento (<Bt>Alterar dados</Bt>); cada mudança vira observação com o antes → depois.</span>],
+            [
+              'Entrega prevista',
+              'Pode ser alterada só na etapa Criado; cada mudança vira uma observação (“alterada de … para …”).',
+            ],
+            [
+              'Faturamento e entrega',
+              <span key="f">
+                Alterável com o pedido em andamento (<Bt>Alterar dados</Bt>); cada mudança vira observação com o antes → depois.
+              </span>,
+            ],
             ['Checklist', 'Itens de fechamento (marcáveis em Em Fechamento).'],
-            ['Observações', <span key="o">Linha do tempo (mais recente no topo). <Bt>+ Incluir observação</Bt> em qualquer situação; registros não são editados nem apagados. A caixa mostra 10 linhas e rola.</span>],
+            [
+              'Observações',
+              <span key="o">
+                Linha do tempo (mais recente no topo). <Bt>+ Incluir observação</Bt> em qualquer situação; registros não são
+                editados nem apagados. A caixa mostra 10 linhas e rola.
+              </span>,
+            ],
             ['Itens', 'Produtos do orçamento, com a folha completa.'],
           ]}
         />
@@ -542,11 +624,13 @@ export function ManualOperacao() {
         </p>
         <ul>
           <li>
-            <b>Período</b>: hoje, 7/30/90 dias, este mês, mês anterior, este ano ou datas personalizadas. <b>Vendedor</b>: todos ou um
-            usuário.
+            <b>Período</b>: hoje, 7/30/90 dias, este mês, mês anterior, este ano ou datas personalizadas. <b>Vendedor</b>: todos
+            ou um usuário.
           </li>
           <li>Cartões com os principais números e a variação em relação ao período anterior de mesma duração.</li>
-          <li>Gráficos: evolução no tempo, funil, situação dos orçamentos, etapas dos pedidos, produtos, fornecedores e vendedores.</li>
+          <li>
+            Gráficos: evolução no tempo, funil, situação dos orçamentos, etapas dos pedidos, produtos, fornecedores e vendedores.
+          </li>
           <li>
             Passe o mouse para ver os valores; <Bt>Ver tabela</Bt> mostra os números de cada gráfico.
           </li>
@@ -585,7 +669,10 @@ export function ManualOperacao() {
               'Material e mão de obra padrão dos itens sem técnica, imposto de compra (e se é aplicado), designer, logística, imposto sobre venda e margem. Mostra uma simulação ao lado. Vale para os próximos cálculos do carrinho (orçamentos já gerados não mudam).',
             ],
             ['Tabelas gerais', 'Técnicas de personalização, Material por técnica e Mão de obra por técnica.'],
-            ['Checklist de fechamento', 'Itens da lista usada em Em Fechamento (incluir, renomear, reordenar, remover). Vale para os próximos pedidos.'],
+            [
+              'Checklist de fechamento',
+              'Itens da lista usada em Em Fechamento (incluir, renomear, reordenar, remover). Vale para os próximos pedidos.',
+            ],
             ['Impressão', 'Instruções especiais (só na impressão/PDF) e rodapé.'],
             ['Sistema', 'Enviar notas para o Kommo (ligado/desligado).'],
           ]}
@@ -626,15 +713,19 @@ export function ManualOperacao() {
           <li>Inclua com nome, login e senha inicial. O login não pode ser alterado nem reaproveitado.</li>
           <li>Altere nome ou senha a qualquer momento.</li>
           <li>
-            Ninguém é apagado: <b>inative</b> quem saiu (não entra mais, mas continua como responsável pelo que fez) e <b>reative</b> se
-            voltar (com os mesmos acessos). Ninguém inativa o próprio usuário.
+            Ninguém é apagado: <b>inative</b> quem saiu (não entra mais, mas continua como responsável pelo que fez) e{' '}
+            <b>reative</b> se voltar (com os mesmos acessos). Ninguém inativa o próprio usuário.
           </li>
         </ul>
         <h4>Acessos</h4>
         <ul>
-          <li>Marque as telas que cada usuário pode usar. O menu mostra só as liberadas e o sistema bloqueia as demais funções.</li>
+          <li>
+            Marque as telas que cada usuário pode usar. O menu mostra só as liberadas e o sistema bloqueia as demais funções.
+          </li>
           <li>Sempre resta pelo menos um usuário com acesso à tela Acessos.</li>
-          <li>Telas novas são liberadas automaticamente a quem administra os acessos; as telas de Ajuda, a todos os usuários ativos.</li>
+          <li>
+            Telas novas são liberadas automaticamente a quem administra os acessos; as telas de Ajuda, a todos os usuários ativos.
+          </li>
         </ul>
         <Dica>
           Todos os usuários veem todos os orçamentos e pedidos. O filtro <Bt>Somente os meus</Bt> mostra só os criados por você.
@@ -655,22 +746,25 @@ export function ManualOperacao() {
           ]}
         />
         <p>
-          A atualização traz preço, estoque, fotos, descrição, ficha técnica e categorias. Também pode ser agendada no servidor para rodar
-          todos os dias. Orçamentos já gerados guardam o custo da época e não mudam.
+          A atualização traz preço, estoque, fotos, descrição, ficha técnica e categorias. Também pode ser agendada no servidor
+          para rodar todos os dias. Orçamentos já gerados guardam o custo da época e não mudam.
         </p>
       </Secao>
 
       {/* ─────────────────────────────── 24 */}
       <Secao id="man-kommo" titulo="Integração com o Kommo" numero={24}>
         <ul>
-          <li>Os contatos do Kommo são copiados para o sistema e atualizados a cada poucos minutos; uma vez por dia, de madrugada, é feita a conferência completa.</li>
+          <li>
+            Os contatos do Kommo são copiados para o sistema e atualizados a cada poucos minutos; uma vez por dia, de madrugada, é
+            feita a conferência completa.
+          </li>
           <li>
             Em <Menu>Sistema › Atualização</Menu>, o cartão <i>Clientes do Kommo</i> mostra o total e a última sincronização, com{' '}
             <Bt>Sincronizar clientes agora</Bt> e <Bt>Conferência completa</Bt>.
           </li>
           <li>
-            Notas no contato: envio do orçamento (com o link), aceite, recusa e pedido gerado. Se o Kommo estiver fora do ar, a nota fica
-            na fila e é reenviada. Podem ser desligadas em <Menu>Parâmetros › Sistema</Menu>.
+            Notas no contato: envio do orçamento (com o link), aceite, recusa e pedido gerado. Se o Kommo estiver fora do ar, a
+            nota fica na fila e é reenviada. Podem ser desligadas em <Menu>Parâmetros › Sistema</Menu>.
           </li>
         </ul>
       </Secao>
@@ -680,16 +774,40 @@ export function ManualOperacao() {
         <Tabela
           colunas={['Situação', 'Causa e solução']}
           linhas={[
-            ['Não consigo editar o orçamento', 'Ele não está Aberto. Se estiver Enviado, use ↩ Voltar para aberto. Com pedido gerado, cancele o pedido primeiro. O carrinho também precisa estar vazio.'],
-            ['“Personalização incompleta” ao gerar', 'Algum item tem técnica sem cadastro em Material/Mão de obra ou arte sem altura e largura. A mensagem lista os itens.'],
-            ['Não consigo enviar para o cliente', 'Com o Kommo ligado, o orçamento precisa de cliente vinculado: edite e escolha o cliente.'],
-            ['O cliente diz que o link não abre', 'O link pode ter sido trocado (Gerar novo link) ou o orçamento voltou para Aberto. Envie de novo.'],
-            ['O cliente não consegue aceitar', 'O link venceu (7 dias) ou o cliente já respondeu. Volte para aberto e reenvie para renovar a validade.'],
+            [
+              'Não consigo editar o orçamento',
+              'Ele não está Aberto. Se estiver Enviado, use ↩ Voltar para aberto. Com pedido gerado, cancele o pedido primeiro. O carrinho também precisa estar vazio.',
+            ],
+            [
+              '“Personalização incompleta” ao gerar',
+              'Algum item tem técnica sem cadastro em Material/Mão de obra ou arte sem altura e largura. A mensagem lista os itens.',
+            ],
+            [
+              'Não consigo enviar para o cliente',
+              'Com o Kommo ligado, o orçamento precisa de cliente vinculado: edite e escolha o cliente.',
+            ],
+            [
+              'O cliente diz que o link não abre',
+              'O link pode ter sido trocado (Gerar novo link) ou o orçamento voltou para Aberto. Envie de novo.',
+            ],
+            [
+              'O cliente não consegue aceitar',
+              'O link venceu (7 dias) ou o cliente já respondeu. Volte para aberto e reenvie para renovar a validade.',
+            ],
             ['Não aparece o botão de mockup', 'Mockups só com o orçamento Aberto.'],
             ['Cliente não aparece na busca', 'Contato recém-criado no Kommo: use Buscar direto no Kommo.'],
-            ['Preço muito alto em pedido pequeno', 'Custos fixos (designer + logística) divididos por poucas peças, ou fração mínima grande na técnica. Ajuste no item ou nas tabelas.'],
-            ['Não vejo uma tela no menu', 'Ela não está liberada para o seu usuário. Peça a liberação a quem administra os Acessos.'],
-            ['Fui desconectado', 'A sessão expira após 12 horas sem uso ou quando a senha é trocada em outro lugar. Entre de novo.'],
+            [
+              'Preço muito alto em pedido pequeno',
+              'Custos fixos (designer + logística) divididos por poucas peças, ou fração mínima grande na técnica. Ajuste no item ou nas tabelas.',
+            ],
+            [
+              'Não vejo uma tela no menu',
+              'Ela não está liberada para o seu usuário. Peça a liberação a quem administra os Acessos.',
+            ],
+            [
+              'Fui desconectado',
+              'A sessão expira após 12 horas sem uso ou quando a senha é trocada em outro lugar. Entre de novo.',
+            ],
           ]}
         />
       </Secao>

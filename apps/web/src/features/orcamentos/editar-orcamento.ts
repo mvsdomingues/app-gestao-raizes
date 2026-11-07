@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { motivoBloqueioAlteracao, personalizacaoVazia, type ItemOrcamento, type Orcamento, type ParametrosCalculo } from '@raizes/shared';
+import { motivoBloqueioAlteracao, entradaDoItemOrcamento, type ItemOrcamento, type Orcamento, type ParametrosCalculo } from '@raizes/shared';
 import { useApp } from '../../app/contexto';
 import { api } from '../../lib/api';
 import { useCarrinho, type ItemCarrinho, type Itens } from '../../state/carrinho';
@@ -62,13 +62,8 @@ async function montarItensCarrinho(
       qty: item.qty,
       calc: { ...parametros, ...(item.calc ?? {}) },
       observacao: item.observacao ?? '',
-      // Personalização: a mesma entrada do operador; orçamentos anteriores viram "sem técnica"
-      // com os valores de material e mão de obra que tinham
-      personalizacao: item.personalizacao?.entrada ?? {
-        ...personalizacaoVazia(),
-        material_valor: (item.calc?.mat_personalizacao ?? 0) * item.qty,
-        mao_obra_unit: item.calc?.mo_personalizacao ?? 0,
-      },
+      // Personalização: as aplicações do operador; formatos anteriores são convertidos
+      personalizacao: entradaDoItemOrcamento(item),
     };
     itens[id] = linha;
   });

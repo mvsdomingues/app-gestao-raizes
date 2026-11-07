@@ -136,7 +136,7 @@ export function PaginaPublica() {
             observacao: o.observacao,
             entregaPrevista: o.entrega_prevista,
             cliente: o.cliente ? { id: 0, nome: o.cliente.nome, telefone: o.cliente.telefone } : null,
-            itens: o.itens.map(({ personalizacao, ...i }) => ({ ...i, arte: personalizacao, imagem_url: i.imagem ?? '' })),
+            itens: o.itens.map(({ personalizacoes, ...i }) => ({ ...i, artes: personalizacoes ?? [], imagem_url: i.imagem ?? '' })),
             mockups: (o.mockups ?? []).map((m) => ({ item: m.item, url: m.imagem })),
             faturamento: o.faturamento,
           }}

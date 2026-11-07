@@ -3,9 +3,11 @@ import {
   formatarDataBr,
   formatarDocumento,
   formatarTelefone,
-  personalizacaoParaCliente,
+  aplicacoesDoItemOrcamento,
+  personalizacoesParaCliente,
   textoPersonalizacaoCliente,
   type PersonalizacaoCliente,
+  type ResultadoPersonalizacao,
   formatBRL,
   resumoDescricao,
   type DadosFaturamento,
@@ -17,10 +19,10 @@ import { ImagemProduto } from '../../components/ImagemProduto';
 import { classeFornecedor } from '../../lib/fornecedor';
 
 /** Linha interna (fora da impressão e do cliente): material usado e ajustes. */
-function materialInterno(r: NonNullable<ItemOrcamento['personalizacao']>): string {
+function materialInterno(r: ResultadoPersonalizacao): string {
   const m2 = (v: number) => v.toLocaleString('pt-BR', { maximumFractionDigits: 4 });
-  const partes = [`Interno: material ${m2(r.material_m2)} m²`];
-  if (r.grupo && r.grupo.itens > 1) partes.push(`rateado entre ${r.grupo.itens} itens (${m2(r.grupo.material_m2)} m² no total)`);
+  const partes = [`Interno: ${r.tecnica}${r.local ? ` (${r.local})` : ''} · material ${m2(r.material_m2)} m²`];
+  if (r.grupo && r.grupo.itens > 1) partes.push(`rateado entre ${r.grupo.itens} aplicações (${m2(r.grupo.material_m2)} m² no total)`);
   if (r.material_ajustado) partes.push('material ajustado');
   if (r.mao_obra_ajustada) partes.push('mão de obra ajustada');
   return partes.join(' · ');
@@ -31,13 +33,13 @@ const cinza = { fontSize: '.82rem', color: '#7A7167' } as const;
 /** Dados da folha: os do orçamento interno ou os da página do cliente (sem custos nem fornecedor). */
 export type DadosFolhaOrcamento = Pick<DadosFolha, 'id' | 'numero' | 'dataHora' | 'subtotal' | 'frete' | 'total' | 'observacao' | 'cliente' | 'entregaPrevista'> & {
   itens: (Pick<ItemOrcamento, 'nome' | 'codigo' | 'qty' | 'preco' | 'imagem_url'> &
-    Partial<Pick<ItemOrcamento, 'fornecedor' | 'origem' | 'personalizacao'>> & {
+    Partial<Pick<ItemOrcamento, 'fornecedor' | 'origem' | 'personalizacao' | 'personalizacoes'>> & {
       observacao?: string | null;
       descricao?: string | null;
       medidas?: string | null;
       material?: string | null;
-      /** Página do cliente: técnica e medidas da arte (sem valores) */
-      arte?: PersonalizacaoCliente | null;
+      /** Página do cliente: técnica, local e medidas de cada aplicação (sem valores) */
+      artes?: PersonalizacaoCliente[];
     })[];
   /** Mockups dos produtos (item = posição na lista; url da imagem) */
   mockups?: { item: number; url: string }[];
@@ -166,24 +168,24 @@ export function FolhaOrcamento({
                     </div>
                     <div className="orc-prod-code">Cód: {item.codigo || '–'}</div>
                     {item.descricao && <div className="orc-prod-desc">{resumoDescricao(item.descricao)}</div>}
-                    {(() => {
-                      // Técnica e medidas da arte: para todos (tela, impressão e cliente), sem valores
-                      const arte = item.arte ?? personalizacaoParaCliente(item.personalizacao);
-                      return (
-                        arte && (
-                          <div className="orc-prod-ficha orc-prod-arte">
-                            <span>
-                              <b>Personalização:</b> {textoPersonalizacaoCliente(arte)}
-                            </span>
-                          </div>
-                        )
-                      );
-                    })()}
-                    {!publico && item.personalizacao && item.personalizacao.tecnica_id !== null && (
-                      <div className="orc-prod-pers so-tela" title="Só na tela interna (não sai na impressão nem para o cliente)">
-                        {materialInterno(item.personalizacao)}
+                    {/* Técnica, local e medidas de cada aplicação: para todos (tela, impressão e cliente), sem valores */}
+                    {(item.artes ?? personalizacoesParaCliente(item)).map((arte, n) => (
+                      <div className="orc-prod-ficha orc-prod-arte" key={`arte-${n}`}>
+                        <span>
+                          <b>Personalização:</b> {textoPersonalizacaoCliente(arte)}
+                        </span>
                       </div>
-                    )}
+                    ))}
+                    {!publico &&
+                      aplicacoesDoItemOrcamento(item).map((r, n) => (
+                        <div
+                          key={`int-${n}`}
+                          className="orc-prod-pers so-tela"
+                          title="Só na tela interna (não sai na impressão nem para o cliente)"
+                        >
+                          {materialInterno(r)}
+                        </div>
+                      ))}
                     {(item.medidas || item.material) && (
                       <div className="orc-prod-ficha">
                         {item.medidas && (

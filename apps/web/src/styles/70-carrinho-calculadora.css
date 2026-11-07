@@ -290,3 +290,28 @@
 }
 .pers-erro { margin-top: 8px; color: #9a3f12; background: #fff4ec; border-radius: 6px; padding: 6px 8px; }
 .pers-grupo { margin-top: 8px; padding: 5px 8px; border-left: 3px solid var(--uva); background: #f4eef8; color: var(--text); border-radius: 0 6px 6px 0; }
+
+/* Várias personalizações por item */
+.pers-cabecalho { display: flex; justify-content: space-between; align-items: center; gap: 8px; margin-bottom: 6px; }
+.pers-titulo { font-size: .68rem; letter-spacing: .1em; text-transform: uppercase; color: var(--uva); font-weight: 600; }
+.pers-adicionar {
+  background: none; border: 1px dashed var(--uva); color: var(--uva); border-radius: 999px;
+  padding: 3px 12px; font: inherit; font-size: .74rem; cursor: pointer;
+}
+.pers-adicionar:hover:not(:disabled) { background: #f4eef8; }
+.pers-adicionar:disabled { opacity: .45; cursor: not-allowed; }
+.pers-sem-tecnica { color: var(--muted); font-size: .74rem; }
+.pers-aplicacao { background: #fff; border: 1px solid var(--border); border-radius: 8px; padding: 8px 10px; }
+.pers-aplicacao + .pers-aplicacao { margin-top: 8px; }
+.pers-num {
+  align-self: center; flex: none; width: 22px; height: 22px; border-radius: 50%;
+  background: var(--uva); color: #fff; font-size: .72rem; font-weight: 600;
+  display: inline-flex; align-items: center; justify-content: center;
+}
+.pers-local .calc-input { width: 130px; text-align: left; }
+.pers-remover {
+  margin-left: auto; align-self: center; background: none; border: none; color: var(--muted);
+  font-size: .9rem; cursor: pointer; padding: 4px 6px; border-radius: 6px;
+}
+.pers-remover:hover { color: var(--danger); background: #fdf0ee; }
+.pers-total { margin-top: 8px; padding: 6px 10px; background: #f4eef8; border-radius: 6px; color: var(--text); }

@@ -5,6 +5,11 @@ import {
   calcPreco,
   calcularPersonalizacao,
   calcularPersonalizacaoOrcamento,
+  calcularPersonalizacoesOrcamento,
+  entradaDoItemOrcamento,
+  entradaVazia,
+  LIMITE_APLICACOES,
+  personalizacoesParaCliente,
   montarItemOrcamento,
   personalizacaoVazia,
   type TecnicaComValores,
@@ -161,5 +166,103 @@ describe('material somado por técnica no orçamento', () => {
     expect(r.get('b')).toMatchObject({ material_valor: 30, material_ajustado: false });
     expect(r.get('b')!.grupo!.itens).toBe(2);
     expect(r.get('c')!.erro).toMatch(/altura e a largura/);
+  });
+});
+
+describe('várias personalizações por item', () => {
+  // Valores cadastrados hoje: Sublimação R$ 1/m² (0,25 m², folga 10%, MO R$ 4); Corte Laser R$ 300/m² (1 m², folga 10%, MO R$ 3)
+  const T: TecnicaComValores[] = [
+    { id: 1, nome: 'Sublimação', material: { preco_m2: 1, fracao_minima: 0.25, folga: 0.1 }, mao_obra: { valor_unitario: 4 } },
+    { id: 2, nome: 'Corte Laser', material: { preco_m2: 300, fracao_minima: 1, folga: 0.1 }, mao_obra: { valor_unitario: 3 } },
+  ];
+  const ap = (tecnica_id: number | null, h: number | null, w: number | null, local: string | null = null) => ({
+    ...personalizacaoVazia(),
+    tecnica_id,
+    altura_cm: h,
+    largura_cm: w,
+    local,
+  });
+  const padrao = { material_unit: 1, mao_obra_unit: 3 };
+
+  it('Corte Laser + Sublimação na CA0150T-VD (50 un): soma material e mão de obra', () => {
+    const entrada = { ...entradaVazia(), aplicacoes: [ap(2, 5, 5, ' Tampa '), ap(1, 8, 8, 'Corpo')] };
+    const r = calcularPersonalizacoesOrcamento([{ chave: 'vd', entrada, qty: 50 }], T, padrao).get('vd')!;
+    expect(r.aplicacoes.map((a) => [a.tecnica, a.local, a.material_valor, a.mao_obra_unit])).toEqual([
+      ['Corte Laser', 'Tampa', 300, 3],
+      ['Sublimação', 'Corpo', 0.5, 4],
+    ]);
+    expect(r).toMatchObject({ material_valor: 300.5, mao_obra_unit: 7, mao_obra_total: 350, erro: null, sem_tecnica: null });
+    expect(r.material_unit).toBeCloseTo(6.01, 6);
+    const params = { ...CALC_DEFAULTS, margem: 0.3 };
+    const preco = calcPreco(15.9, 50, calcComPersonalizacao(params, r));
+    expect(preco.preco).toBeCloseTo(52.4, 4);
+    expect(preco.preco * 50).toBeCloseTo(2620, 2);
+    // Gravado no item; o cliente vê só técnica, local e medidas
+    const item = montarItemOrcamento({ id: 1, nome: 'Caneca', codigo: 'CA0150T-VD', fornecedor: 'ASIA', imagem_url: null, preco: 15.9 }, 50, params, r);
+    expect(item.personalizacoes?.aplicacoes).toHaveLength(2);
+    expect(item.personalizacao).toBeUndefined();
+    expect(personalizacoesParaCliente(item)).toEqual([
+      { tecnica: 'Corte Laser', local: 'Tampa', altura_cm: 5, largura_cm: 5 },
+      { tecnica: 'Sublimação', local: 'Corpo', altura_cm: 8, largura_cm: 8 },
+    ]);
+    expect(entradaDoItemOrcamento(item)).toEqual(entrada);
+  });
+
+  it('mesma técnica duas vezes (frente e verso): material somado, mão de obra cobrada duas vezes', () => {
+    const entrada = { ...entradaVazia(), aplicacoes: [ap(1, 8, 8, 'Frente'), ap(1, 8, 8, 'Verso')] };
+    const r = calcularPersonalizacoesOrcamento([{ chave: 1, entrada, qty: 50 }], T).get(1)!;
+    // 2 × 0,352 = 0,704 m² → 3 frações de 0,25 = 0,75 m² (e não 2 × 0,5)
+    expect(r.aplicacoes[0]!.grupo).toMatchObject({ itens: 2, area_necessaria_m2: 0.704, material_m2: 0.75 });
+    expect(r.material_valor).toBeCloseTo(0.75, 2);
+    expect(r.mao_obra_unit).toBe(8);
+  });
+
+  it('material da técnica somado entre itens e aplicações', () => {
+    const r = calcularPersonalizacoesOrcamento(
+      [
+        { chave: 'a', entrada: { ...entradaVazia(), aplicacoes: [ap(2, 5, 5), ap(1, 8, 8)] }, qty: 50 },
+        { chave: 'b', entrada: { ...entradaVazia(), aplicacoes: [ap(2, 5, 5)] }, qty: 50 },
+      ],
+      T,
+    );
+    // Laser: 2 × 0,1375 = 0,275 m² → 1 m² = R$ 300 dividido entre as duas aplicações
+    expect(r.get('a')!.aplicacoes[0]!.material_valor).toBe(150);
+    expect(r.get('b')!.material_valor).toBe(150);
+    expect(r.get('a')!.material_valor).toBeCloseTo(150.5, 2);
+  });
+
+  it('sem aplicações: valores padrão (sem técnica), aceitando ajuste e zero', () => {
+    const r = calcularPersonalizacoesOrcamento([{ chave: 1, entrada: entradaVazia(), qty: 50 }], T, padrao).get(1)!;
+    expect(r).toMatchObject({ material_valor: 50, material_unit: 1, mao_obra_unit: 3, aplicacoes: [], erro: null });
+    const z = calcularPersonalizacoesOrcamento(
+      [{ chave: 1, entrada: { aplicacoes: [], sem_tecnica: { material_valor: 0, mao_obra_unit: 0 } }, qty: 50 }],
+      T,
+      padrao,
+    ).get(1)!;
+    expect(z).toMatchObject({ material_unit: 0, mao_obra_unit: 0, material_ajustado: true, mao_obra_ajustada: true });
+  });
+
+  it('pendências: técnica não escolhida, medidas, limite de 5', () => {
+    const r = calcularPersonalizacoesOrcamento(
+      [{ chave: 1, entrada: { ...entradaVazia(), aplicacoes: [ap(2, 5, 5), ap(null, null, null), ap(1, 8, null, 'Corpo')] }, qty: 10 }],
+      T,
+    ).get(1)!;
+    expect(r.erro).toContain('aplicação 2: Escolha a técnica');
+    expect(r.erro).toContain('aplicação 3 (Sublimação · Corpo): Informe a altura e a largura');
+    expect(r.aplicacoes[1]).toMatchObject({ material_valor: 0, mao_obra_unit: 0 });
+    const seis = { ...entradaVazia(), aplicacoes: Array.from({ length: LIMITE_APLICACOES + 1 }, () => ap(1, 5, 5)) };
+    expect(calcularPersonalizacoesOrcamento([{ chave: 1, entrada: seis, qty: 10 }], T).get(1)!.erro).toMatch(/No máximo 5/);
+  });
+
+  it('orçamentos anteriores reabrem no formato novo', () => {
+    const umaTecnica = calcularPersonalizacao(ap(1, 8, 8), 50, T);
+    expect(entradaDoItemOrcamento({ qty: 50, personalizacao: umaTecnica })).toEqual({ ...entradaVazia(), aplicacoes: [{ ...ap(1, 8, 8) }] });
+    expect(personalizacoesParaCliente({ personalizacao: umaTecnica })).toEqual([{ tecnica: 'Sublimação', local: null, altura_cm: 8, largura_cm: 8 }]);
+    const semTec = calcularPersonalizacao({ ...personalizacaoVazia(), material_valor: 20, mao_obra_unit: 2 }, 10, T);
+    expect(entradaDoItemOrcamento({ qty: 10, personalizacao: semTec })).toEqual({ aplicacoes: [], sem_tecnica: { material_valor: 20, mao_obra_unit: 2 } });
+    expect(entradaDoItemOrcamento({ qty: 10, calc: { mat_personalizacao: 1, mo_personalizacao: 3 } })).toEqual({
+      aplicacoes: [],
+      sem_tecnica: { material_valor: 10, mao_obra_unit: 3 },
+    });
   });
 });

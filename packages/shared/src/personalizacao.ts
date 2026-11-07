@@ -34,16 +34,30 @@ export interface PersonalizacaoItem {
   material_valor: number | null;
   /** Mão de obra por unidade: ajuste (com técnica) ou digitada (sem técnica) */
   mao_obra_unit: number | null;
+  /** Onde vai a aplicação (tampa, frente, verso…); opcional, aparece para o cliente */
+  local?: string | null;
+}
+
+/** Máximo de aplicações de personalização por item e tamanho do campo "local". */
+export const LIMITE_APLICACOES = 5;
+export const LIMITE_LOCAL = 40;
+
+/** "  Tampa  " → "Tampa"; vazio → null. */
+export function normalizarLocal(local: string | null | undefined): string | null {
+  const l = (local ?? '').replace(/\s+/g, ' ').trim().slice(0, LIMITE_LOCAL);
+  return l || null;
 }
 
 export function personalizacaoVazia(): PersonalizacaoItem {
-  return { tecnica_id: null, altura_cm: null, largura_cm: null, material_m2: null, material_valor: null, mao_obra_unit: null };
+  return { tecnica_id: null, altura_cm: null, largura_cm: null, material_m2: null, material_valor: null, mao_obra_unit: null, local: null };
 }
 
 /** Resultado do cálculo (também gravado no item do orçamento, só para uso interno). */
 export interface ResultadoPersonalizacao {
   tecnica_id: number | null;
   tecnica: string | null;
+  /** Local da aplicação (tampa, frente…) */
+  local?: string | null;
   altura_cm: number | null;
   largura_cm: number | null;
   /** Valores da tabela usados no cálculo */
@@ -99,6 +113,7 @@ export function calcularPersonalizacao(
 ): ResultadoPersonalizacao {
   const q = Math.max(1, qty);
   const base = {
+    local: normalizarLocal(p.local),
     tecnica_id: p.tecnica_id,
     altura_cm: p.altura_cm,
     largura_cm: p.largura_cm,
@@ -273,21 +288,23 @@ export function calcularPersonalizacaoOrcamento<K>(
  */
 export interface PersonalizacaoCliente {
   tecnica: string;
+  /** Local da aplicação (tampa, frente…) ou null */
+  local: string | null;
   altura_cm: number;
   largura_cm: number;
 }
 
 export function personalizacaoParaCliente(
-  r: Pick<ResultadoPersonalizacao, 'tecnica_id' | 'tecnica' | 'altura_cm' | 'largura_cm'> | null | undefined,
+  r: Pick<ResultadoPersonalizacao, 'tecnica_id' | 'tecnica' | 'altura_cm' | 'largura_cm' | 'local'> | null | undefined,
 ): PersonalizacaoCliente | null {
   if (!r || r.tecnica_id === null || !r.tecnica || !(r.altura_cm && r.altura_cm > 0) || !(r.largura_cm && r.largura_cm > 0)) return null;
-  return { tecnica: r.tecnica, altura_cm: r.altura_cm, largura_cm: r.largura_cm };
+  return { tecnica: r.tecnica, local: normalizarLocal(r.local), altura_cm: r.altura_cm, largura_cm: r.largura_cm };
 }
 
 /** "Sublimação · arte 10 × 8 cm" (texto para o cliente). */
 export function textoPersonalizacaoCliente(p: PersonalizacaoCliente): string {
   const cm = (v: number) => v.toLocaleString('pt-BR', { maximumFractionDigits: 1 });
-  return `${p.tecnica} · arte ${cm(p.altura_cm)} × ${cm(p.largura_cm)} cm`;
+  return `${p.tecnica}${p.local ? ` (${p.local})` : ''} · arte ${cm(p.altura_cm)} × ${cm(p.largura_cm)} cm`;
 }
 
 /** Texto curto para a composição do preço e a folha interna. */
@@ -298,8 +315,173 @@ export function descreverPersonalizacao(r: ResultadoPersonalizacao): string {
     return ['sem técnica de personalização', ...ajustes].join(' · ');
   }
   const partes = [`${r.tecnica} · arte ${n(r.altura_cm ?? 0, 1)} × ${n(r.largura_cm ?? 0, 1)} cm`, `material ${n(r.material_m2)} m²`];
-  if (r.grupo && r.grupo.itens > 1) partes.push(`material rateado entre ${r.grupo.itens} itens (${n(r.grupo.material_m2)} m² no total)`);
+  if (r.grupo && r.grupo.itens > 1) partes.push(`material rateado entre ${r.grupo.itens} aplicações (${n(r.grupo.material_m2)} m² no total)`);
   if (r.material_ajustado) partes.push('material ajustado');
   if (r.mao_obra_ajustada) partes.push('mão de obra ajustada');
   return partes.join(' · ');
+}
+
+// ══════════════════════════════════════════════════════════
+// VÁRIAS PERSONALIZAÇÕES POR ITEM (ex.: Corte Laser na tampa + Sublimação no corpo)
+// Cada aplicação é calculada como acima; o item soma material e mão de obra de
+// todas. Sem nenhuma aplicação, o item é "sem técnica" (valores padrão de Parâmetros).
+// ══════════════════════════════════════════════════════════
+
+/** O que o operador informa no item: aplicações (com técnica) ou, sem nenhuma, os valores "sem técnica". */
+export interface EntradaPersonalizacao {
+  aplicacoes: PersonalizacaoItem[];
+  /** Usado só quando não há aplicações: material (R$ do lote) e mão de obra (R$/un); null = padrão */
+  sem_tecnica: { material_valor: number | null; mao_obra_unit: number | null };
+}
+
+export function entradaVazia(): EntradaPersonalizacao {
+  return { aplicacoes: [], sem_tecnica: { material_valor: null, mao_obra_unit: null } };
+}
+
+/** Nova aplicação (técnica ainda não escolhida). */
+export function aplicacaoVazia(): PersonalizacaoItem {
+  return personalizacaoVazia();
+}
+
+/** Personalização do item já calculada (gravada no item do orçamento; uso interno). */
+export interface PersonalizacaoCalculada {
+  /** Uma por aplicação, na ordem (vazio = sem técnica) */
+  aplicacoes: ResultadoPersonalizacao[];
+  /** Cálculo "sem técnica" (só quando não há aplicações) */
+  sem_tecnica: ResultadoPersonalizacao | null;
+  /** Totais do item */
+  material_valor: number;
+  material_unit: number;
+  mao_obra_unit: number;
+  mao_obra_total: number;
+  material_ajustado: boolean;
+  mao_obra_ajustada: boolean;
+  /** Pendências de todas as aplicações (impede gerar o orçamento) */
+  erro: string | null;
+  entrada: EntradaPersonalizacao;
+}
+
+/** Item do orçamento/carrinho para o cálculo em conjunto com várias aplicações. */
+export interface ItemEntradaPersonalizacao<K> {
+  chave: K;
+  entrada: EntradaPersonalizacao;
+  qty: number;
+}
+
+const ERRO_SEM_TECNICA = 'Escolha a técnica de personalização.';
+
+/** "aplicação 2 (Sublimação)" — usado nas mensagens de pendência. */
+function nomeAplicacao(n: number, r: Pick<ResultadoPersonalizacao, 'tecnica' | 'local'>): string {
+  const desc = [r.tecnica, normalizarLocal(r.local)].filter(Boolean).join(' · ');
+  return `aplicação ${n}${desc ? ` (${desc})` : ''}`;
+}
+
+/** Soma as aplicações (ou usa o "sem técnica") e monta o resultado do item. */
+function totalizar(
+  entrada: EntradaPersonalizacao,
+  aplicacoes: ResultadoPersonalizacao[],
+  semTecnica: ResultadoPersonalizacao | null,
+): PersonalizacaoCalculada {
+  const partes = semTecnica ? [semTecnica] : aplicacoes;
+  const erros: string[] = [];
+  if (entrada.aplicacoes.length > LIMITE_APLICACOES) erros.push(`No máximo ${LIMITE_APLICACOES} personalizações por item.`);
+  aplicacoes.forEach((r, i) => {
+    if (r.erro) erros.push(aplicacoes.length > 1 ? `${nomeAplicacao(i + 1, r)}: ${r.erro}` : r.erro);
+  });
+  return {
+    aplicacoes,
+    sem_tecnica: semTecnica,
+    material_valor: dinheiro(partes.reduce((s, r) => s + r.material_valor, 0)),
+    material_unit: partes.reduce((s, r) => s + r.material_unit, 0),
+    mao_obra_unit: partes.reduce((s, r) => s + r.mao_obra_unit, 0),
+    mao_obra_total: partes.reduce((s, r) => s + r.mao_obra_total, 0),
+    material_ajustado: partes.some((r) => r.material_ajustado),
+    mao_obra_ajustada: partes.some((r) => r.mao_obra_ajustada),
+    erro: erros.length ? erros.join(' ') : null,
+    entrada,
+  };
+}
+
+/** Resultado de uma aplicação ainda sem técnica escolhida (zerado, com pendência). */
+function aplicacaoSemTecnica(p: PersonalizacaoItem): ResultadoPersonalizacao {
+  return {
+    ...calcularPersonalizacao({ ...p, tecnica_id: null, material_valor: 0, mao_obra_unit: 0 }, 1, null),
+    entrada: { ...p },
+    erro: ERRO_SEM_TECNICA,
+  };
+}
+
+/**
+ * Personalização de todos os itens do orçamento, com várias aplicações por item.
+ * O material de cada técnica é somado entre TODAS as aplicações do orçamento (de
+ * itens diferentes ou do mesmo item, como frente e verso), arredondado uma vez e
+ * rateado pela área; a mão de obra é cobrada por aplicação.
+ */
+export function calcularPersonalizacoesOrcamento<K>(
+  itens: ItemEntradaPersonalizacao<K>[],
+  tecnicas: TecnicaComValores[] | null,
+  padrao?: PadraoSemTecnica,
+): Map<K, PersonalizacaoCalculada> {
+  // Aplicações com técnica entram no cálculo em conjunto (chave = item + posição)
+  const comTecnica: ItemPersonalizacao<string>[] = [];
+  itens.forEach((it, i) =>
+    it.entrada.aplicacoes.forEach((a, j) => {
+      if (a.tecnica_id !== null) comTecnica.push({ chave: `${i}:${j}`, personalizacao: a, qty: it.qty });
+    }),
+  );
+  const calculadas = calcularPersonalizacaoOrcamento(comTecnica, tecnicas, padrao);
+
+  const res = new Map<K, PersonalizacaoCalculada>();
+  itens.forEach((it, i) => {
+    const aplicacoes = it.entrada.aplicacoes.map((a, j) =>
+      a.tecnica_id === null ? aplicacaoSemTecnica(a) : calculadas.get(`${i}:${j}`)!,
+    );
+    const semTecnica = it.entrada.aplicacoes.length
+      ? null
+      : calcularPersonalizacao(
+          { ...personalizacaoVazia(), material_valor: it.entrada.sem_tecnica.material_valor, mao_obra_unit: it.entrada.sem_tecnica.mao_obra_unit },
+          it.qty,
+          tecnicas,
+          padrao,
+        );
+    res.set(it.chave, totalizar(it.entrada, aplicacoes, semTecnica));
+  });
+  return res;
+}
+
+/** Item do orçamento gravado (formatos atual e anteriores). */
+interface ItemComPersonalizacao {
+  qty: number;
+  calc?: { mat_personalizacao?: number; mo_personalizacao?: number };
+  personalizacao?: ResultadoPersonalizacao;
+  personalizacoes?: PersonalizacaoCalculada;
+}
+
+/**
+ * Entrada do operador a partir do item gravado, para reabrir no carrinho:
+ * formato atual; uma técnica só (versão anterior); ou valores fixos (orçamentos
+ * mais antigos, viram "sem técnica" com o que tinham).
+ */
+export function entradaDoItemOrcamento(item: ItemComPersonalizacao): EntradaPersonalizacao {
+  if (item.personalizacoes?.entrada) return item.personalizacoes.entrada;
+  const e = item.personalizacao?.entrada;
+  if (e && e.tecnica_id !== null) return { ...entradaVazia(), aplicacoes: [{ ...personalizacaoVazia(), ...e }] };
+  if (e) return { ...entradaVazia(), sem_tecnica: { material_valor: e.material_valor, mao_obra_unit: e.mao_obra_unit } };
+  return {
+    ...entradaVazia(),
+    sem_tecnica: { material_valor: (item.calc?.mat_personalizacao ?? 0) * item.qty, mao_obra_unit: item.calc?.mo_personalizacao ?? 0 },
+  };
+}
+
+/** Aplicações com técnica do item gravado (formatos atual e anterior). */
+export function aplicacoesDoItemOrcamento(item: Pick<ItemComPersonalizacao, 'personalizacao' | 'personalizacoes'>): ResultadoPersonalizacao[] {
+  if (item.personalizacoes) return item.personalizacoes.aplicacoes.filter((r) => r.tecnica_id !== null);
+  return item.personalizacao && item.personalizacao.tecnica_id !== null ? [item.personalizacao] : [];
+}
+
+/** O que o cliente vê do item: técnica, local e medidas de cada aplicação (sem valores). */
+export function personalizacoesParaCliente(item: Pick<ItemComPersonalizacao, 'personalizacao' | 'personalizacoes'>): PersonalizacaoCliente[] {
+  return aplicacoesDoItemOrcamento(item)
+    .map((r) => personalizacaoParaCliente(r))
+    .filter((p): p is PersonalizacaoCliente => p !== null);
 }

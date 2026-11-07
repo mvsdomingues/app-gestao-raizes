@@ -9,12 +9,12 @@ import {
   type Produto,
   faturamentoVazio,
   calcComPersonalizacao,
-  calcularPersonalizacaoOrcamento,
-  personalizacaoVazia,
+  calcularPersonalizacoesOrcamento,
+  entradaVazia,
   type DadosFaturamento,
-  type PersonalizacaoItem,
+  type EntradaPersonalizacao,
   type ResultadoCalculo,
-  type ResultadoPersonalizacao,
+  type PersonalizacaoCalculada,
   type TecnicaComValores,
 } from '@raizes/shared';
 
@@ -43,7 +43,7 @@ export interface ItemCarrinho {
   /** Observação deste produto, gravada no item do orçamento. */
   observacao?: string;
   /** Técnica, medidas da arte e ajustes de material / mão de obra */
-  personalizacao: PersonalizacaoItem;
+  personalizacao: EntradaPersonalizacao;
 }
 
 /**
@@ -90,7 +90,7 @@ type Acao =
   | { tipo: 'qtd'; id: string; qty: number; redesenhar: boolean }
   | { tipo: 'calc'; id: string; campo: CampoNumerico; valor: number }
   | { tipo: 'observacaoItem'; id: string; valor: string }
-  | { tipo: 'personalizacao'; id: string; valor: PersonalizacaoItem }
+  | { tipo: 'personalizacao'; id: string; valor: EntradaPersonalizacao }
   | { tipo: 'redesenhar' }
   | { tipo: 'frete'; valor: string }
   | { tipo: 'observacao'; valor: string }
@@ -126,7 +126,7 @@ function redutor(estado: EstadoCarrinho, acao: Acao): EstadoCarrinho {
         // Os ajustes de custo e margem começam com os parâmetros cadastrados
         itens: {
           ...itens,
-          [acao.produto.id]: { produto: acao.produto, qty: 1, calc: { ...acao.calc }, personalizacao: personalizacaoVazia() },
+          [acao.produto.id]: { produto: acao.produto, qty: 1, calc: { ...acao.calc }, personalizacao: entradaVazia() },
         },
       };
     case 'remover':
@@ -204,7 +204,7 @@ interface ContextoCarrinho {
   definirQtd: (id: number | string, qty: number, redesenhar: boolean) => void;
   definirCalc: (id: number | string, campo: CampoNumerico, valor: number) => void;
   definirObservacaoItem: (id: number | string, valor: string) => void;
-  definirPersonalizacao: (id: number | string, valor: PersonalizacaoItem) => void;
+  definirPersonalizacao: (id: number | string, valor: EntradaPersonalizacao) => void;
   redesenhar: () => void;
   definirFrete: (valor: string) => void;
   definirObservacao: (valor: string) => void;
@@ -283,7 +283,7 @@ export function subtotalCarrinho(itens: Itens, parametros: ParametrosCalculo, te
   return Object.values(itens).reduce((s, item) => s + precos.get(item)!.res.preco * item.qty, 0);
 }
 
-export type PrecoItem = { personalizacao: ResultadoPersonalizacao; calc: ParametrosCalculo; res: ResultadoCalculo };
+export type PrecoItem = { personalizacao: PersonalizacaoCalculada; calc: ParametrosCalculo; res: ResultadoCalculo };
 
 /**
  * Preço de cada item do carrinho: parâmetros cadastrados (impostos e margem), ajustes
@@ -297,8 +297,8 @@ export function precosDoCarrinho(
 ): Map<ItemCarrinho, PrecoItem> {
   const lista = Object.values(itens);
   // Sem técnica: material e mão de obra padrão de Parâmetros › Precificação (como no cálculo anterior)
-  const pers = calcularPersonalizacaoOrcamento(
-    lista.map((item) => ({ chave: item, personalizacao: item.personalizacao, qty: item.qty })),
+  const pers = calcularPersonalizacoesOrcamento(
+    lista.map((item) => ({ chave: item, entrada: item.personalizacao, qty: item.qty })),
     tecnicas,
     { material_unit: parametros.mat_personalizacao, mao_obra_unit: parametros.mo_personalizacao },
   );

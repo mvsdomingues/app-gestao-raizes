@@ -61,6 +61,8 @@ export interface ItemOrcamento {
   observacao?: string;
   /** Custo de personalização calculado pelas tabelas (uso interno; nunca vai para o cliente) */
   personalizacao?: import('./personalizacao').ResultadoPersonalizacao;
+  /** Personalizações do item (várias aplicações; formato atual — uso interno) */
+  personalizacoes?: import('./personalizacao').PersonalizacaoCalculada;
   /** Resumo da descrição (até ~200 caracteres), mostrado na folha e na página do cliente. */
   descricao?: string;
   medidas?: string;
