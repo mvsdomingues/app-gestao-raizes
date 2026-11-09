@@ -736,28 +736,23 @@ export function MemoriasCalculo() {
 
       <Secao id="calc-comissoes" titulo="Comissões dos vendedores (apuração mensal)" numero={15}>
         <p>
-          A comissão de cada vendedor no mês soma a parte <b>progressiva</b> (pedidos normais) e a das <b>carteiras especiais</b>.
-          Entram os pedidos que chegaram à etapa <b>Em Produção</b> no mês (pela primeira vez), não cancelados; a base é o valor
-          dos produtos, sem o frete; o vendedor é o responsável pelo orçamento.
+          A comissão de cada vendedor no mês soma duas partes calculadas separadamente: a <b>progressiva</b>, sobre os pedidos
+          normais, e a das <b>carteiras especiais</b>, sobre os pedidos marcados. Entram os pedidos que chegaram à etapa{' '}
+          <b>Em Produção</b> no mês (pela primeira vez), não cancelados; a base é o valor dos produtos, sem o frete; o vendedor é
+          o responsável pelo orçamento.
         </p>
         <Formula
           titulo="Fórmula"
           linhas={[
             <>
-              <b>Volume das faixas</b> = vendas normais + vendas de carteiras do vendedor no mês
+              <b>Progressiva</b> = soma, faixa a faixa, de (parte das vendas normais do mês dentro da faixa × % da faixa)
             </>,
             <>
-              <b>Progressiva</b> = soma, faixa a faixa, de (parte do volume dentro da faixa × % da faixa)
+              <b>Comissão de carteira</b> = valor do pedido × % fixo da carteira — as vendas de carteira <u>não contam</u> para as
+              faixas
             </>,
             <>
-              <b>Comissão dos pedidos normais</b> = progressiva × (vendas normais ÷ volume) — a <i>taxa efetiva</i> aplicada a
-              cada pedido normal
-            </>,
-            <>
-              <b>Comissão de carteira</b> = valor do pedido × % fixo da carteira
-            </>,
-            <>
-              <b>Total do vendedor</b> = comissão dos pedidos normais + comissão das carteiras
+              <b>Total do vendedor</b> = progressiva + comissões das carteiras
             </>,
           ]}
         />
@@ -765,7 +760,7 @@ export function MemoriasCalculo() {
           titulo="Exemplo: Ana em outubro — R$ 25.000 em pedidos normais e R$ 8.000 na carteira Corporativo (5%)"
           dados={<>Faixas: até R$ 10.000 → 2,5% · R$ 10.000 a R$ 30.000 → 4% · acima de R$ 30.000 → 5%</>}
           passos={[
-            ['Volume das faixas', 'R$ 25.000 + R$ 8.000', brl(comAna.volume)],
+            ['Vendas normais (base das faixas)', 'R$ 15.000 + R$ 10.000', brl(comAna.vendas_normais)],
             ...comAna.faixas
               .filter((f) => f.base > 0)
               .map(
@@ -776,27 +771,17 @@ export function MemoriasCalculo() {
                     string,
                   ],
               ),
-            ['Progressiva sobre o volume', 'soma das faixas', brl(comAna.progressiva_volume)],
-            [
-              'Taxa efetiva',
-              `${brl(comAna.progressiva_volume)} ÷ ${brl(comAna.volume)}`,
-              `${num(comAna.taxa_efetiva * 100, 4)}%`,
-            ],
-            [
-              'Pedidos normais',
-              `${brl(comAna.vendas_normais)} × ${num(comAna.taxa_efetiva * 100, 4)}%`,
-              brl(comAna.comissao_normais),
-            ],
+            ['Comissão progressiva', 'soma das faixas', brl(comAna.comissao_normais)],
             ['Carteira Corporativo', `${brl(comAna.vendas_carteiras)} × 5%`, brl(comAna.comissao_carteiras)],
             ['Total da Ana', `${brl(comAna.comissao_normais)} + ${brl(comAna.comissao_carteiras)}`, brl(comAna.total)],
           ]}
-          conclusao="As vendas da carteira ajudam a Ana a chegar às faixas mais altas, mas são comissionadas só pelo percentual fixo da carteira; a progressiva vale para os pedidos normais, na proporção deles no volume."
+          conclusao="Os R$ 8.000 da carteira não entram nas faixas: a Ana fica na faixa de 4% com R$ 25.000. Na lista de pedidos, a progressiva é dividida entre os pedidos normais pelo valor (taxa média = progressiva ÷ vendas normais)."
         />
         <Dica tipo="regra">
           Vigência: valem a tabela de faixas e os percentuais de carteira vigentes no <b>último dia do mês</b>. Ao{' '}
           <b>fechar o mês</b>, o resultado fica gravado e não muda mais (mesmo que se alterem faixas, carteiras ou pedidos); para
-          corrigir, reabre-se o mês, com motivo. Arredondamento em centavos; os centavos que sobram da taxa efetiva ficam no
-          último pedido normal do vendedor.
+          corrigir, reabre-se o mês, com motivo. Arredondamento em centavos; os centavos que sobram ao dividir a progressiva entre
+          os pedidos ficam no último pedido normal do vendedor.
         </Dica>
       </Secao>
 

@@ -61,16 +61,17 @@ describe('faixas progressivas', () => {
 });
 
 describe('apuração do mês', () => {
-  it('Ana: carteira conta para as faixas; progressiva proporcional aos pedidos normais', () => {
+  it('Ana: carteira NÃO conta para as faixas; progressiva só sobre os pedidos normais', () => {
     const a = apurarComissoes('2026-10', [ped('Ana', 15000), ped('Ana', 10000), ped('Ana', 8000, 7)], [TABELA], [CORP], 'agora');
     const ana = a.vendedores[0]!;
-    // Volume 33.000: 250 + 800 + 150 = 1.200 → taxa 3,6364% × 25.000 = 909,09
-    expect(ana).toMatchObject({ vendas_normais: 25000, vendas_carteiras: 8000, volume: 33000, progressiva_volume: 1200, comissao_normais: 909.09 });
+    // Faixas sobre 25.000: 250 + 600 = 850; carteira 8.000 × 5% = 400
+    expect(ana).toMatchObject({ vendas_normais: 25000, vendas_carteiras: 8000, volume: 25000, progressiva_volume: 850, comissao_normais: 850 });
+    expect(ana.taxa_efetiva).toBeCloseTo(0.034, 6);
     expect(ana.carteiras).toEqual([{ carteira_id: 7, nome: 'Corporativo', percentual: 0.05, vendas: 8000, comissao: 400 }]);
-    expect(ana.total).toBe(1309.09);
+    expect(ana.total).toBe(1250);
     // Soma dos pedidos fecha com o total
-    expect(ana.pedidos.reduce((s, p) => s + p.comissao, 0)).toBeCloseTo(1309.09, 2);
-    expect(a.totais).toMatchObject({ pedidos: 3, total: 1309.09, comissao_carteiras: 400 });
+    expect(ana.pedidos.reduce((s, p) => s + p.comissao, 0)).toBeCloseTo(1250, 2);
+    expect(a.totais).toMatchObject({ pedidos: 3, total: 1250, comissao_carteiras: 400 });
     expect(a.avisos).toEqual([]);
   });
 

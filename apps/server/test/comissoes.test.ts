@@ -81,7 +81,7 @@ describe('comissões', () => {
     expect((await req('POST', `/api/comissoes/parametros/carteiras/${corp}/percentuais`, { vigente_de: '2026-11-01', percentual: 8 })).status).toBe(409);
   });
 
-  it('apuração: Em Produção no mês, sem frete, carteira conta para as faixas', async () => {
+  it('apuração: Em Produção no mês, sem frete, carteira fora das faixas', async () => {
     const a = await pedidoConcluido(15000);
     await pedidoConcluido(10000);
     const c = await pedidoConcluido(8000);
@@ -97,8 +97,8 @@ describe('comissões', () => {
     const r = await req('GET', `/api/comissoes/apuracao/${MES}`);
     expect(r.json.situacao).toBe('PREVIA');
     const v = r.json.apuracao.vendedores[0];
-    // Volume 33.000 → 250 + 800 + 150 = 1.200; normais 25.000 × 3,6364% = 909,09; carteira 8.000 × 5% = 400
-    expect(v).toMatchObject({ vendedor: 'Administrador', vendas_normais: 25000, vendas_carteiras: 8000, comissao_normais: 909.09, comissao_carteiras: 400, total: 1309.09 });
+    // Faixas só sobre os normais (25.000) → 250 + 600 = 850; carteira 8.000 × 5% = 400
+    expect(v).toMatchObject({ vendedor: 'Administrador', vendas_normais: 25000, vendas_carteiras: 8000, volume: 25000, comissao_normais: 850, comissao_carteiras: 400, total: 1250 });
     expect(r.json.apuracao.tabela.descricao).toBe('Tabela 2026');
     expect(r.json.apuracao.totais.pedidos).toBe(3);
     // Pedido que voltou para antes de Em Produção sai da apuração
@@ -115,7 +115,7 @@ describe('comissões', () => {
     // Mudar parâmetros não altera o mês fechado
     const corpAtual = (await req('GET', '/api/comissoes/parametros/carteiras')).json[0];
     await req('DELETE', `/api/comissoes/parametros/carteiras/${corp}/percentuais/${corpAtual.percentuais[1].id}`);
-    expect((await req('GET', `/api/comissoes/apuracao/${MES}`)).json.apuracao.totais.total).toBe(1309.09);
+    expect((await req('GET', `/api/comissoes/apuracao/${MES}`)).json.apuracao.totais.total).toBe(1250);
     // Carteira de pedido do mês fechado não muda
     const ped = (await req('GET', `/api/comissoes/pedidos?mes=${MES}`)).json.pedidos[0];
     expect(ped.bloqueado).toBe(true);

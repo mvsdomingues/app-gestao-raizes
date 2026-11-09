@@ -55,7 +55,6 @@ function gerarCsv(r: RespostaApuracao): string {
     'Vendedor',
     'Vendas normais',
     'Vendas carteiras',
-    'Volume das faixas',
     'Comissão progressiva',
     'Comissão carteiras',
     'Total a pagar',
@@ -66,7 +65,6 @@ function gerarCsv(r: RespostaApuracao): string {
       v.vendedor,
       v.vendas_normais,
       v.vendas_carteiras,
-      v.volume,
       v.comissao_normais,
       v.comissao_carteiras,
       v.total,
@@ -77,7 +75,6 @@ function gerarCsv(r: RespostaApuracao): string {
     '',
     a.totais.vendas_normais,
     a.totais.vendas_carteiras,
-    a.totais.vendas_normais + a.totais.vendas_carteiras,
     a.totais.comissao_normais,
     a.totais.comissao_carteiras,
     a.totais.total,
@@ -308,7 +305,6 @@ export function ApuracaoComissoes() {
                     <th>Vendedor</th>
                     <th className="num">Vendas normais</th>
                     <th className="num">Vendas carteiras</th>
-                    <th className="num">Volume das faixas</th>
                     <th className="num">Comissão progressiva</th>
                     <th className="num">Comissão carteiras</th>
                     <th className="num">Total a pagar</th>
@@ -326,7 +322,6 @@ export function ApuracaoComissoes() {
                           </td>
                           <td className="num">{brl(v.vendas_normais)}</td>
                           <td className="num">{brl(v.vendas_carteiras)}</td>
-                          <td className="num">{brl(v.volume)}</td>
                           <td className="num">{brl(v.comissao_normais)}</td>
                           <td className="num">{brl(v.comissao_carteiras)}</td>
                           <td className="num">
@@ -335,7 +330,7 @@ export function ApuracaoComissoes() {
                         </tr>
                         {aberto && (
                           <tr className="com-detalhe-linha">
-                            <td colSpan={7}>
+                            <td colSpan={6}>
                               <DetalheVendedor v={v} />
                             </td>
                           </tr>
@@ -351,7 +346,6 @@ export function ApuracaoComissoes() {
                     </td>
                     <td className="num">{brl(a.totais.vendas_normais)}</td>
                     <td className="num">{brl(a.totais.vendas_carteiras)}</td>
-                    <td className="num">{brl(a.totais.vendas_normais + a.totais.vendas_carteiras)}</td>
                     <td className="num">{brl(a.totais.comissao_normais)}</td>
                     <td className="num">{brl(a.totais.comissao_carteiras)}</td>
                     <td className="num">
@@ -420,7 +414,7 @@ function DetalheVendedor({ v }: { v: VendedorApurado }) {
     <div className="com-detalhe">
       <div className="com-detalhe-blocos">
         <div>
-          <div className="com-detalhe-titulo">Faixas progressivas (volume {brl(v.volume)})</div>
+          <div className="com-detalhe-titulo">Faixas progressivas sobre as vendas normais ({brl(v.volume)})</div>
           <table className="com-mini">
             <tbody>
               {v.faixas
@@ -435,15 +429,8 @@ function DetalheVendedor({ v }: { v: VendedorApurado }) {
                   </tr>
                 ))}
               <tr className="com-mini-total">
-                <td>Progressiva sobre o volume</td>
-                <td className="num">taxa efetiva {pct(v.taxa_efetiva, 4)}</td>
-                <td className="num">{brl(v.progressiva_volume)}</td>
-              </tr>
-              <tr className="com-mini-total">
-                <td>Aplicada aos pedidos normais</td>
-                <td className="num">
-                  {brl(v.vendas_normais)} × {pct(v.taxa_efetiva, 4)}
-                </td>
+                <td>Comissão progressiva</td>
+                <td className="num">taxa média {pct(v.taxa_efetiva, 4)}</td>
                 <td className="num">
                   <b>{brl(v.comissao_normais)}</b>
                 </td>

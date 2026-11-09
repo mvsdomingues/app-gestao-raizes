@@ -6,10 +6,8 @@
 // - Base: valor dos produtos do pedido, sem o frete de entrega.
 // - Vendedor: responsável pelo orçamento.
 // - Faixas progressivas (tabela geral, com vigência): cada percentual vale só
-//   para a parte do volume dentro da faixa. O volume do vendedor no mês soma
-//   TODOS os pedidos (normais + carteiras) para chegar às faixas; a comissão
-//   progressiva resultante é aplicada aos pedidos normais na proporção deles
-//   no volume (taxa efetiva × vendas normais).
+//   para a parte das vendas NORMAIS do vendedor no mês dentro da faixa. As
+//   vendas de carteira NÃO contam para atingir as faixas.
 // - Carteiras especiais: percentual fixo da carteira sobre o pedido, à parte.
 // - Vigência: valem a tabela e os percentuais vigentes no último dia do mês.
 // ══════════════════════════════════════════════════════════
@@ -158,11 +156,11 @@ export interface VendedorApurado {
   vendedor: string;
   vendas_normais: number;
   vendas_carteiras: number;
-  /** Volume usado para as faixas (normais + carteiras) */
+  /** Volume usado para as faixas (só as vendas normais; carteiras não contam) */
   volume: number;
-  /** Comissão progressiva sobre o volume todo, antes da proporção */
+  /** Comissão progressiva sobre o volume */
   progressiva_volume: number;
-  /** Comissão progressiva ÷ volume */
+  /** Comissão progressiva ÷ vendas normais (taxa média, usada para dividir entre os pedidos) */
   taxa_efetiva: number;
   faixas: DetalheFaixa[];
   comissao_normais: number;
@@ -221,12 +219,13 @@ export function apurarComissoes(
     const deCarteira = ordem.filter((p) => p.carteira_id !== null);
     const vendasNormais = centavos(normais.reduce((s, p) => s + p.valor, 0));
     const vendasCarteiras = centavos(deCarteira.reduce((s, p) => s + p.valor, 0));
-    const volume = centavos(vendasNormais + vendasCarteiras);
+    // Carteiras não contam para as faixas: o volume é só o das vendas normais
+    const volume = vendasNormais;
     const prog = tabela ? comissaoProgressiva(volume, tabela.faixas) : { total: 0, faixas: [] };
     const taxa = volume > 0 ? prog.total / volume : 0;
-    const comissaoNormais = centavos(vendasNormais * taxa);
+    const comissaoNormais = prog.total;
 
-    // Comissão normal por pedido, proporcional ao valor; centavos que sobram no último
+    // Comissão progressiva dividida entre os pedidos normais pelo valor; centavos que sobram no último
     const apurados: PedidoApurado[] = [];
     let distribuido = 0;
     normais.forEach((p, i) => {
