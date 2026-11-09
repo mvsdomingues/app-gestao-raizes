@@ -193,6 +193,16 @@ O menu fica na **barra lateral** (pode ser recolhido para mostrar só os ícones
 
 8. **Atualização**: atualiza a base dos fornecedores integrados e mostra o log; com o Kommo ligado, mostra também a sincronização dos clientes.
 
+### Comissões
+
+Menu **Comissões** (três telas, cada uma com permissão própria em Acessos):
+
+- **Parâmetros de comissão**: *Faixas progressivas* — tabela geral com **vigência** ("vigente a partir de") e faixas contínuas (até, %); a última vale para tudo acima. *Carteiras especiais* — nome, descrição, ativa/inativa e percentual fixo com vigência. Carteira usada em pedidos não é excluída (inativar).
+- **Carteiras dos pedidos** (acesso restrito): marca ou tira a carteira de um ou vários pedidos, com histórico (quem, quando, de/para). Pedidos de mês já fechado ficam bloqueados.
+- **Apuração mensal**: prévia do mês, cartões de totais, tabela por vendedor com detalhe por faixa, por carteira e por pedido; exportação CSV (Excel) e impressão/PDF; **fechar o mês** grava o resultado (não muda mais), **reabrir** exige motivo; data de pagamento do mês fechado.
+- Regras: entra o pedido que chegou pela primeira vez a **Em Produção** no mês (não cancelado e sem ter voltado para antes); base = valor dos produtos **sem frete**; vendedor = responsável pelo orçamento; valem a tabela e os percentuais **vigentes no último dia do mês**.
+- Cálculo: volume das faixas = vendas normais + vendas de carteiras; progressiva faixa a faixa sobre o volume; os pedidos normais recebem a progressiva na proporção deles no volume (taxa efetiva); pedidos de carteira recebem o percentual fixo da carteira. Ex.: R$ 25.000 normais + R$ 8.000 em carteira de 5% com faixas 2,5% (até 10 mil), 4% (até 30 mil), 5% (acima) → progressiva R$ 1.200 sobre R$ 33.000 → R$ 909,09 nos normais + R$ 400 na carteira = **R$ 1.309,09**.
+
 ### Ajuda
 
 Menu **Ajuda**, liberado a todos os usuários ativos (ajustável em Acessos):

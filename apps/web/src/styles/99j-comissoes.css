@@ -1,0 +1,67 @@
+/* ══ Comissões: parâmetros, carteiras dos pedidos e apuração ══ */
+.com-faixas-resumo { font-size: .8rem; color: var(--text); }
+.com-situacao { font-size: .72rem; font-weight: 600; padding: 2px 9px; border-radius: 999px; }
+.com-situacao.ativa { background: #e6f4ea; color: #1f6b3a; }
+.com-situacao.inativa { background: var(--creme2); color: var(--muted); }
+.com-faixas-edicao { width: 100%; border-collapse: collapse; margin: 6px 0; font-size: .84rem; }
+.com-faixas-edicao th { text-align: left; font-size: .68rem; text-transform: uppercase; letter-spacing: .06em; color: var(--muted); padding: 4px 6px; }
+.com-faixas-edicao td { padding: 4px 6px; vertical-align: middle; }
+.com-faixas-edicao .custom-input { width: 120px; }
+.com-faixa-de { color: var(--muted); white-space: nowrap; }
+.com-sem-limite { color: var(--muted); font-style: italic; }
+.com-check { display: flex; gap: 8px; align-items: center; font-size: .84rem; margin: 6px 0 10px; }
+.com-percentuais ul { list-style: none; margin: 4px 0 8px; padding: 0; }
+.com-percentuais li { display: flex; justify-content: space-between; align-items: center; padding: 4px 0; border-bottom: 1px solid #f0ece5; font-size: .85rem; }
+.com-novo-pct { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
+.com-novo-pct input[inputmode] { width: 80px; }
+
+.com-barra-acoes { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; margin: 10px 0; padding: 10px 12px; background: var(--surface); border: 1px solid var(--border); border-radius: 10px; font-size: .84rem; }
+.com-barra-acoes select { width: auto; min-width: 200px; }
+.com-tabela tr.selecionado td { background: #f4eef8; }
+.com-sub { display: block; font-size: .72rem; color: var(--muted); }
+.com-tag-carteira { display: inline-block; background: #f4eef8; color: var(--uva); border-radius: 999px; padding: 1px 9px; font-size: .74rem; font-weight: 600; }
+.com-bloqueado { margin-left: 6px; }
+.com-paginacao { display: flex; gap: 8px; justify-content: center; margin: 14px 0; }
+
+.com-topo { display: flex; flex-wrap: wrap; justify-content: space-between; align-items: flex-end; gap: 10px 16px; margin-bottom: 12px; }
+.com-mes { display: flex; align-items: center; gap: 8px; font-size: .8rem; color: var(--muted); }
+.com-mes select { width: auto; min-width: 190px; }
+.com-mes input { width: auto; }
+.com-acoes { display: flex; flex-wrap: wrap; gap: 8px; }
+.com-situacao-faixa { padding: 9px 14px; border-radius: 8px; font-size: .86rem; margin-bottom: 6px; }
+.com-situacao-faixa.previa { background: #fff4ec; border: 1px solid #f6d3bd; color: #7a3a10; }
+.com-situacao-faixa.fechado { background: #e6f4ea; border: 1px solid #bfe0c8; color: #1f5131; }
+.com-pago { font-weight: 600; }
+.com-tabela-usada { font-size: .78rem; color: var(--muted); margin: 6px 0 10px; }
+.com-aviso { background: #fff4ec; border-left: 3px solid #eb6834; padding: 6px 10px; margin: 6px 0; font-size: .82rem; border-radius: 0 6px 6px 0; }
+.com-cards { display: grid; grid-template-columns: repeat(auto-fit, minmax(190px, 1fr)); gap: 10px; margin: 12px 0 16px; }
+.com-card { background: var(--surface); border: 1px solid var(--border); border-radius: 12px; padding: 12px 14px; display: flex; flex-direction: column; gap: 2px; }
+.com-card span { font-size: .7rem; text-transform: uppercase; letter-spacing: .08em; color: var(--muted); }
+.com-card b { font-family: var(--font-display); font-size: 1.6rem; color: var(--berinjela); font-variant-numeric: tabular-nums; }
+.com-card small { font-size: .74rem; color: var(--muted); }
+.com-card.destaque { background: var(--uva); border-color: var(--uva); }
+.com-card.destaque span, .com-card.destaque b { color: #fff; }
+.com-tabela .num { text-align: right; font-variant-numeric: tabular-nums; white-space: nowrap; }
+.com-linha-vendedor { cursor: pointer; }
+.com-linha-vendedor:hover td { background: var(--creme); }
+.com-seta { color: var(--uva); display: inline-block; width: 12px; }
+.com-tabela tfoot td { border-top: 2px solid var(--berinjela); font-weight: 600; padding-top: 8px; }
+.com-detalhe-linha > td { background: #fbf8f4; padding: 12px 14px !important; }
+.com-detalhe-blocos { display: grid; grid-template-columns: repeat(auto-fit, minmax(320px, 1fr)); gap: 14px; margin-bottom: 12px; }
+.com-detalhe-titulo { font-size: .68rem; text-transform: uppercase; letter-spacing: .08em; color: var(--uva); font-weight: 600; margin-bottom: 4px; }
+.com-mini { width: 100%; border-collapse: collapse; font-size: .8rem; background: #fff; border: 1px solid var(--border); border-radius: 8px; }
+.com-mini th { text-align: left; font-size: .66rem; text-transform: uppercase; letter-spacing: .06em; color: var(--muted); padding: 6px 8px; border-bottom: 1px solid var(--border); }
+.com-mini td { padding: 5px 8px; border-bottom: 1px solid #f0ece5; }
+.com-mini .num { text-align: right; white-space: nowrap; font-variant-numeric: tabular-nums; }
+.com-mini-total td { background: #f4eef8; }
+.com-pagamento { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; margin: 16px 0; font-size: .84rem; }
+.com-pagamento input { width: auto; }
+.com-historico { margin: 16px 0; font-size: .82rem; }
+.com-historico ul { margin: 4px 0; padding-left: 18px; }
+
+@media print {
+  .com-apuracao .no-print, .com-pagamento { display: none !important; }
+  .com-card { break-inside: avoid; }
+  .com-linha-vendedor .com-seta { display: none; }
+}
+#com-filtro-mes, .com-mes input[type=month] { min-width: 170px; }

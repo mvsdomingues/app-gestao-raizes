@@ -20,6 +20,9 @@ import { ProvedorApp, useApp } from './contexto';
 import { ProvedorSessao, useSessao } from './sessao';
 import { Dialogos } from '../components/Dialogos';
 import { MemoriasCalculo } from '../features/ajuda/MemoriasCalculo';
+import { ApuracaoComissoes } from '../features/comissoes/ApuracaoComissoes';
+import { CarteirasPedidos } from '../features/comissoes/CarteirasPedidos';
+import { ParametrosComissao } from '../features/comissoes/ParametrosComissao';
 import { ManualOperacao } from '../features/ajuda/ManualOperacao';
 
 // O estúdio de mockups (Konva) é carregado só na primeira vez que a tela é aberta
@@ -86,6 +89,9 @@ const TELAS: Record<IdTela, ReactNode> = {
   usuarios: <Usuarios />,
   acessos: <Acessos />,
   status: <Atualizacao />,
+  'comissoes-apuracao': <ApuracaoComissoes />,
+  'comissoes-carteiras': <CarteirasPedidos />,
+  'comissoes-parametros': <ParametrosComissao />,
   'ajuda-calculos': <MemoriasCalculo />,
   'ajuda-manual': <ManualOperacao />,
 };

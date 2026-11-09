@@ -32,6 +32,14 @@ const GRUPOS: { titulo: string; itens: ItemMenu[] }[] = [
     ],
   },
   {
+    titulo: 'Comissões',
+    itens: [
+      { tela: 'comissoes-apuracao', rotulo: 'Apuração mensal', icone: 'comissao', id: 'tab-comissoes-apuracao' },
+      { tela: 'comissoes-carteiras', rotulo: 'Carteiras', icone: 'carteira', id: 'tab-comissoes-carteiras' },
+      { tela: 'comissoes-parametros', rotulo: 'Parâmetros', icone: 'parametros', id: 'tab-comissoes-parametros' },
+    ],
+  },
+  {
     titulo: 'Cadastros',
     itens: [
       { tela: 'produtos-proprios', rotulo: 'Produtos Próprios', icone: 'produtos', id: 'tab-produtos-proprios' },

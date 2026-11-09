@@ -1,4 +1,9 @@
 import type {
+  CarteiraComissao,
+  MovimentoCarteira,
+  PedidoCarteira,
+  RespostaApuracao,
+  TabelaComissao,
   TecnicaComValores,
   ParametroMaoObra,
   ParametroMaterial,
@@ -294,6 +299,37 @@ export const api = {
   parametrosSistema: () => enviar<RespostaParametrosSistema>('GET', '/api/parametros/sistema'),
   salvarParametrosSistema: (valores: Partial<ParametrosSistema>) =>
     enviar<RespostaParametrosSistema>('PUT', '/api/parametros/sistema', valores),
+
+  // ── Comissões ──
+  tabelasComissao: () => enviar<TabelaComissao[]>('GET', '/api/comissoes/parametros/tabelas'),
+  salvarTabelaComissao: (dados: { vigente_de: string; descricao: string; faixas: { de: string; ate: string; percentual: string }[] }, id?: number) =>
+    id
+      ? enviar<TabelaComissao>('PUT', `/api/comissoes/parametros/tabelas/${id}`, dados)
+      : enviar<TabelaComissao>('POST', '/api/comissoes/parametros/tabelas', dados),
+  excluirTabelaComissao: (id: number) => enviar<{ ok: boolean }>('DELETE', `/api/comissoes/parametros/tabelas/${id}`),
+  carteiras: () => enviar<CarteiraComissao[]>('GET', '/api/comissoes/parametros/carteiras'),
+  salvarCarteira: (dados: { nome: string; descricao: string; ativa: boolean; vigente_de?: string; percentual?: string }, id?: number) =>
+    id
+      ? enviar<CarteiraComissao>('PUT', `/api/comissoes/parametros/carteiras/${id}`, dados)
+      : enviar<CarteiraComissao>('POST', '/api/comissoes/parametros/carteiras', dados),
+  excluirCarteira: (id: number) => enviar<{ ok: boolean }>('DELETE', `/api/comissoes/parametros/carteiras/${id}`),
+  incluirPercentualCarteira: (id: number, dados: { vigente_de: string; percentual: string }) =>
+    enviar<CarteiraComissao>('POST', `/api/comissoes/parametros/carteiras/${id}/percentuais`, dados),
+  excluirPercentualCarteira: (id: number, pid: number) =>
+    enviar<CarteiraComissao>('DELETE', `/api/comissoes/parametros/carteiras/${id}/percentuais/${pid}`),
+  pedidosCarteira: (f: { mes?: string; busca?: string; carteira?: string; limit: number; offset: number }) => {
+    const q = new URLSearchParams();
+    for (const [k, v] of Object.entries(f)) if (v !== undefined && v !== '') q.set(k, String(v));
+    return enviar<{ total: number; pedidos: PedidoCarteira[] }>('GET', `/api/comissoes/pedidos?${q}`);
+  },
+  marcarCarteira: (pedidos: string[], carteira_id: number | null) =>
+    enviar<{ alterados: number }>('PUT', '/api/comissoes/pedidos/carteira', { pedidos, carteira_id }),
+  historicoCarteira: (codigo: string) => enviar<MovimentoCarteira[]>('GET', `/api/comissoes/pedidos/${codigo}/historico`),
+  competenciasComissao: () => enviar<{ competencia: string; fechado: boolean }[]>('GET', '/api/comissoes/apuracao'),
+  apuracao: (c: string) => enviar<RespostaApuracao>('GET', `/api/comissoes/apuracao/${c}`),
+  fecharApuracao: (c: string) => enviar<RespostaApuracao>('POST', `/api/comissoes/apuracao/${c}/fechar`),
+  reabrirApuracao: (c: string, motivo: string) => enviar<RespostaApuracao>('POST', `/api/comissoes/apuracao/${c}/reabrir`, { motivo }),
+  pagamentoApuracao: (c: string, pago_em: string | null) => enviar<RespostaApuracao>('PUT', `/api/comissoes/apuracao/${c}/pagamento`, { pago_em }),
 };
 
 /** URL usada para carregar imagens externas no canvas sem bloqueio de CORS. */

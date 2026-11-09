@@ -2,6 +2,7 @@ import { useMemo, useState } from 'react';
 import {
   CALC_DEFAULTS,
   FAIXAS,
+  apurarComissoes,
   calcComPersonalizacao,
   calcPreco,
   calcularPersonalizacao,
@@ -60,6 +61,7 @@ const SUMARIO = [
   { id: 'calc-completo', titulo: 'Exemplo completo' },
   { id: 'calc-totais', titulo: 'Totais do orçamento' },
   { id: 'calc-dashboards', titulo: 'Indicadores dos dashboards' },
+  { id: 'calc-comissoes', titulo: 'Comissões dos vendedores' },
   { id: 'calc-simulador', titulo: 'Simulador' },
 ];
 
@@ -177,6 +179,68 @@ export function MemoriasCalculo() {
     ],
     [SUBLIMACAO],
   ).get(1)!;
+
+  // Comissões: Ana em outubro, R$ 25.000 normais + R$ 8.000 na carteira Corporativo (5%)
+  const comAna = apurarComissoes(
+    '2026-10',
+    [
+      {
+        pedido_id: 1,
+        codigo: 'PED-000101',
+        orcamento: 'ORC-0101',
+        cliente: null,
+        vendedor_id: 1,
+        vendedor: 'Ana',
+        data_conclusao: '2026-10-05T10:00:00',
+        valor: 15000,
+        carteira_id: null,
+      },
+      {
+        pedido_id: 2,
+        codigo: 'PED-000102',
+        orcamento: 'ORC-0102',
+        cliente: null,
+        vendedor_id: 1,
+        vendedor: 'Ana',
+        data_conclusao: '2026-10-12T10:00:00',
+        valor: 10000,
+        carteira_id: null,
+      },
+      {
+        pedido_id: 3,
+        codigo: 'PED-000103',
+        orcamento: 'ORC-0103',
+        cliente: null,
+        vendedor_id: 1,
+        vendedor: 'Ana',
+        data_conclusao: '2026-10-20T10:00:00',
+        valor: 8000,
+        carteira_id: 9,
+      },
+    ],
+    [
+      {
+        id: 1,
+        vigente_de: '2026-01-01',
+        descricao: 'Exemplo',
+        faixas: [
+          { de: 0, ate: 10000, percentual: 0.025 },
+          { de: 10000, ate: 30000, percentual: 0.04 },
+          { de: 30000, ate: null, percentual: 0.05 },
+        ],
+      },
+    ],
+    [
+      {
+        id: 9,
+        nome: 'Corporativo',
+        descricao: '',
+        ativa: true,
+        percentuais: [{ id: 1, vigente_de: '2026-01-01', percentual: 0.05 }],
+      },
+    ],
+    '',
+  ).vendedores[0]!;
 
   // Sem técnica: R$ 1,00 + R$ 3,00 por unidade (padrão)
   const semTec = calcularPersonalizacao(personalizacaoVazia(), 50, [], {
@@ -670,7 +734,73 @@ export function MemoriasCalculo() {
         />
       </Secao>
 
-      <Secao id="calc-simulador" titulo="Simulador com os seus parâmetros" numero={15}>
+      <Secao id="calc-comissoes" titulo="Comissões dos vendedores (apuração mensal)" numero={15}>
+        <p>
+          A comissão de cada vendedor no mês soma a parte <b>progressiva</b> (pedidos normais) e a das <b>carteiras especiais</b>.
+          Entram os pedidos que chegaram à etapa <b>Em Produção</b> no mês (pela primeira vez), não cancelados; a base é o valor
+          dos produtos, sem o frete; o vendedor é o responsável pelo orçamento.
+        </p>
+        <Formula
+          titulo="Fórmula"
+          linhas={[
+            <>
+              <b>Volume das faixas</b> = vendas normais + vendas de carteiras do vendedor no mês
+            </>,
+            <>
+              <b>Progressiva</b> = soma, faixa a faixa, de (parte do volume dentro da faixa × % da faixa)
+            </>,
+            <>
+              <b>Comissão dos pedidos normais</b> = progressiva × (vendas normais ÷ volume) — a <i>taxa efetiva</i> aplicada a
+              cada pedido normal
+            </>,
+            <>
+              <b>Comissão de carteira</b> = valor do pedido × % fixo da carteira
+            </>,
+            <>
+              <b>Total do vendedor</b> = comissão dos pedidos normais + comissão das carteiras
+            </>,
+          ]}
+        />
+        <Exemplo
+          titulo="Exemplo: Ana em outubro — R$ 25.000 em pedidos normais e R$ 8.000 na carteira Corporativo (5%)"
+          dados={<>Faixas: até R$ 10.000 → 2,5% · R$ 10.000 a R$ 30.000 → 4% · acima de R$ 30.000 → 5%</>}
+          passos={[
+            ['Volume das faixas', 'R$ 25.000 + R$ 8.000', brl(comAna.volume)],
+            ...comAna.faixas
+              .filter((f) => f.base > 0)
+              .map(
+                (f, i) =>
+                  [`Faixa ${i + 1}`, `${brl(f.base)} × ${num(f.percentual * 100, 2)}%`, brl(f.comissao)] as [
+                    string,
+                    string,
+                    string,
+                  ],
+              ),
+            ['Progressiva sobre o volume', 'soma das faixas', brl(comAna.progressiva_volume)],
+            [
+              'Taxa efetiva',
+              `${brl(comAna.progressiva_volume)} ÷ ${brl(comAna.volume)}`,
+              `${num(comAna.taxa_efetiva * 100, 4)}%`,
+            ],
+            [
+              'Pedidos normais',
+              `${brl(comAna.vendas_normais)} × ${num(comAna.taxa_efetiva * 100, 4)}%`,
+              brl(comAna.comissao_normais),
+            ],
+            ['Carteira Corporativo', `${brl(comAna.vendas_carteiras)} × 5%`, brl(comAna.comissao_carteiras)],
+            ['Total da Ana', `${brl(comAna.comissao_normais)} + ${brl(comAna.comissao_carteiras)}`, brl(comAna.total)],
+          ]}
+          conclusao="As vendas da carteira ajudam a Ana a chegar às faixas mais altas, mas são comissionadas só pelo percentual fixo da carteira; a progressiva vale para os pedidos normais, na proporção deles no volume."
+        />
+        <Dica tipo="regra">
+          Vigência: valem a tabela de faixas e os percentuais de carteira vigentes no <b>último dia do mês</b>. Ao{' '}
+          <b>fechar o mês</b>, o resultado fica gravado e não muda mais (mesmo que se alterem faixas, carteiras ou pedidos); para
+          corrigir, reabre-se o mês, com motivo. Arredondamento em centavos; os centavos que sobram da taxa efetiva ficam no
+          último pedido normal do vendedor.
+        </Dica>
+      </Secao>
+
+      <Secao id="calc-simulador" titulo="Simulador com os seus parâmetros" numero={16}>
         <Simulador />
       </Secao>
     </TelaAjuda>

@@ -245,6 +245,61 @@ export function garantirEsquema(db: Database.Database): void {
       ultimo_erro TEXT
     );
 
+    -- Comissões: tabela geral de faixas progressivas, com vigência (faixas em JSON)
+    CREATE TABLE IF NOT EXISTS comissao_tabelas (
+      id          INTEGER PRIMARY KEY AUTOINCREMENT,
+      vigente_de  TEXT NOT NULL UNIQUE,
+      descricao   TEXT NOT NULL DEFAULT '',
+      faixas_json TEXT NOT NULL,
+      criado      TEXT NOT NULL,
+      atualizado  TEXT NOT NULL,
+      usuario_id  INTEGER REFERENCES usuarios(id)
+    );
+    -- Carteiras de clientes especiais (percentual fixo, com vigência)
+    CREATE TABLE IF NOT EXISTS carteiras (
+      id         INTEGER PRIMARY KEY AUTOINCREMENT,
+      nome       TEXT NOT NULL UNIQUE COLLATE NOCASE,
+      descricao  TEXT NOT NULL DEFAULT '',
+      ativa      INTEGER NOT NULL DEFAULT 1,
+      criado     TEXT NOT NULL,
+      atualizado TEXT NOT NULL
+    );
+    CREATE TABLE IF NOT EXISTS carteira_percentuais (
+      id          INTEGER PRIMARY KEY AUTOINCREMENT,
+      carteira_id INTEGER NOT NULL REFERENCES carteiras(id),
+      vigente_de  TEXT NOT NULL,
+      percentual  REAL NOT NULL,
+      criado      TEXT NOT NULL,
+      usuario_id  INTEGER REFERENCES usuarios(id),
+      UNIQUE (carteira_id, vigente_de)
+    );
+    -- Histórico da marcação de carteira nos pedidos
+    CREATE TABLE IF NOT EXISTS pedidos_carteira_movimentos (
+      id                INTEGER PRIMARY KEY AUTOINCREMENT,
+      pedido_id         INTEGER NOT NULL REFERENCES pedidos(id),
+      carteira_anterior INTEGER REFERENCES carteiras(id),
+      carteira_nova     INTEGER REFERENCES carteiras(id),
+      data_hora         TEXT NOT NULL,
+      usuario_id        INTEGER REFERENCES usuarios(id)
+    );
+    CREATE INDEX IF NOT EXISTS ix_pedidos_carteira_mov ON pedidos_carteira_movimentos(pedido_id);
+    -- Fechamento mensal das comissões (foto da apuração) e seu histórico
+    CREATE TABLE IF NOT EXISTS comissao_fechamentos (
+      competencia   TEXT PRIMARY KEY,
+      apuracao_json TEXT NOT NULL,
+      fechado_em    TEXT NOT NULL,
+      fechado_por   INTEGER REFERENCES usuarios(id),
+      pago_em       TEXT
+    );
+    CREATE TABLE IF NOT EXISTS comissao_fechamentos_movimentos (
+      id          INTEGER PRIMARY KEY AUTOINCREMENT,
+      competencia TEXT NOT NULL,
+      acao        TEXT NOT NULL,
+      data_hora   TEXT NOT NULL,
+      usuario_id  INTEGER REFERENCES usuarios(id),
+      observacao  TEXT
+    );
+
   `);
 
   migrarColunas(db);
@@ -373,5 +428,9 @@ function migrarColunas(db: Database.Database): void {
   // Observações livres do orçamento (digitadas no carrinho)
   if (!colunas(db, 'orcamentos').includes('observacao')) {
     db.exec(`ALTER TABLE orcamentos ADD COLUMN observacao TEXT`);
+  }
+  // Carteira de clientes especiais do pedido (comissões)
+  if (!colunas(db, 'pedidos').includes('carteira_id')) {
+    db.exec(`ALTER TABLE pedidos ADD COLUMN carteira_id INTEGER REFERENCES carteiras(id)`);
   }
 }

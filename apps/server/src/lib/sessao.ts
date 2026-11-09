@@ -90,6 +90,12 @@ const REGRAS: Regra[] = [
   { metodos: 'ESCRITA', caminho: /^\/api\/parametros(\/|$)/, telas: ['parametros'] },
   { metodos: 'ESCRITA', caminho: /^\/api\/produtos-proprios(\/|$)/, telas: ['produtos-proprios'] },
   { metodos: 'TODOS', caminho: /^\/api\/dashboards(\/|$)/, telas: ['dash-geral'] },
+  // Comissões: parâmetros (leitura também para quem marca carteiras ou apura), marcação e apuração
+  { metodos: 'GET', caminho: /^\/api\/comissoes\/parametros(\/|$)/, telas: ['comissoes-parametros', 'comissoes-carteiras', 'comissoes-apuracao'] },
+  { metodos: 'ESCRITA', caminho: /^\/api\/comissoes\/parametros(\/|$)/, telas: ['comissoes-parametros'] },
+  { metodos: 'TODOS', caminho: /^\/api\/comissoes\/pedidos(\/|$)/, telas: ['comissoes-carteiras'] },
+  { metodos: 'TODOS', caminho: /^\/api\/comissoes\/apuracao(\/|$)/, telas: ['comissoes-apuracao'] },
+  { metodos: 'TODOS', caminho: /^\/api\/comissoes(\/|$)/, telas: ['comissoes-apuracao'] },
   // Mockups dos produtos de um orçamento (estúdio)
   { metodos: 'TODOS', caminho: /^\/api\/orcamentos\/\d+\/mockups(\/|$)/, telas: ['mockup'] },
   { metodos: 'GET', caminho: /^\/api\/orcamentos(\/|$)/, telas: ['orcamentos', 'pedidos', 'mockup'] },

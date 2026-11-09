@@ -16,6 +16,7 @@ import { rotasProdutosProprios } from './routes/produtos-proprios';
 import { rotaProxyImagem } from './routes/proxy-imagem';
 import { rotasUsuarios } from './routes/usuarios';
 import { rotasClientes } from './routes/clientes';
+import { rotasComissoes } from './routes/comissoes';
 import { rotasPublicas } from './routes/publico';
 import type { ServicoKommo } from './kommo/servico';
 import type { GerenciadorAtualizacao } from './services/gerenciador-atualizacao';
@@ -61,6 +62,7 @@ export function criarApp({ db, gerenciador, imagensDir, webDist, kommo = null, u
   app.use(rotasPedidos(db, kommo));
   app.use(rotasProdutosProprios(db, imagensDir));
   app.use(rotasParametros(db));
+  app.use(rotasComissoes(db));
   app.use(rotasAtualizacao(gerenciador));
   app.use(rotaProxyImagem());
 

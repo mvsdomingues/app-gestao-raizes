@@ -17,7 +17,7 @@ const paraCampo = (v: number) => String(v).replace('.', ',');
 type Registro = { id: number };
 
 /** Modal simples de inclusão/alteração (mesmo visual dos demais cadastros). */
-function ModalRegistro({
+export function ModalRegistro({
   aberto,
   titulo,
   fechar,
@@ -81,7 +81,7 @@ function ModalRegistro({
 }
 
 /** Cabeçalho e tabela de um cadastro. */
-function SecaoTabela<T extends Registro>({
+export function SecaoTabela<T extends Registro>({
   id,
   titulo,
   sub,
@@ -179,7 +179,7 @@ function SeletorTecnica({ tecnicas, valor, mudar, id }: { tecnicas: TecnicaPerso
   );
 }
 
-function CampoNumero({ id, rotulo, valor, mudar, prefixo, sufixo, dica }: { id: string; rotulo: string; valor: string; mudar: (v: string) => void; prefixo?: string; sufixo?: string; dica?: string }) {
+export function CampoNumero({ id, rotulo, valor, mudar, prefixo, sufixo, dica }: { id: string; rotulo: string; valor: string; mudar: (v: string) => void; prefixo?: string; sufixo?: string; dica?: string }) {
   return (
     <div className="custom-modal-field" style={{ flex: 1 }}>
       <label className="custom-modal-label" htmlFor={id}>

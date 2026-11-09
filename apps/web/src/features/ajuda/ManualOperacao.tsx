@@ -22,6 +22,7 @@ const SUMARIO = [
   { id: 'man-quadro', titulo: 'Quadro e calendário' },
   { id: 'man-pedido-detalhe', titulo: 'Detalhes do pedido' },
   { id: 'man-dashboards', titulo: 'Dashboards' },
+  { id: 'man-comissoes', titulo: 'Comissões' },
   { id: 'man-proprios', titulo: 'Produtos próprios' },
   { id: 'man-parametros', titulo: 'Parâmetros' },
   { id: 'man-tabelas', titulo: 'Tabelas gerais' },
@@ -641,7 +642,63 @@ export function ManualOperacao() {
       </Secao>
 
       {/* ─────────────────────────────── 19 */}
-      <Secao id="man-proprios" titulo="Produtos próprios" numero={19}>
+      <Secao id="man-comissoes" titulo="Comissões dos vendedores" numero={19}>
+        <p>
+          Grupo <b>Comissões</b> do menu, com três telas, cada uma com permissão própria em Acessos. As contas estão em{' '}
+          <Menu>Ajuda › Memórias de cálculo › Comissões</Menu>.
+        </p>
+        <h4>1. Parâmetros de comissão</h4>
+        <ul>
+          <li>
+            <b>Faixas progressivas</b>: <Bt>+ Incluir</Bt> uma tabela com <i>vigente a partir de</i>, descrição e as faixas (até
+            quanto e o %). Cada faixa começa onde a anterior termina; a última vale para tudo acima. Para mudar valores a partir
+            de uma data, inclua uma nova tabela com essa vigência — ela já vem preenchida com a mais recente. As anteriores
+            continuam valendo para os meses delas.
+          </li>
+          <li>
+            <b>Carteiras especiais</b>: nome, descrição, ativa/inativa e o percentual com vigência. Para mudar o percentual, abra
+            a carteira e use <Bt>+ Nova vigência</Bt>. Carteira já usada em pedidos não é excluída: inative-a.
+          </li>
+        </ul>
+        <h4>2. Carteiras dos pedidos (acesso restrito)</h4>
+        <Passos
+          itens={[
+            'Filtre pelo mês de conclusão (entrada em Em Produção), pelo pedido/orçamento/cliente ou pela carteira. "Todos os pedidos" mostra também os ainda não concluídos.',
+            'Marque um ou vários pedidos na caixa de seleção.',
+            <>
+              Escolha a carteira e clique em <Bt>Marcar carteira</Bt> (ou <Bt>Tirar carteira</Bt>).
+            </>,
+            <>
+              <Bt>Histórico</Bt> mostra quem mudou a carteira do pedido, quando e de qual para qual.
+            </>,
+          ]}
+        />
+        <p>Pedidos de um mês já fechado aparecem com 🔒 e não podem ser alterados; para corrigir, reabra o mês na apuração.</p>
+        <h4>3. Apuração mensal</h4>
+        <ul>
+          <li>
+            Escolha o mês: a tela mostra a <b>prévia</b>, recalculada com os dados atuais a cada abertura.
+          </li>
+          <li>
+            Cartões com o total de comissões, a parte progressiva e a de carteiras; tabela por vendedor com o total a pagar.
+            Clique no vendedor para ver a conta por faixa, por carteira e pedido a pedido.
+          </li>
+          <li>
+            <Bt>⬇ Exportar planilha (CSV)</Bt> gera o arquivo para o Excel (um pedido por linha e o resumo por vendedor);{' '}
+            <Bt>🖨 Imprimir / PDF</Bt> imprime o relatório.
+          </li>
+          <li>
+            <Bt>🔒 Fechar mês</Bt> grava o resultado: daí em diante ele não muda. Depois de fechado, registre a data em{' '}
+            <Bt>Registrar pagamento</Bt>. <Bt>↺ Reabrir mês</Bt> (motivo obrigatório) volta à prévia. Tudo fica no histórico do
+            mês.
+          </li>
+          <li>
+            Avisos em laranja indicam o que pede atenção: mês sem tabela de faixas vigente ou carteira sem percentual no mês.
+          </li>
+        </ul>
+      </Secao>
+
+      <Secao id="man-proprios" titulo="Produtos próprios" numero={20}>
         <p>
           Produtos da própria empresa, que aparecem no catálogo junto com os dos fornecedores.{' '}
           <Ir tela="produtos-proprios">Abrir Produtos Próprios</Ir>
@@ -657,7 +714,7 @@ export function ManualOperacao() {
       </Secao>
 
       {/* ─────────────────────────────── 20 */}
-      <Secao id="man-parametros" titulo="Parâmetros" numero={20}>
+      <Secao id="man-parametros" titulo="Parâmetros" numero={21}>
         <p>
           Configurações que afetam preços, pedidos e impressão. <Ir tela="parametros">Abrir Parâmetros</Ir>
         </p>
@@ -680,7 +737,7 @@ export function ManualOperacao() {
       </Secao>
 
       {/* ─────────────────────────────── 21 */}
-      <Secao id="man-tabelas" titulo="Tabelas gerais de precificação" numero={21}>
+      <Secao id="man-tabelas" titulo="Tabelas gerais de precificação" numero={22}>
         <Passos
           itens={[
             <>
@@ -707,7 +764,7 @@ export function ManualOperacao() {
       </Secao>
 
       {/* ─────────────────────────────── 22 */}
-      <Secao id="man-usuarios" titulo="Usuários e acessos" numero={22}>
+      <Secao id="man-usuarios" titulo="Usuários e acessos" numero={23}>
         <h4>Usuários</h4>
         <ul>
           <li>Inclua com nome, login e senha inicial. O login não pode ser alterado nem reaproveitado.</li>
@@ -733,7 +790,7 @@ export function ManualOperacao() {
       </Secao>
 
       {/* ─────────────────────────────── 23 */}
-      <Secao id="man-atualizacao" titulo="Atualização de produtos" numero={23}>
+      <Secao id="man-atualizacao" titulo="Atualização de produtos" numero={24}>
         <Passos
           itens={[
             <>
@@ -752,7 +809,7 @@ export function ManualOperacao() {
       </Secao>
 
       {/* ─────────────────────────────── 24 */}
-      <Secao id="man-kommo" titulo="Integração com o Kommo" numero={24}>
+      <Secao id="man-kommo" titulo="Integração com o Kommo" numero={25}>
         <ul>
           <li>
             Os contatos do Kommo são copiados para o sistema e atualizados a cada poucos minutos; uma vez por dia, de madrugada, é
@@ -770,7 +827,7 @@ export function ManualOperacao() {
       </Secao>
 
       {/* ─────────────────────────────── 25 */}
-      <Secao id="man-problemas" titulo="Problemas comuns" numero={25}>
+      <Secao id="man-problemas" titulo="Problemas comuns" numero={26}>
         <Tabela
           colunas={['Situação', 'Causa e solução']}
           linhas={[
@@ -813,7 +870,7 @@ export function ManualOperacao() {
       </Secao>
 
       {/* ─────────────────────────────── 26 */}
-      <Secao id="man-glossario" titulo="Glossário" numero={26}>
+      <Secao id="man-glossario" titulo="Glossário" numero={27}>
         <Tabela
           colunas={['Termo', 'Significado']}
           linhas={[
