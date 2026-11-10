@@ -3,7 +3,7 @@ import type { AddressInfo } from 'node:net';
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 import { criarApp } from '../src/app';
 import { abrirBanco } from '../src/db/conexao';
-import { migrarCarteirasDeClientes } from '../src/db/repositorio-comissoes';
+import { carteiraInicialParaRenomear, migrarCarteirasDeClientes, renomearCarteiraInicial } from '../src/db/repositorio-comissoes';
 import { GerenciadorAtualizacao } from '../src/services/gerenciador-atualizacao';
 import { clienteDeTeste, entrar } from './sessao-teste';
 
@@ -67,9 +67,9 @@ describe('comissões por carteira de clientes', () => {
   it('base nova: Carteira Geral criada pela migração, sem tabela', async () => {
     const cs = (await req('GET', '/api/comissoes/parametros/carteiras')).json;
     expect(cs).toHaveLength(1);
-    expect(cs[0]).toMatchObject({ nome: 'Geral', geral: true, ativa: true, tabelas: [] });
+    expect(cs[0]).toMatchObject({ nome: 'Inicial', geral: true, ativa: true, tabelas: [] });
     geral = cs[0].id;
-    expect((await req('GET', '/api/carteiras')).json).toEqual([{ id: geral, nome: 'Geral', geral: true, ativa: true }]);
+    expect((await req('GET', '/api/carteiras')).json).toEqual([{ id: geral, nome: 'Inicial', geral: true, ativa: true }]);
   });
 
   it('tabela de faixas por carteira, com vigência; percentual fixo = uma faixa', async () => {
@@ -113,22 +113,22 @@ describe('comissões por carteira de clientes', () => {
   });
 
   it('Carteira Geral: sempre exatamente uma; não inativa', async () => {
-    expect((await req('PUT', `/api/comissoes/parametros/carteiras/${geral}`, { nome: 'Geral', geral: false })).json.erro).toMatch(
-      /marque outra/,
-    );
-    expect((await req('PUT', `/api/comissoes/parametros/carteiras/${geral}`, { nome: 'Geral', ativa: false })).json.erro).toMatch(
-      /não pode ser inativada/,
-    );
+    expect(
+      (await req('PUT', `/api/comissoes/parametros/carteiras/${geral}`, { nome: 'Inicial', geral: false })).json.erro,
+    ).toMatch(/marque outra/);
+    expect(
+      (await req('PUT', `/api/comissoes/parametros/carteiras/${geral}`, { nome: 'Inicial', ativa: false })).json.erro,
+    ).toMatch(/não pode ser inativada/);
     // Passar a marca e voltar
     await req('PUT', `/api/comissoes/parametros/carteiras/${corp}`, { nome: 'Corporativo', geral: true });
     expect((await req('GET', '/api/carteiras')).json.filter((x: any) => x.geral).map((x: any) => x.id)).toEqual([corp]);
-    await req('PUT', `/api/comissoes/parametros/carteiras/${geral}`, { nome: 'Geral', geral: true });
+    await req('PUT', `/api/comissoes/parametros/carteiras/${geral}`, { nome: 'Inicial', geral: true });
     expect((await req('GET', '/api/carteiras')).json.filter((x: any) => x.geral).map((x: any) => x.id)).toEqual([geral]);
   });
 
   it('cliente sempre com carteira: sem escolha, a Geral; escolhida na inclusão', async () => {
     const a = await req('POST', '/api/clientes', { nome: 'Ana Brindes', telefone: '11911110000' });
-    expect(a.json.cliente).toMatchObject({ carteira_id: geral, carteira: 'Geral' });
+    expect(a.json.cliente).toMatchObject({ carteira_id: geral, carteira: 'Inicial' });
     ana = a.json.cliente.id;
     const b = await req('POST', '/api/clientes', { nome: 'Bia Corp', telefone: '11922220000', carteira_id: corp });
     expect(b.json.cliente).toMatchObject({ carteira: 'Corporativo' });
@@ -140,7 +140,7 @@ describe('comissões por carteira de clientes', () => {
       carteira_id: corp,
       origem: 'carrinho',
     });
-    expect(c.json.cliente.carteira).toBe('Geral');
+    expect(c.json.cliente.carteira).toBe('Inicial');
     cris = c.json.cliente.id;
     expect((await req('GET', `/api/clientes?carteira=${corp}`)).json.clientes.map((x: any) => x.id)).toEqual([bia]);
   });
@@ -151,7 +151,7 @@ describe('comissões por carteira de clientes', () => {
     await pedidoConcluido(bia, 8000);
     await pedidoConcluido(cris, 1000); // cliente sem carteira escolhida → Geral
     await pedidoConcluido(ana, 5000, '2026-09-30T23:59:00'); // outro mês
-    expect((await req('GET', `/api/pedidos/${a1}`)).json.carteira).toBe('Geral');
+    expect((await req('GET', `/api/pedidos/${a1}`)).json.carteira).toBe('Inicial');
     const lista = await req('GET', `/api/comissoes/pedidos?mes=${MES}&carteira=${corp}`);
     expect(lista.json.pedidos.map((p: any) => p.carteira)).toEqual(['Corporativo']);
 
@@ -160,7 +160,7 @@ describe('comissões por carteira de clientes', () => {
     // Geral 26.000: 250 + 640 = 890 · Corporativo 8.000 × 5% = 400
     expect(v.carteiras.map((c: any) => [c.nome, c.vendas, c.comissao])).toEqual([
       ['Corporativo', 8000, 400],
-      ['Geral', 26000, 890],
+      ['Inicial', 26000, 890],
     ]);
     expect(v.total).toBe(1290);
     expect(r.json.apuracao.totais).toEqual({ pedidos: 4, vendas: 34000, total: 1290 });
@@ -175,18 +175,18 @@ describe('comissões por carteira de clientes', () => {
     const f = await req('PUT', `/api/clientes/${ana}/carteira`, { carteira_id: corp, levar_pedidos: false });
     expect(f.json.cliente.carteira).toBe('Corporativo');
     expect(f.json.pedidos_abertos).toBe(1);
-    expect((await req('GET', `/api/pedidos/${aberto}`)).json.carteira).toBe('Geral');
+    expect((await req('GET', `/api/pedidos/${aberto}`)).json.carteira).toBe('Inicial');
     // Agora levando os pedidos ainda não em produção (os de outubro ficam)
     const m = await req('PUT', '/api/comissoes/clientes/carteira', { clientes: [ana], carteira_id: corp, levar_pedidos: true });
     expect(m.json).toEqual({ clientes: 0, pedidos: 1 });
     expect((await req('GET', `/api/pedidos/${aberto}`)).json.carteira).toBe('Corporativo');
     expect((await req('GET', `/api/comissoes/pedidos/${aberto}/historico`)).json[0]).toMatchObject({
-      de: 'Geral',
+      de: 'Inicial',
       para: 'Corporativo',
     });
     expect((await req('GET', `/api/comissoes/apuracao/${MES}`)).json.apuracao.totais.total).toBe(1290);
     const ficha = (await req('GET', `/api/clientes/${ana}`)).json;
-    expect(ficha.historico.map((h: any) => h.texto).join('\n')).toMatch(/Carteira: Geral → Corporativo/);
+    expect(ficha.historico.map((h: any) => h.texto).join('\n')).toMatch(/Carteira: Inicial → Corporativo/);
     // Volta para a Geral
     await req('PUT', `/api/clientes/${ana}/carteira`, { carteira_id: geral });
     const lc = await req('GET', `/api/comissoes/clientes?carteira=${geral}`);
@@ -219,7 +219,7 @@ describe('comissões por carteira de clientes', () => {
     expect(r.json.faturamento).toMatchObject({ documento: '11222333000181' });
     expect(r.json.orcamento.cliente).toMatchObject({ id: bia });
     expect((await req('GET', `/api/comissoes/pedidos/${cod}/historico`)).json[0]).toMatchObject({
-      de: 'Geral',
+      de: 'Inicial',
       para: 'Corporativo',
     });
     expect((await req('GET', `/api/clientes/${bia}`)).json.historico[0].texto).toBe(`Vinculado ao pedido ${cod}`);
@@ -236,6 +236,43 @@ describe('comissões por carteira de clientes', () => {
     expect((await req('DELETE', `/api/comissoes/parametros/carteiras/${vazia.json.id}`)).status).toBe(200);
   });
 
+  it('carteira só com histórico de troca: o motivo aparece e dá para inativar na hora', async () => {
+    // Cliente e pedido passam por uma carteira e saem dela: sobra só o histórico
+    const passagem = (await req('POST', '/api/comissoes/parametros/carteiras', { nome: 'Passagem' })).json.id;
+    const dani = (await req('POST', '/api/clientes', { nome: 'Dani Passagem', telefone: '11944440000', carteira_id: passagem }))
+      .json.cliente.id;
+    const cod = await pedidoAberto(dani, 100);
+    await req('PUT', `/api/clientes/${dani}/carteira`, { carteira_id: corp, levar_pedidos: true });
+    const lista = (await req('GET', '/api/comissoes/parametros/carteiras')).json.find((c: any) => c.id === passagem);
+    expect(lista).toMatchObject({ clientes: 0, pedidos: 0, historico: 1 });
+
+    const ex = await req('DELETE', `/api/comissoes/parametros/carteiras/${passagem}`);
+    expect(ex.status).toBe(409);
+    expect(ex.json).toMatchObject({ codigo: 'CARTEIRA_EM_USO', pode_inativar: true });
+    expect(ex.json.erro).toContain(`histórico de troca de carteira de 1 pedido (${cod})`);
+    expect(ex.json.erro).not.toMatch(/tem \d+ cliente/);
+
+    const ina = await req('PUT', `/api/comissoes/parametros/carteiras/${passagem}`, {
+      nome: 'Passagem',
+      descricao: '',
+      ativa: false,
+      geral: false,
+    });
+    expect(ina.json).toMatchObject({ ativa: false });
+    const de_novo = await req('DELETE', `/api/comissoes/parametros/carteiras/${passagem}`);
+    expect(de_novo.json).toMatchObject({ pode_inativar: false });
+    expect(de_novo.json.erro).toMatch(/já está inativa/);
+    // Com cliente ativo: não oferece inativar, orienta mover
+    const comCliente = await req('DELETE', `/api/comissoes/parametros/carteiras/${corp}`);
+    expect(comCliente.json.pode_inativar).toBe(false);
+    expect(comCliente.json.erro).toMatch(/cliente(s)? ativo/);
+    expect(comCliente.json.erro).toMatch(/Mova os clientes ativos/);
+    // Carteira Geral
+    expect((await req('DELETE', `/api/comissoes/parametros/carteiras/${geral}`)).json.erro).toMatch(
+      /Carteira Geral não pode ser excluída/,
+    );
+  });
+
   it('fechamento: foto do mês, reabertura com motivo e pagamento', async () => {
     const f = await req('POST', `/api/comissoes/apuracao/${MES}/fechar`);
     expect(f.json).toMatchObject({ situacao: 'FECHADO', fechamento: { fechado_por: 'Administrador', pago_em: null } });
@@ -250,7 +287,7 @@ describe('comissões por carteira de clientes', () => {
     expect((await req('POST', `/api/comissoes/apuracao/${MES}/reabrir`, {})).status).toBe(400);
     const re = await req('POST', `/api/comissoes/apuracao/${MES}/reabrir`, { motivo: 'Ajuste' });
     expect(re.json.situacao).toBe('PREVIA');
-    expect(re.json.apuracao.avisos[0]).toMatch(/"Geral" não tem tabela/);
+    expect(re.json.apuracao.avisos[0]).toMatch(/"Inicial" não tem tabela/);
     expect(re.json.historico.map((h: any) => h.acao)).toEqual(['REABERTO', 'PAGO', 'FECHADO']);
   });
 
@@ -302,6 +339,35 @@ describe('comissões por carteira de clientes', () => {
 });
 
 describe('migração para carteiras de clientes (qualquer base)', () => {
+  it('base migrada antes da troca de nome: a carteira "Geral" da migração vira "Inicial" (uma vez só)', () => {
+    const b = abrirBanco(':memory:');
+    const id = (b.prepare('SELECT id FROM carteiras WHERE geral = 1').get() as { id: number }).id;
+    expect((b.prepare('SELECT nome FROM carteiras WHERE id = ?').get(id) as { nome: string }).nome).toBe('Inicial');
+    // Simula a base antiga: nome "Geral", marca de renomeação ausente, e a marca já passada para outra carteira
+    b.exec("DELETE FROM parametros WHERE chave = 'migracao_carteira_inicial'");
+    b.prepare("UPDATE carteiras SET nome = 'Geral', geral = 0 WHERE id = ?").run(id);
+    b.prepare(
+      "INSERT INTO carteiras (nome, descricao, ativa, geral, criado, atualizado) VALUES ('Varejo', '', 1, 1, 'x', 'x')",
+    ).run();
+    expect(carteiraInicialParaRenomear(b)).toBe(id);
+    expect(renomearCarteiraInicial(b)).toBe('Inicial');
+    expect(b.prepare('SELECT nome, geral FROM carteiras WHERE id = ?').get(id)).toEqual({ nome: 'Inicial', geral: 0 });
+    // Uma vez só: se o usuário voltar a chamar de "Geral", fica assim
+    b.prepare("UPDATE carteiras SET nome = 'Geral' WHERE id = ?").run(id);
+    expect(renomearCarteiraInicial(b)).toBeNull();
+    expect((b.prepare('SELECT nome FROM carteiras WHERE id = ?').get(id) as { nome: string }).nome).toBe('Geral');
+  });
+
+  it('carteira "Geral" criada pelo usuário (não pela migração) não é renomeada', () => {
+    const b = abrirBanco(':memory:');
+    b.exec("DELETE FROM parametros WHERE chave = 'migracao_carteira_inicial'");
+    b.prepare(
+      "INSERT INTO carteiras (nome, descricao, ativa, geral, criado, atualizado) VALUES ('Geral', '', 1, 0, 'x', 'x')",
+    ).run();
+    expect(renomearCarteiraInicial(b)).toBeNull();
+    expect(b.prepare("SELECT COUNT(*) AS n FROM carteiras WHERE nome = 'Geral'").get()).toEqual({ n: 1 });
+  });
+
   it('tabela geral → Carteira Geral; percentuais → uma faixa; clientes pela carteira dos pedidos', () => {
     const b = abrirBanco(':memory:');
     // Desfaz o que a abertura fez, para simular uma base antiga
@@ -315,7 +381,7 @@ describe('migração para carteiras de clientes (qualquer base)', () => {
           .lastInsertRowid,
       );
     const raizes = carteira('Carteira Raízes');
-    const magnus = carteira('Geral'); // nome já usado: a nova vira "Carteira Geral"
+    const magnus = carteira('Inicial'); // nome já usado: a nova vira "Carteira Inicial"
     b.prepare(
       "INSERT INTO carteira_percentuais (carteira_id, vigente_de, percentual, criado) VALUES (?, '2026-10-01', 0.015, 'x')",
     ).run(raizes);
@@ -345,7 +411,7 @@ describe('migração para carteiras de clientes (qualquer base)', () => {
     expect(r).toMatchObject({ clientes: 3, conferir: 1 });
     expect(migrarCarteirasDeClientes(b)).toBeNull();
     const cg = b.prepare('SELECT id, nome FROM carteiras WHERE geral = 1').get() as { id: number; nome: string };
-    expect(cg.nome).toBe('Carteira Geral');
+    expect(cg.nome).toBe('Carteira Inicial');
     const tabs = b.prepare('SELECT carteira_id, faixas_json FROM carteira_tabelas ORDER BY carteira_id').all() as {
       carteira_id: number;
       faixas_json: string;

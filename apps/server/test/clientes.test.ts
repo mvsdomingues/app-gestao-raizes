@@ -160,9 +160,9 @@ describe('cadastro de clientes (API)', () => {
     expect(f.json.historico.at(-1)).toMatchObject({
       origem: 'Carrinho',
       autor: 'Vendedora',
-      texto: 'Cliente incluído na carteira Geral',
+      texto: 'Cliente incluído na carteira Inicial',
     });
-    expect(f.json.cliente).toMatchObject({ carteira: 'Geral' });
+    expect(f.json.cliente).toMatchObject({ carteira: 'Inicial' });
   });
 
   it('orçamento leva a cópia do cliente; sem cliente não é gerado', async () => {

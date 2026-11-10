@@ -8,8 +8,8 @@ import {
   type TabelaComissao,
 } from '@raizes/shared';
 import { useApp } from '../../app/contexto';
-import { api } from '../../lib/api';
-import { confirmar, erroDe } from '../../lib/dialogo';
+import { api, ErroApi } from '../../lib/api';
+import { avisar, confirmar, erroDe } from '../../lib/dialogo';
 import { CampoNumero, ModalRegistro, SecaoTabela } from '../parametros/ParametrosTabelas';
 import { brl, hojeIso, paraCampo, pct, resumoRegra, tabelaAtual } from './comum';
 
@@ -83,6 +83,40 @@ export function ParametrosComissao() {
     }
   };
 
+  /** Exclusão da carteira: se ela já foi usada, mostra o motivo e oferece inativar na mesma janela. */
+  const excluirCarteira = async (c: CarteiraComissao) => {
+    if (!(await confirmar(`Excluir a carteira "${c.nome}"?`, { titulo: 'Excluir carteira', ok: 'Excluir', perigo: true })))
+      return;
+    try {
+      await api.excluirCarteira(c.id);
+      await carregar();
+    } catch (e) {
+      if (!(e instanceof ErroApi) || e.dados.codigo !== 'CARTEIRA_EM_USO') {
+        void erroDe('Não foi possível excluir.', e);
+        return;
+      }
+      if (!e.dados.pode_inativar) {
+        void avisar(e.message, { tipo: 'aviso', titulo: 'A carteira não pode ser excluída' });
+        return;
+      }
+      if (
+        !(await confirmar(e.message, {
+          titulo: 'A carteira não pode ser excluída',
+          ok: 'Inativar agora',
+          cancelar: 'Manter ativa',
+        }))
+      )
+        return;
+      try {
+        await api.salvarCarteira({ nome: c.nome, descricao: c.descricao, ativa: false, geral: false }, c.id);
+        await carregar();
+        void avisar(`A carteira "${c.nome}" foi inativada.`, { tipo: 'sucesso' });
+      } catch (e2) {
+        void erroDe('Não foi possível inativar a carteira.', e2);
+      }
+    }
+  };
+
   const cartAberta = cart && cart !== 'novo' ? (carteiras?.find((c) => c.id === cart.id) ?? cart) : null;
 
   return (
@@ -101,13 +135,13 @@ export function ParametrosComissao() {
           <SecaoTabela
             id="com-carteiras"
             titulo="Carteiras de clientes"
-            sub="Todo cliente está numa carteira; quem não tem carteira escolhida entra na Carteira Geral (sempre uma). Carteira com clientes não é inativada: mova os clientes antes (Comissões › Carteiras dos clientes)."
+            sub="Todo cliente está numa carteira; quem não tem carteira escolhida entra na carteira marcada como Carteira Geral (sempre uma). Clientes: só os ativos; Pedidos: sem os cancelados. Carteira que já teve clientes ou pedidos (inclusive no histórico de troca de carteira) não é excluída, só inativada; com clientes ativos, mova-os antes (Comissões › Carteiras dos clientes)."
             colunas={[
               { titulo: 'Carteira', largura: 200 },
               { titulo: 'Tabela vigente hoje' },
-              { titulo: 'Clientes', num: true, largura: 90 },
+              { titulo: 'Clientes ativos', num: true, largura: 90 },
               { titulo: 'Pedidos', num: true, largura: 90 },
-              { titulo: 'Situação', largura: 100 },
+              { titulo: 'Situação', largura: 150 },
             ]}
             linhas={carteiras}
             vazio="Nenhuma carteira cadastrada."
@@ -126,7 +160,7 @@ export function ParametrosComissao() {
               });
               setCart(c);
             }}
-            excluir={(c) => void excluirCom(`Excluir a carteira "${c.nome}"?`, () => api.excluirCarteira(c.id))}
+            excluir={(c) => void excluirCarteira(c)}
             render={(c) => [
               <span key="n">
                 <b>{c.nome}</b>
@@ -137,8 +171,13 @@ export function ParametrosComissao() {
               </span>,
               c.clientes ?? 0,
               c.pedidos ?? 0,
-              <span key="s" className={`com-situacao ${c.ativa ? 'ativa' : 'inativa'}`}>
-                {c.ativa ? 'Ativa' : 'Inativa'}
+              <span key="s" className="com-situacao-celula">
+                <span className={`com-situacao ${c.ativa ? 'ativa' : 'inativa'}`}>{c.ativa ? 'Ativa' : 'Inativa'}</span>
+                {!!c.historico && (
+                  <span className="com-historico" title="Pedidos que já trocaram de carteira passando por esta (impede excluir)">
+                    histórico: {c.historico} pedido{c.historico === 1 ? '' : 's'}
+                  </span>
+                )}
               </span>,
             ]}
           />
@@ -152,13 +191,17 @@ export function ParametrosComissao() {
         fechar={() => setCart(null)}
         salvar={async () => {
           const base = { nome: cartForm.nome, descricao: cartForm.descricao, ativa: cartForm.ativa, geral: cartForm.geral };
-          await api.salvarCarteira(
+          const salva = await api.salvarCarteira(
             cart === 'novo' && cartForm.percentual
               ? { ...base, vigente_de: cartForm.vigente_de, percentual: cartForm.percentual }
               : base,
             cart && cart !== 'novo' ? cart.id : undefined,
           );
           await carregar();
+          // Confirma a mudança de situação (fica claro que foi gravada)
+          if (cart && cart !== 'novo' && cart.ativa !== salva.ativa) {
+            void avisar(`A carteira "${salva.nome}" foi ${salva.ativa ? 'reativada' : 'inativada'}.`, { tipo: 'sucesso' });
+          }
         }}
       >
         <div className="custom-modal-field">
@@ -197,16 +240,30 @@ export function ParametrosComissao() {
           />
           Carteira Geral (destino dos clientes sem carteira escolhida; a marca sai da carteira atual)
         </label>
-        <label className="com-check">
-          <input
-            type="checkbox"
-            id="com-carteira-ativa"
-            checked={cartForm.ativa}
-            disabled={cartForm.geral}
-            onChange={(e) => setCartForm((f) => ({ ...f, ativa: e.target.checked }))}
-          />
-          Carteira ativa (inativa não recebe clientes)
-        </label>
+        <fieldset className="com-situacao-escolha" id="com-carteira-situacao" disabled={cartForm.geral}>
+          <legend className="custom-modal-label">Situação</legend>
+          <label className="com-check">
+            <input
+              type="radio"
+              name="com-carteira-situacao"
+              id="com-carteira-situacao-ativa"
+              checked={cartForm.ativa}
+              onChange={() => setCartForm((f) => ({ ...f, ativa: true }))}
+            />
+            Ativa — recebe clientes
+          </label>
+          <label className="com-check">
+            <input
+              type="radio"
+              name="com-carteira-situacao"
+              id="com-carteira-situacao-inativa"
+              checked={!cartForm.ativa}
+              onChange={() => setCartForm((f) => ({ ...f, ativa: false }))}
+            />
+            Inativa — não recebe clientes nem aparece para escolha; fica no histórico
+          </label>
+          {cartForm.geral && <p className="param-nota">A Carteira Geral é sempre ativa.</p>}
+        </fieldset>
         {cart === 'novo' ? (
           <>
             <div className="custom-modal-row">

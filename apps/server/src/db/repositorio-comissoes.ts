@@ -39,7 +39,8 @@ const texto = (v: unknown) => (typeof v === 'string' ? v.replace(/\s+/g, ' ').tr
 
 function dataValida(v: unknown, campo: string): string {
   const d = typeof v === 'string' ? v.trim() : '';
-  if (!/^\d{4}-\d{2}-\d{2}$/.test(d) || Number.isNaN(Date.parse(`${d}T00:00:00Z`))) throw new ErroHttp(400, `${campo}: informe uma data válida`);
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(d) || Number.isNaN(Date.parse(`${d}T00:00:00Z`)))
+    throw new ErroHttp(400, `${campo}: informe uma data válida`);
   return d;
 }
 
@@ -84,12 +85,25 @@ export function listarCarteiras(db: Banco): CarteiraComissao[] {
     .prepare(
       `SELECT c.id, c.nome, c.descricao, c.ativa, c.geral,
               (SELECT COUNT(*) FROM clientes cl WHERE cl.carteira_id = c.id AND cl.ativo = 1) AS clientes,
-              (SELECT COUNT(*) FROM pedidos p WHERE p.carteira_id = c.id AND p.status <> 'CANCELADO') AS pedidos
+              (SELECT COUNT(*) FROM pedidos p WHERE p.carteira_id = c.id AND p.status <> 'CANCELADO') AS pedidos,
+              (SELECT COUNT(DISTINCT m.pedido_id) FROM pedidos_carteira_movimentos m
+                WHERE m.carteira_anterior = c.id OR m.carteira_nova = c.id) AS historico
          FROM carteiras c ORDER BY c.geral DESC, c.nome COLLATE NOCASE`,
     )
-    .all() as { id: number; nome: string; descricao: string; ativa: number; geral: number; clientes: number; pedidos: number }[];
+    .all() as {
+    id: number;
+    nome: string;
+    descricao: string;
+    ativa: number;
+    geral: number;
+    clientes: number;
+    pedidos: number;
+    historico: number;
+  }[];
   const tabelas = db
-    .prepare('SELECT id, carteira_id, vigente_de, descricao, faixas_json, atualizado FROM carteira_tabelas ORDER BY vigente_de DESC')
+    .prepare(
+      'SELECT id, carteira_id, vigente_de, descricao, faixas_json, atualizado FROM carteira_tabelas ORDER BY vigente_de DESC',
+    )
     .all() as LinhaTabela[];
   return carteiras.map((c) => ({
     ...c,
@@ -121,7 +135,9 @@ export function carteiraGeralId(db: Banco): number {
 /** Carteira ativa informada, ou erro. */
 export function exigirCarteiraAtiva(db: Banco, v: unknown): number {
   const id = Number(v);
-  const c = Number.isInteger(id) ? (db.prepare('SELECT nome, ativa FROM carteiras WHERE id = ?').get(id) as { nome: string; ativa: number } | undefined) : undefined;
+  const c = Number.isInteger(id)
+    ? (db.prepare('SELECT nome, ativa FROM carteiras WHERE id = ?').get(id) as { nome: string; ativa: number } | undefined)
+    : undefined;
   if (!c) throw new ErroHttp(400, 'Carteira não encontrada');
   if (!c.ativa) throw new ErroHttp(400, `A carteira "${c.nome}" está inativa`);
   return id;
@@ -130,7 +146,8 @@ export function exigirCarteiraAtiva(db: Banco, v: unknown): number {
 /** Carteira que o pedido recebe ao ser criado: a do cliente ou, sem cliente, a Carteira Geral. */
 export function carteiraParaPedido(db: Banco, clienteId: number | null): number {
   const doCliente = clienteId
-    ? (db.prepare('SELECT carteira_id FROM clientes WHERE id = ?').get(clienteId) as { carteira_id: number | null } | undefined)?.carteira_id
+    ? (db.prepare('SELECT carteira_id FROM clientes WHERE id = ?').get(clienteId) as { carteira_id: number | null } | undefined)
+        ?.carteira_id
     : null;
   return doCliente ?? carteiraGeralId(db);
 }
@@ -143,7 +160,8 @@ function carteiraPorId(db: Banco, id: number): CarteiraComissao {
 
 function lerFaixas(corpo: Record<string, unknown>): FaixaComissao[] {
   // Atalho: percentual fixo = uma faixa só, de R$ 0 sem limite
-  if (!Array.isArray(corpo.faixas) && corpo.percentual !== undefined) return faixasPercentualFixo(percentual(corpo.percentual, 'Percentual'));
+  if (!Array.isArray(corpo.faixas) && corpo.percentual !== undefined)
+    return faixasPercentualFixo(percentual(corpo.percentual, 'Percentual'));
   const brutas = Array.isArray(corpo.faixas) ? (corpo.faixas as Record<string, unknown>[]) : [];
   const faixas: FaixaComissao[] = brutas.map((f, i) => {
     const de = valorReais(f?.de);
@@ -151,7 +169,11 @@ function lerFaixas(corpo: Record<string, unknown>): FaixaComissao[] {
     const vazio = f?.ate === null || f?.ate === undefined || f?.ate === '';
     const ate = vazio ? null : valorReais(f?.ate);
     if (!vazio && ate === null) throw new ErroHttp(400, `Faixa ${i + 1}: valor "até" inválido`);
-    return { de: Math.round(de * 100) / 100, ate: ate === null ? null : Math.round(ate * 100) / 100, percentual: percentual(f?.percentual, `Faixa ${i + 1}`) };
+    return {
+      de: Math.round(de * 100) / 100,
+      ate: ate === null ? null : Math.round(ate * 100) / 100,
+      percentual: percentual(f?.percentual, `Faixa ${i + 1}`),
+    };
   });
   const erro = validarFaixas(faixas);
   if (erro) throw new ErroHttp(400, erro);
@@ -162,19 +184,25 @@ export function salvarCarteira(db: Banco, corpo: Record<string, unknown>, usuari
   const nome = texto(corpo.nome);
   const descricao = typeof corpo.descricao === 'string' ? corpo.descricao.replace(/\r\n?/g, '\n').trim() : '';
   if (!nome) throw new ErroHttp(400, 'Nome da carteira: campo obrigatório');
-  if (nome.length > LIMITE_NOME_CARTEIRA) throw new ErroHttp(400, `Nome da carteira: máximo de ${LIMITE_NOME_CARTEIRA} caracteres`);
-  if (descricao.length > LIMITE_DESCRICAO_CARTEIRA) throw new ErroHttp(400, `Descrição: máximo de ${LIMITE_DESCRICAO_CARTEIRA} caracteres`);
+  if (nome.length > LIMITE_NOME_CARTEIRA)
+    throw new ErroHttp(400, `Nome da carteira: máximo de ${LIMITE_NOME_CARTEIRA} caracteres`);
+  if (descricao.length > LIMITE_DESCRICAO_CARTEIRA)
+    throw new ErroHttp(400, `Descrição: máximo de ${LIMITE_DESCRICAO_CARTEIRA} caracteres`);
   const ativa = corpo.ativa === undefined ? true : corpo.ativa === true;
   const outra = db.prepare('SELECT id FROM carteiras WHERE nome = ? COLLATE NOCASE').get(nome) as { id: number } | undefined;
   if (outra && outra.id !== id) throw new ErroHttp(409, `A carteira "${nome}" já está cadastrada`);
   const agora = dataHoraLocal();
   return db.transaction(() => {
-    const atual = id ? (db.prepare('SELECT geral, ativa FROM carteiras WHERE id = ?').get(id) as { geral: number; ativa: number } | undefined) : undefined;
+    const atual = id
+      ? (db.prepare('SELECT geral, ativa FROM carteiras WHERE id = ?').get(id) as { geral: number; ativa: number } | undefined)
+      : undefined;
     if (id && !atual) throw new ErroHttp(404, 'Carteira não encontrada');
     const eraGeral = !!atual?.geral;
     const geral = corpo.geral === undefined ? eraGeral : corpo.geral === true;
-    if (eraGeral && !geral) throw new ErroHttp(409, 'Sempre há uma Carteira Geral: marque outra carteira como Carteira Geral para tirar a marca desta');
-    if (geral && !ativa) throw new ErroHttp(409, 'A Carteira Geral não pode ser inativada');
+    if (eraGeral && !geral)
+      throw new ErroHttp(409, 'Sempre há uma Carteira Geral: marque outra carteira como Carteira Geral para tirar a marca desta');
+    if (geral && !ativa)
+      throw new ErroHttp(409, 'A Carteira Geral não pode ser inativada: marque outra carteira como Carteira Geral antes');
     if (id && atual!.ativa && !ativa) {
       const { n } = db.prepare('SELECT COUNT(*) AS n FROM clientes WHERE carteira_id = ? AND ativo = 1').get(id) as { n: number };
       if (n) throw new ErroHttp(409, `A carteira tem ${n} cliente(s) ativo(s): mova-os para outra carteira antes de inativá-la`);
@@ -183,7 +211,14 @@ export function salvarCarteira(db: Banco, corpo: Record<string, unknown>, usuari
     if (geral && !eraGeral) db.prepare('UPDATE carteiras SET geral = 0, atualizado = ? WHERE geral = 1').run(agora);
     let novoId = id;
     if (id) {
-      db.prepare('UPDATE carteiras SET nome = ?, descricao = ?, ativa = ?, geral = ?, atualizado = ? WHERE id = ?').run(nome, descricao, ativa ? 1 : 0, geral ? 1 : 0, agora, id);
+      db.prepare('UPDATE carteiras SET nome = ?, descricao = ?, ativa = ?, geral = ?, atualizado = ? WHERE id = ?').run(
+        nome,
+        descricao,
+        ativa ? 1 : 0,
+        geral ? 1 : 0,
+        agora,
+        id,
+      );
     } else {
       novoId = Number(
         db
@@ -199,15 +234,61 @@ export function salvarCarteira(db: Banco, corpo: Record<string, unknown>, usuari
   })();
 }
 
-/** Exclui a carteira que nunca teve cliente nem pedido (usada → inativar). */
+const plural = (n: number, um: string, varios: string) => `${n} ${n === 1 ? um : varios}`;
+
+/** Por que a carteira não pode ser excluída (vazio = pode): clientes, pedidos e histórico de troca de carteira. */
+export function usosDaCarteira(db: Banco, id: number): string[] {
+  const n = (sql: string, ...a: unknown[]) => (db.prepare(sql).get(...a) as { n: number }).n;
+  const usos: string[] = [];
+  const cliAtivos = n('SELECT COUNT(*) AS n FROM clientes WHERE carteira_id = ? AND ativo = 1', id);
+  const cliInativos = n('SELECT COUNT(*) AS n FROM clientes WHERE carteira_id = ? AND ativo = 0', id);
+  const pedidos = n("SELECT COUNT(*) AS n FROM pedidos WHERE carteira_id = ? AND status <> 'CANCELADO'", id);
+  const cancelados = n("SELECT COUNT(*) AS n FROM pedidos WHERE carteira_id = ? AND status = 'CANCELADO'", id);
+  if (cliAtivos) usos.push(`tem ${plural(cliAtivos, 'cliente ativo', 'clientes ativos')}`);
+  if (cliInativos) usos.push(`tem ${plural(cliInativos, 'cliente inativo', 'clientes inativos')}`);
+  if (pedidos) usos.push(`tem ${plural(pedidos, 'pedido', 'pedidos')}`);
+  if (cancelados) usos.push(`tem ${plural(cancelados, 'pedido cancelado', 'pedidos cancelados')}`);
+  const hist = db
+    .prepare(
+      `SELECT DISTINCT p.codigo FROM pedidos_carteira_movimentos m JOIN pedidos p ON p.id = m.pedido_id
+        WHERE m.carteira_anterior = ? OR m.carteira_nova = ? ORDER BY p.codigo`,
+    )
+    .all(id, id) as { codigo: string }[];
+  if (hist.length) {
+    const lista =
+      hist
+        .slice(0, 5)
+        .map((h) => h.codigo)
+        .join(', ') + (hist.length > 5 ? ', …' : '');
+    usos.push(`aparece no histórico de troca de carteira de ${plural(hist.length, 'pedido', 'pedidos')} (${lista})`);
+  }
+  return usos;
+}
+
+/**
+ * Exclui a carteira que nunca teve cliente nem pedido. Usada → 409 com o motivo e
+ * `pode_inativar` (a tela oferece inativar na hora).
+ */
 export function excluirCarteira(db: Banco, id: number): void {
   const c = carteiraPorId(db, id);
-  if (c.geral) throw new ErroHttp(409, 'A Carteira Geral não pode ser excluída');
-  const usada =
-    db.prepare('SELECT 1 FROM clientes WHERE carteira_id = ? LIMIT 1').get(id) ||
-    db.prepare('SELECT 1 FROM pedidos WHERE carteira_id = ? LIMIT 1').get(id) ||
-    db.prepare('SELECT 1 FROM pedidos_carteira_movimentos WHERE carteira_anterior = ? OR carteira_nova = ? LIMIT 1').get(id, id);
-  if (usada) throw new ErroHttp(409, `A carteira "${c.nome}" já tem clientes ou pedidos: inative-a em vez de excluir`);
+  if (c.geral)
+    throw new ErroHttp(
+      409,
+      'A Carteira Geral não pode ser excluída nem inativada: marque outra carteira como Carteira Geral antes',
+    );
+  const usos = usosDaCarteira(db, id);
+  if (usos.length) {
+    const podeInativar = c.ativa && !(c.clientes ?? 0);
+    const saida = !c.ativa
+      ? 'Ela já está inativa e assim fica guardada para o histórico.'
+      : podeInativar
+        ? 'Inative-a: ela deixa de receber clientes e continua no histórico.'
+        : 'Mova os clientes ativos para outra carteira (Comissões › Carteiras dos clientes) e depois inative-a.';
+    throw new ErroHttp(409, `A carteira "${c.nome}" não pode ser excluída porque ${usos.join('; ')}. ${saida}`, {
+      codigo: 'CARTEIRA_EM_USO',
+      pode_inativar: podeInativar,
+    });
+  }
   db.transaction(() => {
     db.prepare('DELETE FROM carteira_tabelas WHERE carteira_id = ?').run(id);
     db.prepare('DELETE FROM carteira_percentuais WHERE carteira_id = ?').run(id);
@@ -216,32 +297,37 @@ export function excluirCarteira(db: Banco, id: number): void {
 }
 
 /** Inclui ou altera a tabela de faixas de uma carteira (`percentual` = atalho para uma faixa só). */
-export function salvarTabelaCarteira(db: Banco, carteiraId: number, corpo: Record<string, unknown>, usuarioId: number, tabelaId?: number): CarteiraComissao {
+export function salvarTabelaCarteira(
+  db: Banco,
+  carteiraId: number,
+  corpo: Record<string, unknown>,
+  usuarioId: number,
+  tabelaId?: number,
+): CarteiraComissao {
   carteiraPorId(db, carteiraId);
   const vigente_de = dataValida(corpo.vigente_de, 'Vigente a partir de');
   const descricao = texto(corpo.descricao);
-  if (descricao.length > LIMITE_DESCRICAO_TABELA) throw new ErroHttp(400, `Descrição: máximo de ${LIMITE_DESCRICAO_TABELA} caracteres`);
+  if (descricao.length > LIMITE_DESCRICAO_TABELA)
+    throw new ErroHttp(400, `Descrição: máximo de ${LIMITE_DESCRICAO_TABELA} caracteres`);
   const faixas = lerFaixas(corpo);
-  const outra = db.prepare('SELECT id FROM carteira_tabelas WHERE carteira_id = ? AND vigente_de = ?').get(carteiraId, vigente_de) as { id: number } | undefined;
+  const outra = db
+    .prepare('SELECT id FROM carteira_tabelas WHERE carteira_id = ? AND vigente_de = ?')
+    .get(carteiraId, vigente_de) as { id: number } | undefined;
   if (outra && outra.id !== tabelaId) {
     throw new ErroHttp(409, `Esta carteira já tem uma tabela vigente a partir de ${vigente_de.split('-').reverse().join('/')}`);
   }
   const agora = dataHoraLocal();
   if (tabelaId) {
     const r = db
-      .prepare('UPDATE carteira_tabelas SET vigente_de = ?, descricao = ?, faixas_json = ?, atualizado = ?, usuario_id = ? WHERE id = ? AND carteira_id = ?')
+      .prepare(
+        'UPDATE carteira_tabelas SET vigente_de = ?, descricao = ?, faixas_json = ?, atualizado = ?, usuario_id = ? WHERE id = ? AND carteira_id = ?',
+      )
       .run(vigente_de, descricao, JSON.stringify(faixas), agora, usuarioId, tabelaId, carteiraId);
     if (!r.changes) throw new ErroHttp(404, 'Tabela não encontrada');
   } else {
-    db.prepare('INSERT INTO carteira_tabelas (carteira_id, vigente_de, descricao, faixas_json, criado, atualizado, usuario_id) VALUES (?, ?, ?, ?, ?, ?, ?)').run(
-      carteiraId,
-      vigente_de,
-      descricao,
-      JSON.stringify(faixas),
-      agora,
-      agora,
-      usuarioId,
-    );
+    db.prepare(
+      'INSERT INTO carteira_tabelas (carteira_id, vigente_de, descricao, faixas_json, criado, atualizado, usuario_id) VALUES (?, ?, ?, ?, ?, ?, ?)',
+    ).run(carteiraId, vigente_de, descricao, JSON.stringify(faixas), agora, agora, usuarioId);
   }
   return carteiraPorId(db, carteiraId);
 }
@@ -287,7 +373,8 @@ const comissionavel = (l: Pick<LinhaPedido, 'status' | 'conclusao'>) =>
   !!l.conclusao && (ETAPAS_COMISSIONAVEIS as readonly string[]).includes(l.status);
 
 /** Mês (AAAA-MM) em que o pedido conta, ou null. */
-const competenciaDoPedido = (l: Pick<LinhaPedido, 'status' | 'conclusao'>) => (comissionavel(l) ? l.conclusao!.slice(0, 7) : null);
+const competenciaDoPedido = (l: Pick<LinhaPedido, 'status' | 'conclusao'>) =>
+  comissionavel(l) ? l.conclusao!.slice(0, 7) : null;
 
 export interface FiltroPedidosCarteira {
   mes?: string;
@@ -329,7 +416,9 @@ export function listarPedidosCarteira(db: Banco, f: FiltroPedidosCarteira): { to
   const linhas = db
     .prepare(`${SELECT_PEDIDOS} ${where} ORDER BY p.id DESC LIMIT ? OFFSET ?`)
     .all(...args, limit, Math.max(f.offset ?? 0, 0)) as LinhaPedido[];
-  const fechadas = new Set((db.prepare('SELECT competencia FROM comissao_fechamentos').all() as { competencia: string }[]).map((x) => x.competencia));
+  const fechadas = new Set(
+    (db.prepare('SELECT competencia FROM comissao_fechamentos').all() as { competencia: string }[]).map((x) => x.competencia),
+  );
   return {
     total,
     pedidos: linhas.map((l) => {
@@ -389,7 +478,10 @@ export function listarClientesCarteira(db: Banco, f: FiltroClientesCarteira): { 
          ${where} ORDER BY cl.nome COLLATE NOCASE LIMIT ? OFFSET ?`,
     )
     .all(...args, limit, Math.max(f.offset ?? 0, 0)) as (Omit<ClienteCarteira, 'codigo' | 'ativo'> & { ativo: number })[];
-  return { total: n, clientes: linhas.map((l) => ({ ...l, codigo: codigoCliente(l.id), ativo: !!l.ativo, carteira: l.carteira ?? '—' })) };
+  return {
+    total: n,
+    clientes: linhas.map((l) => ({ ...l, codigo: codigoCliente(l.id), ativo: !!l.ativo, carteira: l.carteira ?? '—' })),
+  };
 }
 
 /**
@@ -413,9 +505,11 @@ export function moverClientesCarteira(
     let clientes = 0;
     let pedidos = 0;
     for (const id of lista) {
-      const c = db.prepare('SELECT cl.carteira_id, ca.nome FROM clientes cl LEFT JOIN carteiras ca ON ca.id = cl.carteira_id WHERE cl.id = ?').get(id) as
-        | { carteira_id: number | null; nome: string | null }
-        | undefined;
+      const c = db
+        .prepare(
+          'SELECT cl.carteira_id, ca.nome FROM clientes cl LEFT JOIN carteiras ca ON ca.id = cl.carteira_id WHERE cl.id = ?',
+        )
+        .get(id) as { carteira_id: number | null; nome: string | null } | undefined;
       if (!c) throw new ErroHttp(404, `Cliente ${codigoCliente(id)} não encontrado`);
       let movidos = 0;
       if (levarPedidos) {
@@ -427,27 +521,29 @@ export function moverClientesCarteira(
           .all(id, nova) as { id: number; carteira_id: number | null }[];
         for (const p of abertos) {
           db.prepare('UPDATE pedidos SET carteira_id = ? WHERE id = ?').run(nova, p.id);
-          db.prepare('INSERT INTO pedidos_carteira_movimentos (pedido_id, carteira_anterior, carteira_nova, data_hora, usuario_id) VALUES (?, ?, ?, ?, ?)').run(
-            p.id,
-            p.carteira_id,
-            nova,
-            agora,
-            autor.usuarioId,
-          );
+          db.prepare(
+            'INSERT INTO pedidos_carteira_movimentos (pedido_id, carteira_anterior, carteira_nova, data_hora, usuario_id) VALUES (?, ?, ?, ?, ?)',
+          ).run(p.id, p.carteira_id, nova, agora, autor.usuarioId);
         }
         movidos = abertos.length;
         pedidos += movidos;
       }
       if (c.carteira_id === nova && !movidos) continue;
       if (c.carteira_id !== nova) {
-        db.prepare('UPDATE clientes SET carteira_id = ?, atualizado = ?, alterado_por = ? WHERE id = ?').run(nova, agora, autor.usuarioId, id);
+        db.prepare('UPDATE clientes SET carteira_id = ?, atualizado = ?, alterado_por = ? WHERE id = ?').run(
+          nova,
+          agora,
+          autor.usuarioId,
+          id,
+        );
         clientes++;
       }
       registrarHistorico(
         db,
         id,
         autor,
-        `Carteira: ${c.nome ?? '(nenhuma)'} → ${nomeNova}` + (levarPedidos ? ` (${movidos} pedido(s) ainda não em produção também mudaram)` : ''),
+        `Carteira: ${c.nome ?? '(nenhuma)'} → ${nomeNova}` +
+          (levarPedidos ? ` (${movidos} pedido(s) ainda não em produção também mudaram)` : ''),
       );
     }
     return { clientes, pedidos };
@@ -509,7 +605,8 @@ export function lerApuracao(db: Banco, competencia: string): RespostaApuracao {
       `SELECT f.apuracao_json, f.fechado_em, f.pago_em, u.nome AS fechado_por
          FROM comissao_fechamentos f LEFT JOIN usuarios u ON u.id = f.fechado_por WHERE f.competencia = ?`,
     )
-    .get(competencia) as { apuracao_json: string; fechado_em: string; pago_em: string | null; fechado_por: string | null } | undefined;
+    .get(competencia) as
+    { apuracao_json: string; fechado_em: string; pago_em: string | null; fechado_por: string | null } | undefined;
   const historico = historicoFechamento(db, competencia);
   if (f) {
     return {
@@ -523,13 +620,9 @@ export function lerApuracao(db: Banco, competencia: string): RespostaApuracao {
 }
 
 function registrar(db: Banco, competencia: string, acao: string, usuarioId: number, observacao: string | null = null) {
-  db.prepare('INSERT INTO comissao_fechamentos_movimentos (competencia, acao, data_hora, usuario_id, observacao) VALUES (?, ?, ?, ?, ?)').run(
-    competencia,
-    acao,
-    isoLocal(),
-    usuarioId,
-    observacao,
-  );
+  db.prepare(
+    'INSERT INTO comissao_fechamentos_movimentos (competencia, acao, data_hora, usuario_id, observacao) VALUES (?, ?, ?, ?, ?)',
+  ).run(competencia, acao, isoLocal(), usuarioId, observacao);
 }
 
 /** Fecha o mês: grava a foto da apuração; daí em diante o mês não muda. */
@@ -583,14 +676,21 @@ export function competenciasDisponiveis(db: Banco): { competencia: string; fecha
   const meses = new Set<string>(
     (
       db
-        .prepare(`SELECT DISTINCT substr(m.data_hora, 1, 7) AS c FROM pedidos_movimentos m WHERE m.status_novo = '${ETAPA_CONCLUSAO_COMISSAO}'`)
+        .prepare(
+          `SELECT DISTINCT substr(m.data_hora, 1, 7) AS c FROM pedidos_movimentos m WHERE m.status_novo = '${ETAPA_CONCLUSAO_COMISSAO}'`,
+        )
         .all() as { c: string }[]
     ).map((x) => x.c),
   );
-  const fechadas = new Set((db.prepare('SELECT competencia FROM comissao_fechamentos').all() as { competencia: string }[]).map((x) => x.competencia));
+  const fechadas = new Set(
+    (db.prepare('SELECT competencia FROM comissao_fechamentos').all() as { competencia: string }[]).map((x) => x.competencia),
+  );
   for (const c of fechadas) meses.add(c);
   meses.add(isoLocal().slice(0, 7));
-  return [...meses].sort().reverse().map((competencia) => ({ competencia, fechado: fechadas.has(competencia) }));
+  return [...meses]
+    .sort()
+    .reverse()
+    .map((competencia) => ({ competencia, fechado: fechadas.has(competencia) }));
 }
 
 // ── Migração (uma vez): carteiras de clientes ──────────────
@@ -598,7 +698,60 @@ export function competenciasDisponiveis(db: Banco): { competencia: string; fecha
 /** Nome livre para a carteira nova ("Geral", "Carteira Geral", "Geral 2"…). */
 function nomeLivre(db: Banco, opcoes: string[]): string {
   for (const n of opcoes) if (!db.prepare('SELECT 1 FROM carteiras WHERE nome = ? COLLATE NOCASE').get(n)) return n;
-  for (let i = 2; ; i++) if (!db.prepare('SELECT 1 FROM carteiras WHERE nome = ? COLLATE NOCASE').get(`Geral ${i}`)) return `Geral ${i}`;
+  for (let i = 2; ; i++)
+    if (!db.prepare('SELECT 1 FROM carteiras WHERE nome = ? COLLATE NOCASE').get(`${opcoes[0]} ${i}`)) return `${opcoes[0]} ${i}`;
+}
+
+/** Carteira criada pela migração: nome "Inicial" para não se confundir com a marca "Carteira Geral". */
+const DESCRICAO_INICIAL =
+  'Carteira inicial, criada na mudança para carteiras de clientes com a tabela de faixas geral. Começa marcada como Carteira Geral (recebe os clientes sem carteira escolhida); a marca pode passar para outra carteira.';
+const DESCRICAO_GERAL_ANTIGA =
+  'Carteira Geral: clientes sem carteira escolhida. Criada na mudança para carteiras de clientes, com a tabela de faixas geral.';
+
+/** Carteira da migração que ainda se chama "Geral" (bancos migrados antes da troca de nome), ou null. */
+export function carteiraInicialParaRenomear(db: Banco): number | null {
+  if (db.prepare("SELECT 1 FROM parametros WHERE chave = 'migracao_carteira_inicial'").get()) return null;
+  const marca = db.prepare("SELECT valor FROM parametros WHERE chave = 'migracao_carteiras_clientes'").get() as
+    { valor: string } | undefined;
+  if (!marca) return null;
+  let id = 0;
+  try {
+    id = Number((JSON.parse(marca.valor) as { carteiraGeral?: number }).carteiraGeral) || 0;
+  } catch {
+    return null;
+  }
+  const c = db.prepare('SELECT nome FROM carteiras WHERE id = ?').get(id) as { nome: string } | undefined;
+  if (!c || c.nome.trim().toLowerCase() !== 'geral') return null;
+  return id;
+}
+
+/**
+ * Uma vez: a carteira criada pela migração com o nome "Geral" passa a se chamar "Inicial"
+ * (só ela, identificada pela marca da migração; nome alterado pelo usuário fica como está).
+ */
+export function renomearCarteiraInicial(db: Banco): string | null {
+  if (db.prepare("SELECT 1 FROM parametros WHERE chave = 'migracao_carteira_inicial'").get()) return null;
+  let renomeada: string | null = null;
+  db.transaction(() => {
+    const id = carteiraInicialParaRenomear(db);
+    if (id) {
+      const nome = nomeLivre(db, ['Inicial', 'Carteira Inicial']);
+      const atual = db.prepare('SELECT descricao FROM carteiras WHERE id = ?').get(id) as { descricao: string };
+      const descricao = atual.descricao === DESCRICAO_GERAL_ANTIGA ? DESCRICAO_INICIAL : atual.descricao;
+      db.prepare('UPDATE carteiras SET nome = ?, descricao = ?, atualizado = ? WHERE id = ?').run(
+        nome,
+        descricao,
+        dataHoraLocal(),
+        id,
+      );
+      renomeada = nome;
+    }
+    db.prepare("INSERT INTO parametros (chave, valor, atualizado) VALUES ('migracao_carteira_inicial', ?, ?)").run(
+      JSON.stringify({ carteira: id, nome: renomeada }),
+      dataHoraLocal(),
+    );
+  })();
+  return renomeada;
 }
 
 /**
@@ -624,15 +777,12 @@ export function migrarCarteirasDeClientes(db: Banco): { carteiraGeral: number; c
       geral = Number(
         db
           .prepare('INSERT INTO carteiras (nome, descricao, ativa, geral, criado, atualizado) VALUES (?, ?, 1, 1, ?, ?)')
-          .run(
-            nomeLivre(db, ['Geral', 'Carteira Geral']),
-            'Carteira Geral: clientes sem carteira escolhida. Criada na mudança para carteiras de clientes, com a tabela de faixas geral.',
-            agora,
-            agora,
-          ).lastInsertRowid,
+          .run(nomeLivre(db, ['Inicial', 'Carteira Inicial']), DESCRICAO_INICIAL, agora, agora).lastInsertRowid,
       );
     }
-    const gerais = db.prepare('SELECT vigente_de, descricao, faixas_json, criado, atualizado, usuario_id FROM comissao_tabelas').all() as {
+    const gerais = db
+      .prepare('SELECT vigente_de, descricao, faixas_json, criado, atualizado, usuario_id FROM comissao_tabelas')
+      .all() as {
       vigente_de: string;
       descricao: string;
       faixas_json: string;
@@ -654,17 +804,34 @@ export function migrarCarteirasDeClientes(db: Banco): { carteiraGeral: number; c
     }[];
     for (const p of pcts) {
       const rotulo = `${(p.percentual * 100).toLocaleString('pt-BR', { maximumFractionDigits: 4 })}%`;
-      inserir.run(p.carteira_id, p.vigente_de, `Percentual fixo de ${rotulo}`, JSON.stringify(faixasPercentualFixo(p.percentual)), p.criado, p.criado, p.usuario_id);
+      inserir.run(
+        p.carteira_id,
+        p.vigente_de,
+        `Percentual fixo de ${rotulo}`,
+        JSON.stringify(faixasPercentualFixo(p.percentual)),
+        p.criado,
+        p.criado,
+        p.usuario_id,
+      );
     }
     // 3. Pedidos sem carteira → Geral
     db.prepare('UPDATE pedidos SET carteira_id = ? WHERE carteira_id IS NULL').run(geral);
     // 4. Carteira de cada cliente pelos seus pedidos (não cancelados)
-    const nomes = new Map((db.prepare('SELECT id, nome FROM carteiras').all() as { id: number; nome: string }[]).map((c) => [c.id, c.nome]));
-    const clientes = db.prepare('SELECT id, alerta FROM clientes WHERE carteira_id IS NULL').all() as { id: number; alerta: string | null }[];
+    const nomes = new Map(
+      (db.prepare('SELECT id, nome FROM carteiras').all() as { id: number; nome: string }[]).map((c) => [c.id, c.nome]),
+    );
+    const clientes = db.prepare('SELECT id, alerta FROM clientes WHERE carteira_id IS NULL').all() as {
+      id: number;
+      alerta: string | null;
+    }[];
     const autor = { usuarioId: null, nome: 'Sistema', origem: 'MIGRACAO' as const };
     for (const c of clientes) {
       const usadas = (
-        db.prepare("SELECT DISTINCT carteira_id FROM pedidos WHERE cliente_id = ? AND status <> 'CANCELADO' AND carteira_id IS NOT NULL").all(c.id) as {
+        db
+          .prepare(
+            "SELECT DISTINCT carteira_id FROM pedidos WHERE cliente_id = ? AND status <> 'CANCELADO' AND carteira_id IS NOT NULL",
+          )
+          .all(c.id) as {
           carteira_id: number;
         }[]
       ).map((x) => x.carteira_id);
@@ -680,7 +847,10 @@ export function migrarCarteirasDeClientes(db: Banco): { carteiraGeral: number; c
       resultado.clientes++;
     }
     resultado.carteiraGeral = geral;
-    db.prepare("INSERT INTO parametros (chave, valor, atualizado) VALUES ('migracao_carteiras_clientes', ?, ?)").run(JSON.stringify(resultado), agora);
+    db.prepare("INSERT INTO parametros (chave, valor, atualizado) VALUES ('migracao_carteiras_clientes', ?, ?)").run(
+      JSON.stringify(resultado),
+      agora,
+    );
   })();
   return resultado;
 }

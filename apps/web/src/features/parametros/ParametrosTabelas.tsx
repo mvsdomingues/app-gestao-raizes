@@ -8,7 +8,7 @@ import {
   type TecnicaPersonalizacao,
 } from '@raizes/shared';
 import { api } from '../../lib/api';
-import { confirmar, erroDe } from '../../lib/dialogo';
+import { avisar, confirmar, erroDe } from '../../lib/dialogo';
 
 const numero = (v: number, casas = 2) => v.toLocaleString('pt-BR', { minimumFractionDigits: casas, maximumFractionDigits: 4 });
 /** Número para o campo de edição ("85,5") */
@@ -45,7 +45,10 @@ export function ModalRegistro({
       await salvar();
       fechar();
     } catch (e) {
-      setErro(e instanceof Error ? e.message : String(e));
+      const msg = e instanceof Error ? e.message : String(e);
+      setErro(msg);
+      // Também no pop-up: a mensagem dentro da janela passa despercebida
+      void avisar(msg, { tipo: 'erro', titulo: 'Não foi possível salvar' });
     } finally {
       setSalvando(false);
     }
@@ -115,7 +118,14 @@ export function SecaoTabela<T extends Registro>({
           <h3 className="update-panel-title">{titulo}</h3>
           <p className="update-panel-sub">{sub}</p>
         </div>
-        <button className="btn-novo" type="button" id={`${id}-incluir`} onClick={incluir} disabled={!podeIncluir} title={podeIncluir ? undefined : avisoIncluir}>
+        <button
+          className="btn-novo"
+          type="button"
+          id={`${id}-incluir`}
+          onClick={incluir}
+          disabled={!podeIncluir}
+          title={podeIncluir ? undefined : avisoIncluir}
+        >
           + Incluir
         </button>
       </div>
@@ -161,7 +171,17 @@ export function SecaoTabela<T extends Registro>({
   );
 }
 
-function SeletorTecnica({ tecnicas, valor, mudar, id }: { tecnicas: TecnicaPersonalizacao[]; valor: string; mudar: (v: string) => void; id: string }) {
+function SeletorTecnica({
+  tecnicas,
+  valor,
+  mudar,
+  id,
+}: {
+  tecnicas: TecnicaPersonalizacao[];
+  valor: string;
+  mudar: (v: string) => void;
+  id: string;
+}) {
   return (
     <div className="custom-modal-field">
       <label className="custom-modal-label" htmlFor={id}>
@@ -179,7 +199,23 @@ function SeletorTecnica({ tecnicas, valor, mudar, id }: { tecnicas: TecnicaPerso
   );
 }
 
-export function CampoNumero({ id, rotulo, valor, mudar, prefixo, sufixo, dica }: { id: string; rotulo: string; valor: string; mudar: (v: string) => void; prefixo?: string; sufixo?: string; dica?: string }) {
+export function CampoNumero({
+  id,
+  rotulo,
+  valor,
+  mudar,
+  prefixo,
+  sufixo,
+  dica,
+}: {
+  id: string;
+  rotulo: string;
+  valor: string;
+  mudar: (v: string) => void;
+  prefixo?: string;
+  sufixo?: string;
+  dica?: string;
+}) {
   return (
     <div className="custom-modal-field" style={{ flex: 1 }}>
       <label className="custom-modal-label" htmlFor={id}>
@@ -187,7 +223,15 @@ export function CampoNumero({ id, rotulo, valor, mudar, prefixo, sufixo, dica }:
       </label>
       <div className="param-numero">
         {prefixo && <span>{prefixo}</span>}
-        <input id={id} className="custom-input" inputMode="decimal" value={valor} placeholder="0,00" onChange={(e) => mudar(e.target.value)} required />
+        <input
+          id={id}
+          className="custom-input"
+          inputMode="decimal"
+          value={valor}
+          placeholder="0,00"
+          onChange={(e) => mudar(e.target.value)}
+          required
+        />
         {sufixo && <span>{sufixo}</span>}
       </div>
       {dica && <span className="param-campo-dica">{dica}</span>}
@@ -256,7 +300,12 @@ export function ParametrosTabelas({ visitas }: { visitas: number }) {
           setTec(t);
         }}
         excluir={(t) => void excluirCom(`Excluir a técnica "${t.nome}"?`, () => api.excluirTecnica(t.id))}
-        render={(t) => [<b key="n">{t.nome}</b>, <span key="d" className="param-descricao">{t.descricao || '—'}</span>]}
+        render={(t) => [
+          <b key="n">{t.nome}</b>,
+          <span key="d" className="param-descricao">
+            {t.descricao || '—'}
+          </span>,
+        ]}
       />
 
       <SecaoTabela
@@ -278,10 +327,17 @@ export function ParametrosTabelas({ visitas }: { visitas: number }) {
           setMat('novo');
         }}
         alterar={(m) => {
-          setMatForm({ tecnica_id: String(m.tecnica_id), preco_m2: paraCampo(m.preco_m2), fracao_minima: paraCampo(m.fracao_minima), folga_percentual: paraCampo(Math.round(m.folga * 10000) / 100) });
+          setMatForm({
+            tecnica_id: String(m.tecnica_id),
+            preco_m2: paraCampo(m.preco_m2),
+            fracao_minima: paraCampo(m.fracao_minima),
+            folga_percentual: paraCampo(Math.round(m.folga * 10000) / 100),
+          });
           setMat(m);
         }}
-        excluir={(m) => void excluirCom(`Excluir o valor de material da técnica "${m.tecnica}"?`, () => api.excluirMaterial(m.id))}
+        excluir={(m) =>
+          void excluirCom(`Excluir o valor de material da técnica "${m.tecnica}"?`, () => api.excluirMaterial(m.id))
+        }
         render={(m) => [m.tecnica, formatBRL(m.preco_m2), `${numero(m.fracao_minima, 2)} m²`, `${numero(m.folga * 100, 0)}%`]}
       />
 
@@ -302,7 +358,9 @@ export function ParametrosTabelas({ visitas }: { visitas: number }) {
           setMoForm({ tecnica_id: String(m.tecnica_id), valor_unitario: paraCampo(m.valor_unitario) });
           setMo(m);
         }}
-        excluir={(m) => void excluirCom(`Excluir o valor de mão de obra da técnica "${m.tecnica}"?`, () => api.excluirMaoObra(m.id))}
+        excluir={(m) =>
+          void excluirCom(`Excluir o valor de mão de obra da técnica "${m.tecnica}"?`, () => api.excluirMaoObra(m.id))
+        }
         render={(m) => [m.tecnica, formatBRL(m.valor_unitario)]}
       />
 
@@ -354,13 +412,27 @@ export function ParametrosTabelas({ visitas }: { visitas: number }) {
         fechar={() => setMat(null)}
         salvar={async () => {
           if (!matForm.tecnica_id) throw new Error('Escolha a técnica de personalização.');
-          await api.salvarMaterial({ ...matForm, tecnica_id: Number(matForm.tecnica_id) }, mat && mat !== 'novo' ? mat.id : undefined);
+          await api.salvarMaterial(
+            { ...matForm, tecnica_id: Number(matForm.tecnica_id) },
+            mat && mat !== 'novo' ? mat.id : undefined,
+          );
           await carregar();
         }}
       >
-        <SeletorTecnica id="material-tecnica" tecnicas={listaTecnicas} valor={matForm.tecnica_id} mudar={(v) => setMatForm((f) => ({ ...f, tecnica_id: v }))} />
+        <SeletorTecnica
+          id="material-tecnica"
+          tecnicas={listaTecnicas}
+          valor={matForm.tecnica_id}
+          mudar={(v) => setMatForm((f) => ({ ...f, tecnica_id: v }))}
+        />
         <div className="custom-modal-row">
-          <CampoNumero id="material-preco" rotulo="Preço por m²" prefixo="R$" valor={matForm.preco_m2} mudar={(v) => setMatForm((f) => ({ ...f, preco_m2: v }))} />
+          <CampoNumero
+            id="material-preco"
+            rotulo="Preço por m²"
+            prefixo="R$"
+            valor={matForm.preco_m2}
+            mudar={(v) => setMatForm((f) => ({ ...f, preco_m2: v }))}
+          />
           <CampoNumero
             id="material-fracao"
             rotulo="Fração mínima"
@@ -391,8 +463,20 @@ export function ParametrosTabelas({ visitas }: { visitas: number }) {
           await carregar();
         }}
       >
-        <SeletorTecnica id="mao-obra-tecnica" tecnicas={listaTecnicas} valor={moForm.tecnica_id} mudar={(v) => setMoForm((f) => ({ ...f, tecnica_id: v }))} />
-        <CampoNumero id="mao-obra-valor" rotulo="Valor unitário" prefixo="R$" valor={moForm.valor_unitario} mudar={(v) => setMoForm((f) => ({ ...f, valor_unitario: v }))} dica="Por peça personalizada" />
+        <SeletorTecnica
+          id="mao-obra-tecnica"
+          tecnicas={listaTecnicas}
+          valor={moForm.tecnica_id}
+          mudar={(v) => setMoForm((f) => ({ ...f, tecnica_id: v }))}
+        />
+        <CampoNumero
+          id="mao-obra-valor"
+          rotulo="Valor unitário"
+          prefixo="R$"
+          valor={moForm.valor_unitario}
+          mudar={(v) => setMoForm((f) => ({ ...f, valor_unitario: v }))}
+          dica="Por peça personalizada"
+        />
       </ModalRegistro>
     </div>
   );

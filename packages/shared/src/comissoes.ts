@@ -47,8 +47,10 @@ export interface CarteiraComissao {
   tabelas: TabelaComissao[];
   /** Clientes na carteira */
   clientes?: number;
-  /** Pedidos na carteira */
+  /** Pedidos na carteira (sem os cancelados) */
   pedidos?: number;
+  /** Pedidos que já trocaram de carteira envolvendo esta (histórico; impede excluir) */
+  historico?: number;
 }
 
 /** Carteira resumida (seletores das telas de clientes e pedidos). */

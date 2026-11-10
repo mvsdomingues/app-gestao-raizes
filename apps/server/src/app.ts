@@ -91,7 +91,9 @@ export function criarApp({ db, gerenciador, imagensDir, webDist, kommo = null, u
   const tratarErros: ErrorRequestHandler = (err, _req, res, _next) => {
     const status = err instanceof ErroHttp ? err.status : 500;
     if (status >= 500) console.error(err);
-    res.status(status).json({ erro: err instanceof Error ? err.message : String(err) });
+    res
+      .status(status)
+      .json({ ...(err instanceof ErroHttp ? err.extra : {}), erro: err instanceof Error ? err.message : String(err) });
   };
   app.use(tratarErros);
 

@@ -788,8 +788,18 @@ export function ManualOperacao() {
             vem preenchida com a mais recente; as anteriores continuam valendo para os meses delas.
           </li>
           <li>
+            A carteira criada na mudança para carteiras de clientes se chama <b>Inicial</b> e começa marcada como Carteira Geral.
+            O nome e a marca são independentes: a marca pode passar para outra carteira, e a Inicial vira uma carteira comum.
+          </li>
+          <li>
+            Na lista, <b>Clientes ativos</b> conta só os clientes ativos e <b>Pedidos</b> não conta os cancelados; “histórico: N
+            pedidos” indica pedidos que já trocaram de carteira passando por ela.
+          </li>
+          <li>
             A Carteira Geral não é inativada nem excluída. Carteira com clientes ativos não é inativada: mova os clientes antes.
-            Carteira que já teve cliente ou pedido não é excluída.
+            Carteira que já teve cliente ou pedido — inclusive só no histórico de troca de carteira — não é excluída: ao tentar, o
+            sistema mostra o motivo e oferece <Bt>Inativar agora</Bt>. Para inativar pelo ✎, escolha <b>Situação: Inativa</b> e
+            salve; a confirmação aparece na tela.
           </li>
         </ul>
         <h4>2. Carteiras dos clientes (acesso restrito)</h4>

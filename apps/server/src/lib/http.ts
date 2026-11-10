@@ -5,6 +5,8 @@ export class ErroHttp extends Error {
   constructor(
     public readonly status: number,
     message: string,
+    /** Campos extras devolvidos junto com { erro } (ex.: codigo, para a tela oferecer uma saída) */
+    public readonly extra: Record<string, unknown> = {},
   ) {
     super(message);
   }

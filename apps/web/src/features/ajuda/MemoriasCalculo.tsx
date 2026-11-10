@@ -199,7 +199,7 @@ export function MemoriasCalculo() {
     [
       {
         id: 1,
-        nome: 'Geral',
+        nome: 'Inicial',
         descricao: '',
         ativa: true,
         geral: true,
@@ -764,11 +764,11 @@ export function MemoriasCalculo() {
           ]}
         />
         <Exemplo
-          titulo="Exemplo: Ana em outubro — R$ 25.000 na Geral, R$ 8.000 na Corporativo e R$ 3.000 na Carteira Raízes"
+          titulo="Exemplo: Ana em outubro — R$ 25.000 na Inicial, R$ 8.000 na Corporativo e R$ 3.000 na Carteira Raízes"
           dados={
             <>
-              Geral: até R$ 10.000 → 2,5% · R$ 10.000 a R$ 30.000 → 4% · acima → 5%. Corporativo: até R$ 5.000 → 3% · acima → 4%.
-              Carteira Raízes: 1,5% fixo.
+              Inicial (Carteira Geral): até R$ 10.000 → 2,5% · R$ 10.000 a R$ 30.000 → 4% · acima → 5%. Corporativo: até R$ 5.000
+              → 3% · acima → 4%. Carteira Raízes: 1,5% fixo.
             </>
           }
           passos={[
@@ -784,7 +784,7 @@ export function MemoriasCalculo() {
                     ] as [string, string, string],
                 ),
             ),
-            ['Geral', `sobre ${brl(cartAna('Geral').vendas)}`, brl(cartAna('Geral').comissao)],
+            ['Inicial', `sobre ${brl(cartAna('Inicial').vendas)}`, brl(cartAna('Inicial').comissao)],
             ['Corporativo', `sobre ${brl(cartAna('Corporativo').vendas)}`, brl(cartAna('Corporativo').comissao)],
             ['Carteira Raízes', `sobre ${brl(cartAna('Carteira Raízes').vendas)}`, brl(cartAna('Carteira Raízes').comissao)],
             ['Total da Ana', 'soma das carteiras', brl(comAna.total)],
