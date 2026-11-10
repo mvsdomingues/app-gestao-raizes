@@ -16,7 +16,6 @@ import { Paginacao } from '../catalogo/Paginacao';
 import { formatarDataHora, TagStatusPedido, useAcoesPedido } from './comum';
 import { ModalNovoPedido } from './ModalNovoPedido';
 import { ClienteVinculado } from '../clientes/ClienteVinculado';
-import { useConfigClientes } from '../clientes/config';
 import { SeletorCliente } from '../clientes/SeletorCliente';
 import type { ClienteVinculado as Cliente } from '@raizes/shared';
 
@@ -43,7 +42,6 @@ export function ListaPedidos({ versao, aoAlterar }: Props) {
   const [estado, setEstado] = useState<Estado>({ tipo: 'carregando' });
   const [novoAberto, setNovoAberto] = useState(false);
   const seq = useRef(0);
-  const kommo = useConfigClientes();
   const [clienteFiltro, setClienteFiltro] = useState<Cliente | null>(null);
 
   const carregar = useCallback(async (f: FiltrosPedidos, pag: number) => {
@@ -150,12 +148,10 @@ export function ListaPedidos({ versao, aoAlterar }: Props) {
           <label htmlFor="filtro-ped-ate">Até</label>
           <input id="filtro-ped-ate" className="custom-input" type="date" {...campo('ate')} />
         </div>
-        {(kommo.ativo || clienteFiltro) && (
-          <div className="orc-filtro orc-filtro-cliente">
-            <label htmlFor="filtro-cliente-ped">Cliente</label>
-            <SeletorCliente id="filtro-cliente-ped" compacto valor={clienteFiltro} aoMudar={filtrarCliente} placeholder="Telefone ou nome" />
-          </div>
-        )}
+        <div className="orc-filtro orc-filtro-cliente">
+          <label htmlFor="filtro-cliente-ped">Cliente</label>
+          <SeletorCliente id="filtro-cliente-ped" compacto valor={clienteFiltro} aoMudar={filtrarCliente} placeholder="Nome, telefone ou código" />
+        </div>
         <label className="filtro-meus" title="Mostra só os pedidos criados por você">
           <input type="checkbox" id="filtro-meus-pedidos" checked={filtros.meus === '1'} onChange={(e) => alternarMeus(e.target.checked)} />
           Somente os meus
@@ -212,7 +208,7 @@ export function ListaPedidos({ versao, aoAlterar }: Props) {
               <th style={{ width: 110 }}>Orçamento</th>
               <th>Criado em</th>
               <th style={{ width: 110 }}>Entrega</th>
-              {kommo.ativo && <th>Cliente</th>}
+              <th>Cliente</th>
               <th style={{ width: 150 }}>Responsável</th>
               <th className="num" style={{ width: 70 }}>
                 Itens
@@ -235,11 +231,9 @@ export function ListaPedidos({ versao, aoAlterar }: Props) {
                   <td className="pedido-ref-orc">{p.orcamento_numero}</td>
                   <td>{formatarDataHora(p.criado)}</td>
                   <td>{p.entrega_prevista ? formatarDataBr(p.entrega_prevista) : '—'}</td>
-                  {kommo.ativo && (
-                    <td className="col-cliente">
-                      <ClienteVinculado cliente={p.cliente} link={false} />
-                    </td>
-                  )}
+                  <td className="col-cliente">
+                    <ClienteVinculado cliente={p.cliente} link={false} />
+                  </td>
                   <td>
                     <NomeUsuario usuario={p.responsavel} />
                   </td>

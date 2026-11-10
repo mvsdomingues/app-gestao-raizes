@@ -26,6 +26,7 @@ import { corpoJson, ErroHttp } from '../lib/http';
 import { marcarItemChecklist } from '../db/repositorio-checklist';
 import { exigirUsuario } from '../lib/sessao';
 import { lerFaturamento } from '../lib/faturamento';
+import { atualizarCadastroPeloPedido, kommoIdDoCliente } from '../db/repositorio-cadastro-clientes';
 import type { ServicoKommo } from '../kommo/servico';
 import { lerOrcamento } from './orcamentos';
 
@@ -101,9 +102,10 @@ export function rotasPedidos(db: Banco, kommo: ServicoKommo | null = null): Rout
     const codigo = criarPedido(db, orcamentoId, textoOpcional(corpo.observacao), eu.id);
     const p = detalhe(codigo);
     // Fase 4 da integração: nota no contato do Kommo (enviada em segundo plano, com nova tentativa)
-    if (kommo && p.cliente) {
+    const contatoKommo = p.cliente ? kommoIdDoCliente(db, p.cliente.id) : null;
+    if (kommo && contatoKommo) {
       kommo.notificarPedido({
-        contatoId: p.cliente.id,
+        contatoId: contatoKommo,
         pedidoId: p.id,
         codigo: p.codigo,
         orcamento: p.orcamento_numero,
@@ -138,8 +140,14 @@ export function rotasPedidos(db: Banco, kommo: ServicoKommo | null = null): Rout
 
   /** Dados de faturamento do pedido em andamento: { faturamento } (cada mudança vira observação) */
   r.put('/api/pedidos/:codigo/faturamento', (req, res) => {
-    const dados = lerFaturamento(corpoJson(req).faturamento, true)!;
-    alterarFaturamentoPedido(db, String(req.params.codigo), dados, exigirUsuario(res).id);
+    const corpo = corpoJson(req);
+    const dados = lerFaturamento(corpo.faturamento, true)!;
+    const eu = exigirUsuario(res);
+    db.transaction(() => {
+      alterarFaturamentoPedido(db, String(req.params.codigo), dados, eu.id);
+      // "Atualizar também o cadastro do cliente" (o cadastro não muda sozinho a partir do pedido)
+      if (corpo.atualizar_cadastro === true) atualizarCadastroPeloPedido(db, String(req.params.codigo), dados, { usuarioId: eu.id, nome: eu.nome, origem: 'PEDIDO' });
+    })();
     res.json(detalhe(String(req.params.codigo)));
   });
 

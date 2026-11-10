@@ -1,5 +1,6 @@
 import { Router, type Request } from 'express';
 import {
+  codigoCliente,
   isStatusOrcamento,
   dataValida,
   isStatusOrcamentoManual,
@@ -23,7 +24,7 @@ import {
 } from '../db/repositorio-orcamentos';
 import { pedidoAtivoDoOrcamento } from '../db/repositorio-pedidos';
 import { mockupsDoOrcamento, reorganizarMockups } from '../db/repositorio-mockups';
-import { vinculoDoCliente } from '../db/repositorio-clientes';
+import { clienteAtivo, kommoIdDoCliente, vinculoClienteCadastro } from '../db/repositorio-cadastro-clientes';
 import { COLUNAS_LINK, extrairLink, trocarLink } from '../db/repositorio-link';
 import { urlBase } from '../lib/url';
 import type { ServicoKommo } from '../kommo/servico';
@@ -36,16 +37,18 @@ import { faturamentoDoBanco, lerFaturamento } from '../lib/faturamento';
 
 /** Cliente gravado no orçamento a partir das colunas cliente_* (null = sem cliente). */
 function clienteDaLinha(l: Record<string, unknown>): ClienteVinculado | null {
-  const id = l.cliente_kommo_id as number | null;
+  const id = l.cliente_id as number | null;
   const nome = l.cliente_nome as string | null;
   const telefone = l.cliente_telefone as string | null;
-  delete l.cliente_kommo_id;
+  const email = l.cliente_email as string | null;
+  delete l.cliente_id;
   delete l.cliente_nome;
   delete l.cliente_telefone;
-  return id ? { id, nome: nome ?? '', telefone: telefone ?? null } : null;
+  delete l.cliente_email;
+  return id ? { id, nome: nome ?? '', telefone: telefone ?? null, email: email ?? null, codigo: codigoCliente(id) } : null;
 }
 
-const COLUNAS_CLIENTE = 'orcamentos.cliente_kommo_id, orcamentos.cliente_nome, orcamentos.cliente_telefone';
+const COLUNAS_CLIENTE = 'orcamentos.cliente_id, orcamentos.cliente_nome, orcamentos.cliente_telefone, orcamentos.cliente_email';
 
 interface LinhaOrcamento extends Omit<ResumoOrcamento, 'numero' | 'responsavel' | 'alterado_por' | 'cliente'> {
   itens_json: string;
@@ -102,7 +105,7 @@ export function lerOrcamento(db: Banco, id: number, base = ''): Orcamento | unde
 }
 
 export interface OpcoesOrcamentos {
-  /** Com a integração do Kommo ligada, só envia ao cliente o orçamento que tem cliente vinculado. */
+  /** Só envia ao cliente o orçamento que tem cliente do cadastro vinculado. */
   exigirClienteAoEnviar?: boolean;
   /** Integração ligada: "Enviar para o Cliente" registra uma nota no contato do Kommo. */
   kommo?: ServicoKommo | null;
@@ -162,10 +165,10 @@ export function rotasOrcamentos(db: Banco, opcoes: OpcoesOrcamentos = {}): Route
       wheres.push('orcamentos.usuario_id = ?');
       params.push(exigirUsuario(res).id);
     }
-    // Cliente do Kommo (código do contato)
+    // Cliente do cadastro
     const cliente = q('cliente').replace(/\D/g, '');
     if (cliente) {
-      wheres.push('orcamentos.cliente_kommo_id = ?');
+      wheres.push('orcamentos.cliente_id = ?');
       params.push(Number(cliente));
     }
     // Situação: Aberto, Enviado ou Pedido gerado
@@ -247,7 +250,7 @@ export function rotasOrcamentos(db: Banco, opcoes: OpcoesOrcamentos = {}): Route
     try {
       const num = (v: unknown) => (falsyPython(v) ? 0 : floatPython(v));
       const obs = typeof data.observacao === 'string' ? data.observacao.trim().slice(0, 2000) : '';
-      const bruto = data.cliente_kommo_id;
+      const bruto = data.cliente_id;
       const clienteId =
         bruto === undefined ? undefined : bruto === null || bruto === '' ? null : Number.isInteger(Number(bruto)) ? Number(bruto) : NaN;
       if (Number.isNaN(clienteId)) throw new Error('cliente');
@@ -267,33 +270,30 @@ export function rotasOrcamentos(db: Banco, opcoes: OpcoesOrcamentos = {}): Route
   }
 
   /**
-   * Cópia de nome e telefone do cliente para gravar no orçamento. O contato precisa estar
-   * na base sincronizada; numa alteração, o mesmo cliente já vinculado é mantido mesmo
-   * que tenha sido removido do Kommo depois.
+   * Cópia de nome, telefone e e-mail do cliente do cadastro para gravar no orçamento
+   * (mais o código do contato no Kommo, mantido só como referência). Cliente inativo
+   * só continua se já era o deste orçamento.
    */
-  function dadosDoCliente(
-    clienteId: number | null | undefined,
-    atual?: { cliente_kommo_id: number | null; cliente_nome: string | null; cliente_telefone: string | null },
-  ): [number | null, string | null, string | null] {
-    if (!clienteId) return [null, null, null];
-    const v = vinculoDoCliente(db, clienteId);
-    if (v) return [v.id, v.nome, v.telefone];
-    if (atual?.cliente_kommo_id === clienteId) return [clienteId, atual.cliente_nome, atual.cliente_telefone];
-    throw new ErroHttp(400, 'Cliente não encontrado na base do Kommo. Sincronize os clientes e escolha de novo.');
+  type DadosClienteOrc = [number | null, string | null, string | null, string | null, number | null];
+  function dadosDoCliente(clienteId: number | null | undefined, atualId?: number | null): DadosClienteOrc {
+    if (!clienteId) return [null, null, null, null, null];
+    const v = vinculoClienteCadastro(db, clienteId);
+    if (!v || (!clienteAtivo(db, clienteId) && atualId !== clienteId)) throw new ErroHttp(400, 'Cliente não encontrado no cadastro (ou inativo). Escolha o cliente de novo.');
+    return [v.id, v.nome, v.telefone ?? null, v.email ?? null, kommoIdDoCliente(db, v.id)];
   }
 
   r.post('/api/orcamentos', (req, res) => {
     const eu = exigirUsuario(res);
     const { itens, subtotal, frete, total, observacao, clienteId, entrega, faturamento } = lerCorpo(req);
-    const [cid, cnome, ctel] = dadosDoCliente(clienteId);
+    const [cid, cnome, ctel, cemail, ckommo] = dadosDoCliente(clienteId);
     const dataHora = isoLocal();
     const info = db
       .prepare(
         `INSERT INTO orcamentos (data_hora, subtotal, frete, total, qtd_itens, itens_json, usuario_id, observacao,
-                                 cliente_kommo_id, cliente_nome, cliente_telefone, entrega_prevista, faturamento_json)
-         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+                                 cliente_id, cliente_nome, cliente_telefone, cliente_email, cliente_kommo_id, entrega_prevista, faturamento_json)
+         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
       )
-      .run(dataHora, subtotal, frete, total, itens.length, JSON.stringify(itens), eu.id, observacao, cid, cnome, ctel, entrega ?? null, faturamento ?? null);
+      .run(dataHora, subtotal, frete, total, itens.length, JSON.stringify(itens), eu.id, observacao, cid, cnome, ctel, cemail, ckommo, entrega ?? null, faturamento ?? null);
     const id = Number(info.lastInsertRowid);
     registrarMovimentoOrcamento(db, id, null, 'ABERTO', eu.id, null, dataHora);
     const corpo: OrcamentoCriado = { id, numero: numeroOrcamento(id), data_hora: dataHora };
@@ -312,23 +312,27 @@ export function rotasOrcamentos(db: Banco, opcoes: OpcoesOrcamentos = {}): Route
     if (bloqueio) throw new ErroHttp(409, bloqueio);
     const eu = exigirUsuario(res);
     const atual = db
-      .prepare('SELECT cliente_kommo_id, cliente_nome, cliente_telefone, entrega_prevista, faturamento_json FROM orcamentos WHERE id = ?')
+      .prepare('SELECT cliente_id, cliente_kommo_id, cliente_nome, cliente_telefone, cliente_email, entrega_prevista, faturamento_json FROM orcamentos WHERE id = ?')
       .get(id) as {
       faturamento_json: string | null;
+      cliente_id: number | null;
       cliente_kommo_id: number | null;
       cliente_nome: string | null;
       cliente_telefone: string | null;
+      cliente_email: string | null;
       entrega_prevista: string | null;
     };
     // Cliente não informado = mantém o atual
-    const [cid, cnome, ctel] =
-      clienteId === undefined ? [atual.cliente_kommo_id, atual.cliente_nome, atual.cliente_telefone] : dadosDoCliente(clienteId, atual);
+    const [cid, cnome, ctel, cemail, ckommo]: DadosClienteOrc =
+      clienteId === undefined
+        ? [atual.cliente_id, atual.cliente_nome, atual.cliente_telefone, atual.cliente_email, atual.cliente_kommo_id]
+        : dadosDoCliente(clienteId, atual.cliente_id);
     const dataHora = isoLocal();
     const info = db
       .prepare(
         `UPDATE orcamentos SET data_hora = ?, subtotal = ?, frete = ?, total = ?, qtd_itens = ?, itens_json = ?,
-                alterado_por = ?, observacao = ?, cliente_kommo_id = ?, cliente_nome = ?, cliente_telefone = ?,
-                entrega_prevista = ?, faturamento_json = ? WHERE id = ?`,
+                alterado_por = ?, observacao = ?, cliente_id = ?, cliente_nome = ?, cliente_telefone = ?, cliente_email = ?,
+                cliente_kommo_id = ?, entrega_prevista = ?, faturamento_json = ? WHERE id = ?`,
       )
       .run(
         dataHora,
@@ -342,6 +346,8 @@ export function rotasOrcamentos(db: Banco, opcoes: OpcoesOrcamentos = {}): Route
         cid,
         cnome,
         ctel,
+        cemail,
+        ckommo,
         entrega === undefined ? atual.entrega_prevista : entrega,
         faturamento === undefined ? atual.faturamento_json : faturamento,
         id,
@@ -364,12 +370,10 @@ export function rotasOrcamentos(db: Banco, opcoes: OpcoesOrcamentos = {}): Route
     if (!isStatusOrcamentoManual(corpo.status)) {
       throw new ErroHttp(400, 'Situação inválida: use ABERTO, ENVIADO ou CANCELADO ("Pedido gerado" vem da geração do pedido)');
     }
-    // Com o Kommo ligado, só envia ao cliente o orçamento que tem cliente vinculado
+    // Só envia ao cliente o orçamento que tem cliente do cadastro vinculado
     if (corpo.status === 'ENVIADO' && opcoes.exigirClienteAoEnviar) {
-      const o = db.prepare('SELECT cliente_kommo_id FROM orcamentos WHERE id = ?').get(id) as
-        | { cliente_kommo_id: number | null }
-        | undefined;
-      if (o && !o.cliente_kommo_id) {
+      const o = db.prepare('SELECT cliente_id FROM orcamentos WHERE id = ?').get(id) as { cliente_id: number | null } | undefined;
+      if (o && !o.cliente_id) {
         throw new ErroHttp(
           409,
           `O ${numeroOrcamento(id)} não tem cliente vinculado. Edite o orçamento, escolha o cliente no carrinho e depois envie.`,
@@ -387,9 +391,10 @@ export function rotasOrcamentos(db: Banco, opcoes: OpcoesOrcamentos = {}): Route
     );
     const o = lerOrcamento(db, id, base(req));
     // Nota "orçamento enviado" (com o link) no contato do Kommo
-    if (opcoes.kommo && corpo.status === 'ENVIADO' && antes !== 'ENVIADO' && o?.cliente) {
+    const contatoKommo = o?.cliente ? kommoIdDoCliente(db, o.cliente.id) : null;
+    if (opcoes.kommo && o && corpo.status === 'ENVIADO' && antes !== 'ENVIADO' && contatoKommo) {
       opcoes.kommo.notificarOrcamentoEnviado({
-        contatoId: o.cliente.id,
+        contatoId: contatoKommo,
         orcamentoId: o.id,
         numero: o.numero,
         total: o.total,

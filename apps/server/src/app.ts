@@ -58,7 +58,7 @@ export function criarApp({ db, gerenciador, imagensDir, webDist, kommo = null, u
   app.use(rotasClientes(db, kommo));
   app.use(rotasDashboards(db));
   app.use(rotasMockups(db, imagensDir));
-  app.use(rotasOrcamentos(db, { exigirClienteAoEnviar: !!kommo, kommo, urlPublica, imagensDir }));
+  app.use(rotasOrcamentos(db, { exigirClienteAoEnviar: true, kommo, urlPublica, imagensDir }));
   app.use(rotasPedidos(db, kommo));
   app.use(rotasProdutosProprios(db, imagensDir));
   app.use(rotasParametros(db));

@@ -4,9 +4,10 @@ import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 import { criarApp } from '../src/app';
 import { abrirBanco } from '../src/db/conexao';
 import { GerenciadorAtualizacao } from '../src/services/gerenciador-atualizacao';
-import { entrar } from './sessao-teste';
+import { entrar, clienteDeTeste } from './sessao-teste';
 
 const db = abrirBanco(':memory:');
+const CLI = clienteDeTeste(db);
 let servidor: Server;
 let base = '';
 let cookie = '';
@@ -33,7 +34,7 @@ beforeAll(async () => {
   await new Promise((r) => servidor.once('listening', r));
   base = `http://127.0.0.1:${(servidor.address() as AddressInfo).port}`;
   cookie = await entrar(base);
-  for (let i = 0; i < 3; i++) await req('POST', '/api/orcamentos', { itens: [item], subtotal: 200, frete: 0, total: 200 + i });
+  for (let i = 0; i < 3; i++) await req('POST', '/api/orcamentos', { cliente_id: CLI, itens: [item], subtotal: 200, frete: 0, total: 200 + i });
 });
 
 afterAll(() => servidor.close());
@@ -117,7 +118,7 @@ describe('situação do orçamento', () => {
 
   it('observações do orçamento são gravadas, alteradas e lidas', async () => {
     const novo = (
-      await req('POST', '/api/orcamentos', { itens: [item], subtotal: 1, frete: 0, total: 1, observacao: '  Entrega em 15 dias  ' })
+      await req('POST', '/api/orcamentos', { cliente_id: CLI, itens: [item], subtotal: 1, frete: 0, total: 1, observacao: '  Entrega em 15 dias  ' })
     ).json;
     expect((await req('GET', `/api/orcamentos/${novo.id}`)).json.observacao).toBe('Entrega em 15 dias');
     await req('PUT', `/api/orcamentos/${novo.id}`, { itens: [item], total: 1, observacao: 'Prazo 20 dias' });
@@ -128,7 +129,7 @@ describe('situação do orçamento', () => {
 
   it('observação de cada produto é gravada junto com o item', async () => {
     const itens = [{ ...item, observacao: 'Gravação a laser na tampa' }, { ...item, codigo: 'C2' }];
-    const novo = (await req('POST', '/api/orcamentos', { itens, subtotal: 1, frete: 0, total: 1, observacao: 'Geral' })).json;
+    const novo = (await req('POST', '/api/orcamentos', { cliente_id: CLI, itens, subtotal: 1, frete: 0, total: 1, observacao: 'Geral' })).json;
     const o = (await req('GET', `/api/orcamentos/${novo.id}`)).json;
     expect(o.itens.map((i: { observacao?: string }) => i.observacao)).toEqual(['Gravação a laser na tampa', undefined]);
     expect(o.observacao).toBe('Geral');

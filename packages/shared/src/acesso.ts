@@ -12,6 +12,7 @@ export const TELAS_SISTEMA = [
   { id: 'orcamentos', rotulo: 'Orçamentos', grupo: 'Vendas' },
   { id: 'pedidos', rotulo: 'Pedidos', grupo: 'Vendas' },
   { id: 'mockup', rotulo: 'Mockups', grupo: 'Vendas' },
+  { id: 'clientes', rotulo: 'Clientes', grupo: 'Cadastros' },
   { id: 'produtos-proprios', rotulo: 'Produtos Próprios', grupo: 'Cadastros' },
   { id: 'parametros', rotulo: 'Parâmetros', grupo: 'Cadastros' },
   { id: 'usuarios', rotulo: 'Usuários', grupo: 'Sistema' },

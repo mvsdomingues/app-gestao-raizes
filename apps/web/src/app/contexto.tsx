@@ -52,7 +52,7 @@ export interface FolhaOrcamento {
   /** Quem criou / alterou por último (null = registro anterior ao controle de acesso) */
   responsavel?: UsuarioResumo | null;
   alteradoPor?: UsuarioResumo | null;
-  /** Cliente do Kommo vinculado (null = sem cliente) */
+  /** Cliente do cadastro vinculado (null = sem cliente) */
   cliente?: ClienteVinculado | null;
   /** Data prevista de entrega (AAAA-MM-DD) */
   entregaPrevista?: string | null;
@@ -96,6 +96,10 @@ interface ContextoApp {
   avisarOrcamentosAlterados: () => void;
   /** Atualiza a tag de pedido da folha aberta (após gerar/cancelar um pedido). */
   definirPedidoDaFolha: (orcamentoId: number, pedido: PedidoDoOrcamento | null) => void;
+
+  /** Cliente aberto na ficha da tela Clientes (aberto a partir de orçamentos e pedidos). */
+  clienteAberto: number | null;
+  abrirCliente: (id: number | null) => void;
 
   /** Usuário escolhido na tela Acessos (aberto a partir da tela Usuários). */
   usuarioAcessos: number | null;
@@ -142,6 +146,7 @@ export function ProvedorApp({ children }: { children: ReactNode }) {
   const [pedidoAberto, setPedidoAberto] = useState<Pedido | null>(null);
   const [abaPedidos, setAbaPedidos] = useState<AbaPedidos>('lista');
   const [usuarioAcessos, setUsuarioAcessos] = useState<number | null>(null);
+  const [clienteAberto, setClienteAberto] = useState<number | null>(null);
   const [versaoOrcamentos, setVersaoOrcamentos] = useState(0);
   const mockupSolicitado = useRef<number | null>(null);
 
@@ -236,6 +241,14 @@ export function ProvedorApp({ children }: { children: ReactNode }) {
       avisarOrcamentosAlterados: () => setVersaoOrcamentos((v) => v + 1),
       definirPedidoDaFolha: (orcamentoId, pedido) =>
         setFolha((f) => (f && f.id === orcamentoId ? { ...f, pedido } : f)),
+      clienteAberto,
+      abrirCliente: (id) => {
+        setClienteAberto(id);
+        if (id !== null) {
+          irPara('clientes');
+          document.querySelector('.app-views')?.scrollTo(0, 0);
+        }
+      },
       usuarioAcessos,
       abrirAcessos: (id) => {
         setUsuarioAcessos(id);
@@ -268,7 +281,7 @@ export function ProvedorApp({ children }: { children: ReactNode }) {
         irPara('mockup');
       },
     }),
-    [tela, visitas, irPara, fornecedores, carregarFornecedores, status, carregarStatus, imagemAmpliada, parametros, parametrosAtualizado, carregarParametros, tecnicas, versaoCatalogo, folha, abaOrcamentos, pedidoAberto, abaPedidos, usuarioAcessos, versaoOrcamentos],
+    [tela, visitas, irPara, fornecedores, carregarFornecedores, status, carregarStatus, imagemAmpliada, parametros, parametrosAtualizado, carregarParametros, tecnicas, versaoCatalogo, folha, abaOrcamentos, pedidoAberto, abaPedidos, usuarioAcessos, versaoOrcamentos, clienteAberto],
   );
 
   return <Ctx.Provider value={valor}>{children}</Ctx.Provider>;

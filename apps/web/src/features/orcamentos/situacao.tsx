@@ -31,7 +31,7 @@ export function useSituacaoOrcamento(aoAlterar?: (o: Orcamento) => void) {
     novo: StatusOrcamentoManual,
     cliente?: ClienteVinculado | null,
   ) => {
-    if (novo === 'ENVIADO' && kommo.ativo && cliente === null) {
+    if (novo === 'ENVIADO' && cliente === null) {
       void avisar(
         `O ${numero} não tem cliente vinculado.\n\nEdite o orçamento, escolha o cliente no carrinho e depois envie.`,
         { tipo: 'aviso', titulo: 'Vincule um cliente' },

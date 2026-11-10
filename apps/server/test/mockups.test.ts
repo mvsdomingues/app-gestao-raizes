@@ -8,9 +8,10 @@ import { criarApp } from '../src/app';
 import { abrirBanco } from '../src/db/conexao';
 import { reiniciarLimitesPublicos } from '../src/routes/publico';
 import { GerenciadorAtualizacao } from '../src/services/gerenciador-atualizacao';
-import { entrar } from './sessao-teste';
+import { entrar, clienteDeTeste } from './sessao-teste';
 
 const db = abrirBanco(':memory:');
+const CLI = clienteDeTeste(db);
 const imagens = mkdtempSync(join(tmpdir(), 'raizes-mockups-'));
 let servidor: Server;
 let base = '';
@@ -47,7 +48,7 @@ async function req(metodo: string, url: string, corpo?: unknown, comLogin = true
 }
 
 async function novoOrcamento(itens = [item('A'), item('B'), item('C')]) {
-  const c = await req('POST', '/api/orcamentos', { itens, subtotal: 600, frete: 0, total: 600 });
+  const c = await req('POST', '/api/orcamentos', { cliente_id: CLI, itens, subtotal: 600, frete: 0, total: 600 });
   return c.json.id as number;
 }
 

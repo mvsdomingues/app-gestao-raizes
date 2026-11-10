@@ -4,7 +4,7 @@ import { useApp } from '../../app/contexto';
 import { NomeUsuario } from '../../components/NomeUsuario';
 import { useSessao } from '../../app/sessao';
 import { api } from '../../lib/api';
-import { erroDe } from '../../lib/dialogo';
+import { avisar, confirmar, erroDe } from '../../lib/dialogo';
 import { FolhaOrcamento } from '../orcamentos/FolhaOrcamento';
 import { useParametrosImpressao } from '../orcamentos/impressao';
 import { ClienteVinculado } from '../clientes/ClienteVinculado';
@@ -389,7 +389,29 @@ function FaturamentoPedido({ pedido, aoSalvar }: { pedido: Pedido; aoSalvar: (p:
         )}
       </div>
       {pedido.faturamento ? (
-        <ResumoFaturamento dados={pedido.faturamento} />
+        <>
+          <ResumoFaturamento dados={pedido.faturamento} />
+          {pode && (
+            <button
+              type="button"
+              className="link-botao pedido-atualizar-cadastro"
+              id="btn-atualizar-cadastro"
+              title="O cadastro do cliente não muda sozinho quando o faturamento do pedido é alterado"
+              onClick={async () => {
+                const quem = pedido.cliente ? `${pedido.cliente.codigo ?? ''} ${pedido.cliente.nome}`.trim() : 'um novo cliente';
+                if (!(await confirmar(`Gravar estes dados de faturamento no cadastro de ${quem}? A alteração fica no histórico do cliente.`, { ok: 'Atualizar o cadastro' }))) return;
+                try {
+                  aoSalvar(await api.alterarFaturamentoPedido(pedido.codigo, pedido.faturamento!, true));
+                  void avisar('Cadastro do cliente atualizado.', { tipo: 'sucesso' });
+                } catch (e) {
+                  void erroDe('Não foi possível atualizar o cadastro.', e);
+                }
+              }}
+            >
+              Atualizar o cadastro do cliente com estes dados
+            </button>
+          )}
+        </>
       ) : (
         <p className="pedido-fat-vazio">Dados de faturamento não informados{pode ? ' — use "Informar dados".' : '.'}</p>
       )}

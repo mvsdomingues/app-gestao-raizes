@@ -1,4 +1,5 @@
 import {
+  codigoCliente,
   codigoPedido,
   FLUXO_PEDIDO,
   statusAnterior,
@@ -44,7 +45,7 @@ interface LinhaPedido {
 
 const SELECT_PEDIDO = `
   SELECT p.id, p.codigo, p.status, p.orcamento_id, p.observacao, p.criado, p.atualizado, p.entrega_prevista,
-         o.total, o.qtd_itens, o.cliente_kommo_id, o.cliente_nome, o.cliente_telefone,
+         o.total, o.qtd_itens, p.cliente_id, o.cliente_nome, o.cliente_telefone, o.cliente_email,
          (SELECT COUNT(*) FROM pedidos_checklist c WHERE c.pedido_id = p.id) AS checklist_total,
          (SELECT COUNT(*) FROM pedidos_checklist c WHERE c.pedido_id = p.id AND c.feito = 1) AS checklist_feitos,
          ${colunasResponsavel('ur', 'resp')}
@@ -55,11 +56,20 @@ const SELECT_PEDIDO = `
 function resumo(l: LinhaPedido): ResumoPedido & { observacao: string | null } {
   const linha = { ...l } as LinhaPedido & Record<string, unknown>;
   const responsavel = extrairResponsavel(linha, 'resp');
-  const cid = linha.cliente_kommo_id as number | null;
-  const cliente = cid ? { id: cid, nome: (linha.cliente_nome as string) ?? '', telefone: (linha.cliente_telefone as string | null) ?? null } : null;
-  delete linha.cliente_kommo_id;
+  const cid = linha.cliente_id as number | null;
+  const cliente = cid
+    ? {
+        id: cid,
+        nome: (linha.cliente_nome as string) ?? '',
+        telefone: (linha.cliente_telefone as string | null) ?? null,
+        email: (linha.cliente_email as string | null) ?? null,
+        codigo: codigoCliente(cid),
+      }
+    : null;
+  delete linha.cliente_id;
   delete linha.cliente_nome;
   delete linha.cliente_telefone;
+  delete linha.cliente_email;
   return { ...linha, orcamento_numero: numeroOrcamento(l.orcamento_id), responsavel, cliente };
 }
 
@@ -111,7 +121,7 @@ export function listarPedidos(
   const params: unknown[] = [];
   const cliente = (filtros.cliente ?? '').replace(/\D/g, '');
   if (cliente) {
-    wheres.push('p.orcamento_id IN (SELECT id FROM orcamentos WHERE cliente_kommo_id = ?)');
+    wheres.push('p.cliente_id = ?');
     params.push(Number(cliente));
   }
   if (filtros.meus === '1' && usuarioId) {
@@ -247,8 +257,8 @@ export function criarPedido(
   const quemMovimenta = origem === 'CLIENTE' ? null : usuarioId;
   return db.transaction(() => {
     const existe = db
-      .prepare('SELECT status, entrega_prevista, faturamento_json FROM orcamentos WHERE id = ?')
-      .get(orcamentoId) as { status: string; entrega_prevista: string | null; faturamento_json: string | null } | undefined;
+      .prepare('SELECT status, entrega_prevista, faturamento_json, cliente_id FROM orcamentos WHERE id = ?')
+      .get(orcamentoId) as { status: string; entrega_prevista: string | null; faturamento_json: string | null; cliente_id: number | null } | undefined;
     if (!existe) throw new ErroHttp(404, `Orçamento ${numeroOrcamento(orcamentoId)} não encontrado`);
     const ativo = pedidoAtivoDoOrcamento(db, orcamentoId);
     if (ativo) {
@@ -265,9 +275,9 @@ export function criarPedido(
     const codigo = codigoPedido(id);
     const agora = isoLocal();
     db.prepare(
-      `INSERT INTO pedidos (id, codigo, orcamento_id, status, observacao, criado, atualizado, usuario_id, entrega_prevista, faturamento_json)
-       VALUES (?, ?, ?, 'CRIADO', ?, ?, ?, ?, ?, ?)`,
-    ).run(id, codigo, orcamentoId, observacao, agora, agora, usuarioId, existe.entrega_prevista, existe.faturamento_json);
+      `INSERT INTO pedidos (id, codigo, orcamento_id, status, observacao, criado, atualizado, usuario_id, entrega_prevista, faturamento_json, cliente_id)
+       VALUES (?, ?, ?, 'CRIADO', ?, ?, ?, ?, ?, ?, ?)`,
+    ).run(id, codigo, orcamentoId, observacao, agora, agora, usuarioId, existe.entrega_prevista, existe.faturamento_json, existe.cliente_id);
     registrarMovimento(db, id, null, 'CRIADO', agora, opcoes.observacaoMovimento ?? observacao, quemMovimenta, origem);
     if (observacao) inserirObservacao(db, id, observacao, agora, quemMovimenta, origem);
     // Situação do orçamento passa a "Pedido gerado"

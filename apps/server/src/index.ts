@@ -19,7 +19,7 @@ const gerenciador = new GerenciadorAtualizacao({
   args: [...process.execArgv.filter((a) => !a.startsWith('--watch')), scriptAtualizacao],
 });
 
-// Integração com o Kommo: ligada quando KOMMO_SUBDOMINIO e KOMMO_TOKEN estão no .env
+// Integração com o Kommo: ligada só com KOMMO_ATIVO=1, KOMMO_SUBDOMINIO e KOMMO_TOKEN no .env
 const kommo = config.kommo
   ? new ServicoKommo(
       db,

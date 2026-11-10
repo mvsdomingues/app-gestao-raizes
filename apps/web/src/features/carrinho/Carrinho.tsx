@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { calcComParametros, faturamentoPreenchido, faturamentoVazio, formatBRL, montarItemOrcamento } from '@raizes/shared';
+import { calcComParametros, diferencasFaturamento, faturamentoPreenchido, faturamentoVazio, formatBRL, montarItemOrcamento, type ClienteVinculado } from '@raizes/shared';
 import { ResumoFaturamento } from '../clientes/FormularioFaturamento';
 import { ModalFaturamento } from '../clientes/ModalFaturamento';
 import { useApp } from '../../app/contexto';
@@ -8,7 +8,6 @@ import { api, ErroApi } from '../../lib/api';
 import { precosDoCarrinho, subtotalCarrinho, useCarrinho } from '../../state/carrinho';
 import { ItemCarrinho } from './ItemCarrinho';
 import { avisar, confirmar, erro } from '../../lib/dialogo';
-import { useConfigClientes } from '../clientes/config';
 import { SeletorCliente } from '../clientes/SeletorCliente';
 
 export function Carrinho() {
@@ -19,8 +18,29 @@ export function Carrinho() {
   const { frete, edicao, observacao, cliente, entregaPrevista, faturamento } = estado;
   const [editandoFaturamento, setEditandoFaturamento] = useState(false);
   const temFaturamento = faturamentoPreenchido(faturamento);
-  const kommo = useConfigClientes();
   const [gerando, setGerando] = useState(false);
+
+  /** Cliente escolhido: o faturamento do cadastro preenche o do carrinho (pergunta antes de trocar o já digitado). */
+  const escolherCliente = async (c: ClienteVinculado | null) => {
+    definirCliente(c);
+    if (!c) return;
+    try {
+      const r = await api.faturamentoCliente(c.id);
+      if (!faturamentoPreenchido(r.faturamento) || diferencasFaturamento(faturamento, r.faturamento).length === 0) return;
+      if (
+        temFaturamento &&
+        !(await confirmar('O carrinho já tem dados de faturamento. Trocar pelos dados do cadastro deste cliente?', {
+          titulo: 'Dados de faturamento',
+          ok: 'Usar os do cadastro',
+          cancelar: 'Manter os do carrinho',
+        }))
+      )
+        return;
+      definirFaturamento(r.faturamento);
+    } catch {
+      /* sem os dados do cadastro: o carrinho continua como está */
+    }
+  };
 
   // Abrir a aba redesenha a lista (reinicia campos e fecha os painéis)
   useEffect(() => {
@@ -86,7 +106,7 @@ export function Carrinho() {
       frete: valorFrete,
       total: tot,
       observacao: observacao.trim(),
-      cliente_kommo_id: cliente?.id ?? null,
+      cliente_id: cliente?.id ?? null,
       entrega_prevista: entregaPrevista || null,
       faturamento: temFaturamento ? faturamento : null,
     };
@@ -197,15 +217,13 @@ export function Carrinho() {
             <div className="carrinho-resumo">
               <div className="carrinho-resumo-title">Resumo</div>
 
-              {(kommo.ativo || cliente) && (
-                <div className="cart-cliente" id="cart-cliente">
-                  <label className="cart-field-label" htmlFor="campo-cliente">
-                    Cliente
-                    <span className="cart-cliente-dica">{cliente ? 'contato do Kommo' : 'obrigatório para enviar ao cliente'}</span>
-                  </label>
-                  <SeletorCliente id="campo-cliente" valor={cliente} aoMudar={definirCliente} />
-                </div>
-              )}
+              <div className="cart-cliente" id="cart-cliente">
+                <label className="cart-field-label" htmlFor="campo-cliente">
+                  Cliente
+                  <span className="cart-cliente-dica">{cliente ? cliente.codigo : 'opcional para gerar; obrigatório para enviar'}</span>
+                </label>
+                <SeletorCliente id="campo-cliente" valor={cliente} aoMudar={(c) => void escolherCliente(c)} />
+              </div>
 
               <div className="cart-extra-fields">
                 <div className="cart-field-row">

@@ -1,7 +1,8 @@
-import { formatarTelefone, urlContatoKommo, type ClienteVinculado as Cliente } from '@raizes/shared';
-import { useConfigClientes } from './config';
+import { codigoCliente, formatarTelefone, type ClienteVinculado as Cliente } from '@raizes/shared';
+import { useApp } from '../../app/contexto';
+import { useSessao } from '../../app/sessao';
 
-/** "Nome · telefone" do cliente vinculado, com link para o contato no Kommo. */
+/** "Nome · telefone" do cliente vinculado, com link para a ficha na tela Clientes (quem tem acesso). */
 export function ClienteVinculado({
   cliente,
   link = true,
@@ -11,23 +12,26 @@ export function ClienteVinculado({
   link?: boolean;
   vazio?: string;
 }) {
-  const { subdominio } = useConfigClientes();
+  const { abrirCliente } = useApp();
+  const { pode } = useSessao();
   if (!cliente) return <span className="cliente-vazio">{vazio}</span>;
   return (
     <span className="cliente-vinculado">
-      <span className="cliente-nome">{cliente.nome || `Contato #${cliente.id}`}</span>
+      <span className="cliente-nome">{cliente.nome || cliente.codigo || codigoCliente(cliente.id)}</span>
       {cliente.telefone && <span className="cliente-tel"> · {formatarTelefone(cliente.telefone)}</span>}
-      {link && subdominio && (
-        <a
-          className="cliente-link-kommo"
-          href={urlContatoKommo(subdominio, cliente.id)}
-          target="_blank"
-          rel="noreferrer"
-          title="Abrir o contato no Kommo"
-          onClick={(e) => e.stopPropagation()}
+      {!cliente.telefone && cliente.email && <span className="cliente-tel"> · {cliente.email}</span>}
+      {link && pode('clientes') && (
+        <button
+          type="button"
+          className="link-botao cliente-ver-cadastro"
+          title={`Abrir ${cliente.codigo ?? codigoCliente(cliente.id)} na tela Clientes`}
+          onClick={(e) => {
+            e.stopPropagation();
+            abrirCliente(cliente.id);
+          }}
         >
-          Abrir no Kommo ↗
-        </a>
+          Ver cadastro
+        </button>
       )}
     </span>
   );

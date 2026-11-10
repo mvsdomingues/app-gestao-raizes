@@ -48,7 +48,7 @@ export const config = {
   webDist: resolve(RAIZ, 'apps/web/dist'),
   /** Endereço público dos links enviados aos clientes (sem barra no fim); null = o endereço de acesso. */
   urlPublica: process.env.APP_URL_PUBLICA?.trim().replace(/\/+$/, '') || null,
-  /** Integração com o Kommo (desligada sem KOMMO_TOKEN). */
+  /** Integração com o Kommo (desligada sem KOMMO_ATIVO=1, KOMMO_SUBDOMINIO e KOMMO_TOKEN). */
   kommo: configKommo(),
 };
 
@@ -65,7 +65,8 @@ export interface ConfigKommo {
 function configKommo(): ConfigKommo | null {
   const subdominio = process.env.KOMMO_SUBDOMINIO?.trim() ?? '';
   const token = process.env.KOMMO_TOKEN?.trim() ?? '';
-  if (!subdominio || !token) return null;
+  // Desligada por padrão: o cadastro de clientes é do próprio sistema; KOMMO_ATIVO=1 religa
+  if (process.env.KOMMO_ATIVO?.trim() !== '1' || !subdominio || !token) return null;
   return {
     subdominio,
     token,

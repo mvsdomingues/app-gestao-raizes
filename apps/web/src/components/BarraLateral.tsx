@@ -42,6 +42,7 @@ const GRUPOS: { titulo: string; itens: ItemMenu[] }[] = [
   {
     titulo: 'Cadastros',
     itens: [
+      { tela: 'clientes', rotulo: 'Clientes', icone: 'clientes', id: 'tab-clientes' },
       { tela: 'produtos-proprios', rotulo: 'Produtos Próprios', icone: 'produtos', id: 'tab-produtos-proprios' },
       { tela: 'parametros', rotulo: 'Parâmetros', icone: 'parametros', id: 'tab-parametros' },
     ],

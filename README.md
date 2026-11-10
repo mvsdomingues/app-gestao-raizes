@@ -153,12 +153,12 @@ O menu fica na **barra lateral** (pode ser recolhido para mostrar só os ícones
 3. **Orçamentos**: tela única com duas abas.
    - **Todos os orçamentos**: lista paginada (20 por página) com filtros por número (`ORC-0005` ou `5`), produto (descrição ou código de qualquer item), período (de/até), faixa de valor total e situação. Clique em uma linha para ver os detalhes; **✎ Editar** carrega o orçamento de volta no carrinho (o carrinho precisa estar vazio).
    - **Detalhes**: folha do orçamento selecionado, com **Editar**, **Gerar pedido** e **Imprimir / Salvar PDF**.
-   - **Situação** de cada orçamento: **Aberto** (ao ser gerado) → **Enviado** (botão *✉ Enviar para o Cliente* na lista ou nos detalhes; com o Kommo ligado, exige cliente vinculado; dá para voltar para Aberto) → **Pedido gerado** (automático ao gerar o pedido, com o código `PED-…` clicável). Se o pedido for cancelado, o orçamento volta para a situação que tinha (Aberto ou Enviado).
+   - **Situação** de cada orçamento: **Aberto** (ao ser gerado) → **Enviado** (botão *✉ Enviar para o Cliente* na lista ou nos detalhes; exige cliente vinculado; dá para voltar para Aberto) → **Pedido gerado** (automático ao gerar o pedido, com o código `PED-…` clicável). Se o pedido for cancelado, o orçamento volta para a situação que tinha (Aberto ou Enviado).
    - Cada mudança de situação fica no histórico (data, hora e usuário), visível nos detalhes junto com as etapas.
    - Só orçamento **Aberto** pode ser alterado. Se estiver **Enviado**, o sistema avisa que ele precisa voltar para Aberto antes (botão *↩ Voltar para aberto* nos detalhes); com **pedido gerado**, nunca. O botão **📦 Gerar pedido** vale para Aberto e Enviado.
 
    - **Previsão de entrega**: campo de data no resumo do carrinho, gravado com o orçamento. Aparece na folha (impressa e na página do cliente) e passa para o pedido.
-   - **Cliente** (com a integração do Kommo ligada): veja *Clientes do Kommo* abaixo.
+   - **Cliente**: escolhido no cadastro de clientes do sistema; veja *Cadastro de clientes* abaixo.
    - **Cancelado**: *✕ Cancelar orçamento* (Aberto ou Enviado, sempre com motivo) ou recusa do cliente pelo link. Cancelado não é alterado nem vira pedido; *↺ Reabrir* volta para Aberto. Orçamento com pedido ativo não é cancelado (cancela-se o pedido).
    - **Link para o cliente**: veja *Link do orçamento* abaixo.
 
@@ -183,6 +183,7 @@ O menu fica na **barra lateral** (pode ser recolhido para mostrar só os ícones
 
 **Cadastros**
 
+6. **Clientes** (*Cadastros › Clientes*): cadastro único dos clientes (`CLI-000001`); veja *Cadastro de clientes* abaixo.
 6. **Produtos Próprios**: inclua, busque, altere e exclua produtos da própria empresa. Cada um recebe um código sequencial `PDP-000001`, `PDP-000002`… (códigos excluídos não são reutilizados). A foto pode ser enviada do computador ou informada por URL; os arquivos ficam em `data/imagens/proprios/`. Em *Detalhes do produto* (opcional) informe descrição, material, medidas, peso, capacidade, cor, categoria, personalização e vídeo (YouTube/Vimeo) — aparecem no painel de detalhes do catálogo e, resumidos, no orçamento.
 7. **Parâmetros**: tela em abas.
    - **Precificação**: valores da calculadora (material, mão de obra, imposto de compra, designer, logística, imposto sobre venda e margem), com simulação de preço. Material, mão de obra, designer e logística são o ponto de partida de cada item novo; imposto de compra, imposto sobre venda e margem valem sempre para todos os itens do carrinho.
@@ -191,7 +192,7 @@ O menu fica na **barra lateral** (pode ser recolhido para mostrar só os ícones
 
 **Sistema**
 
-8. **Atualização**: atualiza a base dos fornecedores integrados e mostra o log; com o Kommo ligado, mostra também a sincronização dos clientes.
+8. **Atualização**: atualiza a base dos fornecedores integrados e mostra o log; com o Kommo religado, mostra também a sincronização dos contatos.
 
 ### Comissões
 
@@ -225,7 +226,7 @@ Menu **Dashboards** (central de acompanhamento; novos painéis entram nesse grup
 *Enviar para o Cliente* gera um link secreto do orçamento (`/o/<código>`, 43 caracteres aleatórios; não há número nem sequência no endereço). A janela que abre mostra o link, **Copiar link** e **Enviar pelo WhatsApp** (telefone do cliente e mensagem prontos); os detalhes do orçamento mostram o link, a validade, se o cliente já abriu, e **Gerar novo link** (o anterior para de funcionar).
 
 - **Página do cliente** (sem login, funciona no celular): mesmo conteúdo da folha impressa, **sem a composição do preço e sem fornecedor**, com *Imprimir / Salvar PDF* e, no fim, **Aceitar orçamento** (observação opcional) e **Rejeitar** (motivo obrigatório).
-- **Aceitar** gera o pedido na hora (responsável = responsável pelo orçamento; a movimentação aparece como *Cliente (link)*). **Rejeitar** leva o orçamento a **Cancelado** com o motivo. O cliente responde uma vez só; data, hora, IP e navegador ficam gravados. Com o Kommo ligado, aceite e recusa viram notas no contato (a nota de envio leva o link).
+- **Aceitar** gera o pedido na hora (responsável = responsável pelo orçamento; a movimentação aparece como *Cliente (link)*). **Rejeitar** leva o orçamento a **Cancelado** com o motivo. O cliente responde uma vez só; data, hora, IP e navegador ficam gravados. Os dados confirmados no aceite atualizam o cadastro do cliente do orçamento. Com o Kommo religado, aceite e recusa viram notas no contato (a nota de envio leva o link).
 - **Validade**: 7 dias a partir do envio. Vencido, a página continua visível, sem os botões. Orçamento que voltou para Aberto aparece como "em revisão"; ao reenviar, a validade recomeça.
 - **Proteções**: código inválido, revogado ou de orçamento não enviado recebe a mesma resposta ("link inválido"); 20 códigos inválidos seguidos bloqueiam o IP por 15 minutos; páginas fora dos buscadores (`noindex`) e sem `Referer`; fotos servidas pelo sistema (o endereço do fornecedor não aparece).
 - **Endereço do link**: `APP_URL_PUBLICA` no `.env`; sem ela, o endereço pelo qual a tela foi aberta (IP, domínio ou localhost). No Nginx não use senha (`auth_basic`), senão o cliente não abre o link: ver `deploy/nginx/raizes.conf`.
@@ -271,17 +272,20 @@ Cada item do carrinho pode ter **até 5 personalizações** (aplicações), cada
   - **Rodapé**: texto no fim do documento, abaixo da validade (tela e impressão).
   - Campos vazios não aparecem. A mudança vale para todos os orçamentos, inclusive os já enviados.
 
-### Clientes do Kommo
+### Cadastro de clientes
 
-Com `KOMMO_SUBDOMINIO` e `KOMMO_TOKEN` no `.env`, o orçamento passa a ter **cliente**, escolhido entre os contatos do Kommo (o sistema não cria contatos no Kommo).
+Os clientes ficam no próprio sistema (tela **Clientes**, grupo Cadastros, permissão própria). Código `CLI-000001`; situação **Pré-cadastro** ou **Completo**; nunca são excluídos (inativar/reativar).
 
-- **Cópia local dos contatos**: o servidor lê todos os contatos na primeira vez e, depois, a cada `KOMMO_SYNC_MINUTOS` (padrão 10) só os alterados. Uma vez por dia, depois das 3h, faz a conferência completa e tira da busca os contatos apagados no Kommo. Na tela **Atualização**, o cartão *Clientes do Kommo* mostra o total, a última sincronização e os botões *Sincronizar clientes agora* e *Conferência completa*. O token fica só no servidor.
-- **Carrinho**: campo **Cliente** no resumo, com uma caixa de busca única. O sistema reconhece o que foi digitado: telefone (qualquer formato, com ou sem +55), parte do nome (sem acento; todas as palavras), e-mail ou `#código` do Kommo. A lista mostra nome, telefones, código, data de criação, quantos orçamentos o cliente já tem e o aviso *telefone repetido* quando dois contatos têm o mesmo número. Se não achar (contato criado há poucos minutos), **Buscar direto no Kommo** consulta o Kommo na hora. Setas e Enter escolhem; o cliente escolhido mostra *Abrir no Kommo*, *Trocar* e *Remover*.
-- O cliente é **opcional para gerar** o orçamento e **obrigatório para enviar** (*Enviar para o Cliente*). O orçamento guarda o código do contato e uma cópia do nome e do telefone.
-- O cliente aparece nas listas e nos detalhes de Orçamentos e Pedidos, na folha impressa e no cartão do Quadro; as listas têm filtro por cliente e os detalhes, o link *Abrir no Kommo*.
-- **Notas no contato do Kommo** (podem ser desligadas em *Parâmetros › Sistema*): ao clicar em *Enviar para o Cliente* ("Orçamento ORC-… enviado ao cliente", com valor, quantidade de itens e usuário) e ao gerar o pedido (código do pedido, orçamento, valor e usuário). As notas ficam no histórico do **contato** (não no negócio). Se o Kommo estiver fora do ar, a nota fica na fila e é reenviada a cada sincronização.
+- **Carrinho**: campo **Cliente** com busca única (nome ou razão social sem acento, telefone com ou sem +55 e com ou sem o 9, e-mail, CPF/CNPJ ou `CLI-…`). **+ Novo cliente** só aparece depois de uma busca e faz o **pré-cadastro** (nome + telefone ou e-mail). Telefone ou e-mail já usado mostra os cadastros parecidos: *Usar este cliente* ou *Criar mesmo assim* (marca a possível duplicidade). Ao escolher o cliente, o faturamento do cadastro preenche o carrinho. Quem só tem o carrinho vê o resumo do cliente; dados completos, CPF e histórico ficam na tela Clientes.
+- O cliente é **opcional para gerar** e **obrigatório para enviar** o orçamento. O orçamento grava `cliente_id` e uma cópia de nome, telefone e e-mail; o pedido herda o `cliente_id`.
+- **Aceite pelo link**: os dados confirmados atualizam o cliente **desse orçamento** (fica Completo), com o que mudou no histórico (origem *Cliente (link)*). Orçamento antigo sem cliente: o aceite cria o cliente.
+- **Duplicidade** — o vínculo decide, não a comparação: o que chega por um orçamento sempre atualiza o cliente daquele orçamento. CPF/CNPJ é único entre os ativos (bloqueia no cadastro manual; no aceite grava e marca o par como *possível duplicidade*); documento diferente do anterior gera a pendência *documento alterado* (botão *Conferido*). Telefone (DDD + 8 últimos dígitos) e e-mail iguais só avisam e marcam o par. Na ficha: **Mesclar** (escolhe o cadastro que fica e o valor de cada campo; orçamentos, pedidos e contatos passam para ele; o outro é inativado com a referência) ou **Não são o mesmo cliente**.
+- **Pedido**: alterar o faturamento do pedido não muda o cadastro; o botão *Atualizar o cadastro do cliente com estes dados* leva os dados para o cadastro.
+- **Migração** (uma vez, na primeira subida desta versão, com cópia `data/produtos.db.antes-clientes.bak`): cria os clientes a partir dos orçamentos existentes (contato do Kommo, nome/telefone e faturamento mais recente), agrupando por código do Kommo, CPF/CNPJ e telefone + nome; liga orçamentos e pedidos; os pares com telefone, e-mail ou documento iguais ficam como possível duplicidade.
 
-Sem as variáveis no `.env`, nada disso aparece e os orçamentos funcionam como antes.
+### Kommo (desligado)
+
+A integração com o Kommo está **desligada por padrão**: só liga com `KOMMO_ATIVO=1`, `KOMMO_SUBDOMINIO` e `KOMMO_TOKEN` no `.env`. O código do contato do Kommo fica nos clientes migrados só como referência (`clientes.kommo_id`). Religada, ela volta a manter a cópia dos contatos (`clientes_kommo`, a cada `KOMMO_SYNC_MINUTOS`; cartão *Clientes do Kommo* na tela Atualização) e a registrar notas no contato dos clientes que têm esse código (envio do orçamento, aceite, recusa e pedido gerado; podem ser desligadas em *Parâmetros › Sistema*). O sistema nunca cria contatos no Kommo.
 
 ### Calculadora de preço
 
@@ -320,16 +324,20 @@ Todas as rotas exigem login, exceto as de `/api/auth`. Cada rota também exige a
 | `PUT /api/pedidos/:codigo/checklist/:item` | Marca/desmarca um item (`{ feito }`; só na etapa Em Fechamento) |
 | `GET/PUT /api/parametros/sistema` | Parâmetros de sistema (`{ kommo_notas_ativo }`) |
 | `GET /api/orcamentos` | Lista paginada (`numero`, `produto`, `de`, `ate`, `min`, `max`, `status`, `pedido=com\|sem`, `meus=1`, `cliente`, `limit`, `offset`) → `{ total, orcamentos }` (cada um com `pedido` ativo ou `null`) |
-| `POST /api/orcamentos` · `GET/PUT /api/orcamentos/:id` | Grava, consulta (com `status`, `movimentos` e `cliente`) e altera (PUT mantém o número; 409 se não estiver Aberto). `entrega_prevista` (AAAA-MM-DD) grava a previsão de entrega; `cliente_kommo_id` vincula o cliente (400 se não estiver na base; ausente no PUT = mantém) |
-| `POST /api/orcamentos/:id/status` | Situação manual `{ status: 'ABERTO' \| 'ENVIADO' \| 'CANCELADO', status_atual, motivo? }` (Cancelado exige motivo; Aberto a partir de Cancelado = reabrir) (409 com pedido gerado ou, com o Kommo ligado, ao enviar sem cliente) |
+| `POST /api/orcamentos` · `GET/PUT /api/orcamentos/:id` | Grava, consulta (com `status`, `movimentos` e `cliente`) e altera (PUT mantém o número; 409 se não estiver Aberto). `entrega_prevista` (AAAA-MM-DD) grava a previsão de entrega; `cliente_id` vincula o cliente do cadastro (400 se não existir ou estiver inativo; ausente no PUT = mantém) |
+| `POST /api/orcamentos/:id/status` | Situação manual `{ status: 'ABERTO' \| 'ENVIADO' \| 'CANCELADO', status_atual, motivo? }` (Cancelado exige motivo; Aberto a partir de Cancelado = reabrir) (409 com pedido gerado ou ao enviar sem cliente) |
 | `POST /api/orcamentos/:id/link` | Gera um novo link do cliente (o anterior deixa de funcionar) |
 | `GET /api/publico/orcamentos/:codigo` | **Sem login** · orçamento para a página do cliente (sem custos nem fornecedor) |
 | `GET /api/publico/orcamentos/:codigo/imagem/:n` | **Sem login** · foto do item n |
 | `POST /api/publico/orcamentos/:codigo/aceitar` · `.../recusar` | **Sem login** · aceite `{ observacao? }` (gera o pedido) / recusa `{ motivo }` (Cancelado) |
-| `GET /api/clientes?busca=` | Busca na cópia local dos contatos do Kommo (telefone, nome, e-mail ou `#código`) → `{ tipo, fonte, clientes }` |
-| `GET /api/clientes/kommo?busca=` · `GET /api/clientes/:id` | Busca direta no Kommo (grava na cópia local) / um cliente |
-| `GET /api/clientes/config` | `{ ativo, subdominio }` (integração ligada?) |
-| `GET /api/clientes/sincronizacao` · `POST /api/clientes/sincronizar` | Situação da sincronização / sincroniza agora (`{ completa?: true }`; tela Atualização) |
+| `GET /api/clientes?busca=&limite=` | Busca rápida no cadastro (ativos; nome, telefone, e-mail, CPF/CNPJ ou `CLI-…`) → `{ clientes }` (telas Clientes, Carrinho, Orçamentos, Pedidos) |
+| `GET /api/clientes?busca=&situacao=&ativos=&pendencias=1&limit=&offset=` | Lista da tela Clientes → `{ total, clientes }` |
+| `POST /api/clientes` | Inclui (`criar_mesmo_assim` aceita telefone/e-mail repetido; 409 `POSSIVEL_DUPLICIDADE` com `coincidencias`). Pelo carrinho, só nome/telefone/e-mail |
+| `GET /api/clientes/:id` · `GET /api/clientes/:id/faturamento` | Ficha (histórico, orçamentos, pedidos, totais, duplicidades; só com a tela Clientes — os demais recebem `{ cliente }`) / faturamento do cadastro para o carrinho |
+| `PUT /api/clientes/:id` · `POST /api/clientes/:id/ativo` · `POST /api/clientes/:id/conferido` | Altera / inativa-reativa / limpa a pendência (tela Clientes) |
+| `POST /api/clientes/:id/contatos` · `DELETE /api/clientes/:id/contatos/:contato` | Telefones e e-mails adicionais |
+| `GET /api/clientes/duplicidades` · `POST /api/clientes/duplicidades/:id/descartar` · `POST /api/clientes/mesclar` | Possíveis duplicidades / "não são o mesmo" / mescla `{ principal, outro, escolhas }` |
+| `GET /api/kommo/config` · `GET /api/kommo/sincronizacao` · `POST /api/kommo/sincronizar` | Integração do Kommo (desligada por padrão; sincronizar só com a tela Atualização) |
 | `GET /api/pedidos` | Lista paginada (`codigo`, `orcamento`, `status` ou `EM_ANDAMENTO`, `de`, `ate`, `meus=1`, `cliente`, `limit`, `offset`) → `{ total, pedidos }` |
 | `POST /api/pedidos` | Cria pedido `{ orcamento_id, observacao? }` (409 se o orçamento já tem pedido ativo) |
 | `GET /api/pedidos/:codigo` | Pedido com movimentações e orçamento (`PED-000001`) |

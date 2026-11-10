@@ -5,9 +5,10 @@ import { dataValida, formatarDataBr } from '@raizes/shared';
 import { criarApp } from '../src/app';
 import { abrirBanco } from '../src/db/conexao';
 import { GerenciadorAtualizacao } from '../src/services/gerenciador-atualizacao';
-import { entrar } from './sessao-teste';
+import { entrar, clienteDeTeste } from './sessao-teste';
 
 const db = abrirBanco(':memory:');
+const CLI = clienteDeTeste(db);
 let servidor: Server;
 let base = '';
 let cookie = '';
@@ -44,7 +45,7 @@ describe('data prevista de entrega', () => {
   });
 
   it('gravada no orçamento; alteração sem a data mantém; null limpa; inválida recusa', async () => {
-    const c = await req('POST', '/api/orcamentos', { itens: [item], subtotal: 200, frete: 0, total: 200, entrega_prevista: '2026-11-20' });
+    const c = await req('POST', '/api/orcamentos', { cliente_id: CLI, itens: [item], subtotal: 200, frete: 0, total: 200, entrega_prevista: '2026-11-20' });
     expect((await req('GET', `/api/orcamentos/${c.json.id}`)).json.entrega_prevista).toBe('2026-11-20');
     expect((await req('GET', '/api/orcamentos')).json.orcamentos[0].entrega_prevista).toBe('2026-11-20');
     await req('PUT', `/api/orcamentos/${c.json.id}`, { itens: [item], subtotal: 1, frete: 0, total: 1 });
@@ -54,19 +55,19 @@ describe('data prevista de entrega', () => {
     await req('PUT', `/api/orcamentos/${c.json.id}`, { itens: [item], subtotal: 1, frete: 0, total: 1, entrega_prevista: null });
     expect((await req('GET', `/api/orcamentos/${c.json.id}`)).json.entrega_prevista).toBeNull();
     expect(
-      (await req('POST', '/api/orcamentos', { itens: [item], subtotal: 1, frete: 0, total: 1, entrega_prevista: '2026-13-01' })).status,
+      (await req('POST', '/api/orcamentos', { cliente_id: CLI, itens: [item], subtotal: 1, frete: 0, total: 1, entrega_prevista: '2026-13-01' })).status,
     ).toBe(400);
   });
 
   it('aparece na página do cliente', async () => {
-    const c = await req('POST', '/api/orcamentos', { itens: [item], subtotal: 1, frete: 0, total: 1, entrega_prevista: '2026-11-25' });
+    const c = await req('POST', '/api/orcamentos', { cliente_id: CLI, itens: [item], subtotal: 1, frete: 0, total: 1, entrega_prevista: '2026-11-25' });
     const e = await req('POST', `/api/orcamentos/${c.json.id}/status`, { status: 'ENVIADO' });
     const codigo = (e.json.link.url as string).split('/o/')[1];
     expect((await req('GET', `/api/publico/orcamentos/${codigo}`, undefined, false)).json.entrega_prevista).toBe('2026-11-25');
   });
 
   it('o pedido herda a data; altera só em Criado, com registro no histórico', async () => {
-    const c = await req('POST', '/api/orcamentos', { itens: [item], subtotal: 1, frete: 0, total: 1, entrega_prevista: '2026-11-20' });
+    const c = await req('POST', '/api/orcamentos', { cliente_id: CLI, itens: [item], subtotal: 1, frete: 0, total: 1, entrega_prevista: '2026-11-20' });
     const p = await req('POST', '/api/pedidos', { orcamento_id: c.json.id });
     expect(p.json.entrega_prevista).toBe('2026-11-20');
     const cod = p.json.codigo;
@@ -99,7 +100,7 @@ describe('data prevista de entrega', () => {
 describe('calendário de pedidos', () => {
   it('pedidos não encerrados por data de entrega no período, e os sem data', async () => {
     const novo = async (entrega: string | null) => {
-      const o = await req('POST', '/api/orcamentos', { itens: [item], subtotal: 1, frete: 0, total: 1, entrega_prevista: entrega });
+      const o = await req('POST', '/api/orcamentos', { cliente_id: CLI, itens: [item], subtotal: 1, frete: 0, total: 1, entrega_prevista: entrega });
       return (await req('POST', '/api/pedidos', { orcamento_id: o.json.id })).json.codigo as string;
     };
     const a = await novo('2030-03-05');

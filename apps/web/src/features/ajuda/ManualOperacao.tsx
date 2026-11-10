@@ -23,6 +23,7 @@ const SUMARIO = [
   { id: 'man-pedido-detalhe', titulo: 'Detalhes do pedido' },
   { id: 'man-dashboards', titulo: 'Dashboards' },
   { id: 'man-comissoes', titulo: 'Comissões' },
+  { id: 'man-clientes', titulo: 'Clientes (cadastro)' },
   { id: 'man-proprios', titulo: 'Produtos próprios' },
   { id: 'man-parametros', titulo: 'Parâmetros' },
   { id: 'man-tabelas', titulo: 'Tabelas gerais' },
@@ -191,7 +192,7 @@ export function ManualOperacao() {
         <h4>No resumo (lado direito)</h4>
         <ul>
           <li>
-            <b>Cliente</b> (com o Kommo ligado), <b>Faturamento e entrega</b>, <b>Previsão de entrega</b>, <b>Frete</b> e{' '}
+            <b>Cliente</b>, <b>Faturamento e entrega</b>, <b>Previsão de entrega</b>, <b>Frete</b> e{' '}
             <b>Observações</b> gerais do orçamento.
           </li>
           <li>Subtotal (soma dos itens), frete e total.</li>
@@ -281,22 +282,36 @@ export function ManualOperacao() {
 
       {/* ─────────────────────────────── 6 */}
       <Secao id="man-cliente" titulo="Cliente, faturamento e previsão de entrega" numero={6}>
-        <h4>Cliente (Kommo)</h4>
+        <h4>Cliente</h4>
         <p>
-          Com a integração do Kommo ligada, o campo <b>Cliente</b> tem uma busca única que reconhece o que foi digitado: telefone
-          (qualquer formato, com ou sem +55), parte do nome (sem acento), e-mail ou <b>#código</b> do Kommo. Use as setas e Enter
-          para escolher. A lista mostra telefones, código, data de criação, quantos orçamentos o cliente tem e o aviso{' '}
-          <i>telefone repetido</i>.
+          O campo <b>Cliente</b> busca no cadastro de clientes do próprio sistema: nome ou razão social (sem acento, por partes),
+          telefone (qualquer formato, com ou sem +55 e com ou sem o 9), e-mail, CPF/CNPJ ou o código <b>CLI-000001</b>. Use as
+          setas e Enter para escolher. A lista mostra telefone, e-mail, código, cidade, quantos orçamentos o cliente tem e os avisos{' '}
+          <i>pré-cadastro</i> e <i>possível duplicidade</i>.
         </p>
+        <Passos
+          itens={[
+            'Busque primeiro: o botão “+ Novo cliente” só aparece depois de uma busca (para evitar cadastro repetido).',
+            <>
+              Não é nenhum da lista? <Bt>+ Novo cliente</Bt>: informe o nome ou razão social e o telefone ou o e-mail (o que você
+              digitou na busca já vem preenchido). É um <b>pré-cadastro</b>; o resto vem do aceite.
+            </>,
+            <>
+              Se o telefone ou o e-mail já estiver em outro cadastro, o sistema mostra quem é: <Bt>Usar este cliente</Bt> ou{' '}
+              <Bt>Criar mesmo assim</Bt> (o novo fica marcado como possível duplicidade para a conferência).
+            </>,
+          ]}
+        />
         <ul>
           <li>
-            Não achou (contato criado há poucos minutos)? <Bt>Buscar direto no Kommo</Bt>.
+            Cliente escolhido: <Bt>Ver cadastro</Bt> (quem tem a tela Clientes), <Bt>Trocar</Bt> e <Bt>Remover</Bt>.
           </li>
           <li>
-            Cliente escolhido: <Bt>Abrir no Kommo</Bt>, <Bt>Trocar</Bt> e <Bt>Remover</Bt>.
+            Ao escolher o cliente, os dados de faturamento do cadastro preenchem o carrinho (se o carrinho já tiver outros, o sistema
+            pergunta qual manter).
           </li>
           <li>O cliente é opcional para gerar o orçamento e obrigatório para enviá-lo.</li>
-          <li>O sistema nunca cria contatos no Kommo: cadastre o contato lá primeiro.</li>
+          <li>O orçamento guarda uma cópia do nome, telefone e e-mail do momento; o vínculo com o cadastro continua.</li>
         </ul>
         <h4>Faturamento e entrega</h4>
         <Passos
@@ -313,8 +328,8 @@ export function ManualOperacao() {
         />
         <p>
           No orçamento esses dados são <b>opcionais</b> (só o que foi digitado é conferido: CPF/CNPJ com dígito verificador,
-          e-mail e CEP). No aceite pelo link eles passam a ser <b>obrigatórios</b> para o cliente. Aparecem no início da folha
-          impressa.
+          e-mail e CEP). No aceite pelo link eles passam a ser <b>obrigatórios</b> para o cliente e, confirmados, atualizam o
+          cadastro do cliente (que passa a <b>Completo</b>). Aparecem no início da folha impressa.
         </p>
         <h4>Previsão de entrega e frete</h4>
         <p>
@@ -409,7 +424,7 @@ export function ManualOperacao() {
       <Secao id="man-link" titulo="Enviar o orçamento ao cliente (link)" numero={10}>
         <Passos
           itens={[
-            'Confira o orçamento (e, com o Kommo ligado, vincule o cliente — é obrigatório para enviar).',
+            'Confira o orçamento e o cliente vinculado (obrigatório para enviar).',
             <>
               Clique em <Bt>✉ Enviar para o Cliente</Bt>. O orçamento passa para <b>Enviado</b> e abre a janela do link.
             </>,
@@ -426,7 +441,7 @@ export function ManualOperacao() {
             ['Novo link', 'Gerar novo link invalida o anterior na hora.'],
             ['Em revisão', 'Se o orçamento voltar para Aberto, o link mostra “em revisão”. Ao reenviar, a validade recomeça.'],
             ['Uma resposta', 'O cliente aceita ou rejeita uma única vez; data, hora, IP e navegador ficam gravados.'],
-            ['Kommo', 'Envio, aceite e recusa viram notas no contato (se ligado em Parâmetros › Sistema).'],
+            ['Cadastro', 'Os dados confirmados no aceite atualizam o cadastro do cliente deste orçamento, com registro no histórico.'],
           ]}
         />
       </Secao>
@@ -641,8 +656,71 @@ export function ManualOperacao() {
         </Dica>
       </Secao>
 
+      {/* ─────────────────────────────── clientes */}
+      <Secao id="man-clientes" titulo="Clientes (cadastro)" numero={19}>
+        <p>
+          Cadastro único dos clientes, com código <b>CLI-000001</b>. Nasce como <b>pré-cadastro</b> no carrinho (nome + telefone ou
+          e-mail) e fica <b>Completo</b> quando os dados de faturamento são confirmados no aceite pelo link.{' '}
+          <Ir tela="clientes">Abrir Clientes</Ir>
+        </p>
+        <h4>Lista</h4>
+        <ul>
+          <li>Busca por nome, telefone, e-mail, CPF/CNPJ ou código; filtros de situação, ativos/inativos e “Com pendência”.</li>
+          <li>Clique na linha para abrir a ficha.</li>
+          <li>
+            <Bt>+ Novo cliente</Bt> abre o formulário completo. CPF/CNPJ já cadastrado <b>bloqueia</b>; telefone ou e-mail repetido
+            avisa e permite criar mesmo assim (marcando a possível duplicidade).
+          </li>
+        </ul>
+        <h4>Ficha do cliente</h4>
+        <ul>
+          <li>Dados (os mesmos do faturamento, mais telefone principal e observações internas) e <Bt>Salvar alterações</Bt>.</li>
+          <li>Telefones e e-mails adicionais, com descrição (ex.: financeiro). Também são usados na busca e na conferência de duplicidade.</li>
+          <li>Totais, pedidos e orçamentos do cliente, e o <b>histórico</b>: quem alterou o quê, quando e por onde (cadastro, carrinho, aceite pelo link, pedido, mesclagem).</li>
+          <li>
+            <Bt>Inativar</Bt> / <Bt>Reativar</Bt>: clientes nunca são excluídos; o inativo some das buscas, mas continua nos orçamentos e
+            pedidos.
+          </li>
+        </ul>
+        <h4>Atualização x duplicidade</h4>
+        <Tabela
+          colunas={['Situação', 'O que o sistema faz']}
+          linhas={[
+            ['Dados chegam por um orçamento (aceite, pedido)', 'Atualizam sempre o cliente ligado a esse orçamento — nunca outro.'],
+            ['Aceite com CPF/CNPJ novo ou igual', 'Atualiza o cadastro (fica Completo) e registra o que mudou no histórico.'],
+            ['Aceite com CPF/CNPJ diferente do que o cliente tinha', 'Atualiza e deixa a pendência “documento alterado”: confira e clique em Conferido.'],
+            ['Aceite com CPF/CNPJ que já é de outro cliente', 'Não bloqueia o cliente: grava no cliente do orçamento e marca os dois como possível duplicidade.'],
+            ['Cadastro manual com CPF/CNPJ de outro cliente', 'Bloqueia (o documento é único entre os ativos).'],
+            ['Telefone ou e-mail iguais', 'Avisa e permite seguir; o par fica marcado como possível duplicidade.'],
+            ['Nome parecido', 'Só aparece como sugestão na busca.'],
+          ]}
+        />
+        <h4>Possível duplicidade</h4>
+        <Passos
+          itens={[
+            'Filtre por “Com pendência” e abra o cliente.',
+            <>
+              No quadro <i>Possível duplicidade</i>, compare com o outro cadastro. Se forem diferentes, <Bt>Não são o mesmo cliente</Bt>{' '}
+              (a suspeita não volta).
+            </>,
+            <>
+              Se forem o mesmo, <Bt>Mesclar</Bt>: escolha qual cadastro fica e, campo a campo, qual valor vale. Orçamentos, pedidos e
+              contatos passam para o que fica; o outro é inativado com a referência. Tudo vai para o histórico dos dois.
+            </>,
+          ]}
+        />
+        <h4>Pedido</h4>
+        <p>
+          Alterar o faturamento do pedido <b>não</b> muda o cadastro sozinho. Para levar os dados ao cadastro, use{' '}
+          <Bt>Atualizar o cadastro do cliente com estes dados</Bt> nos detalhes do pedido.
+        </p>
+        <Dica>
+          CPF, endereço e histórico só aparecem para quem tem a tela Clientes. Vendedores (carrinho) só buscam e fazem o pré-cadastro.
+        </Dica>
+      </Secao>
+
       {/* ─────────────────────────────── 19 */}
-      <Secao id="man-comissoes" titulo="Comissões dos vendedores" numero={19}>
+      <Secao id="man-comissoes" titulo="Comissões dos vendedores" numero={20}>
         <p>
           Grupo <b>Comissões</b> do menu, com três telas, cada uma com permissão própria em Acessos. As contas estão em{' '}
           <Menu>Ajuda › Memórias de cálculo › Comissões</Menu>.
@@ -698,7 +776,7 @@ export function ManualOperacao() {
         </ul>
       </Secao>
 
-      <Secao id="man-proprios" titulo="Produtos próprios" numero={20}>
+      <Secao id="man-proprios" titulo="Produtos próprios" numero={21}>
         <p>
           Produtos da própria empresa, que aparecem no catálogo junto com os dos fornecedores.{' '}
           <Ir tela="produtos-proprios">Abrir Produtos Próprios</Ir>
@@ -714,7 +792,7 @@ export function ManualOperacao() {
       </Secao>
 
       {/* ─────────────────────────────── 20 */}
-      <Secao id="man-parametros" titulo="Parâmetros" numero={21}>
+      <Secao id="man-parametros" titulo="Parâmetros" numero={22}>
         <p>
           Configurações que afetam preços, pedidos e impressão. <Ir tela="parametros">Abrir Parâmetros</Ir>
         </p>
@@ -731,13 +809,13 @@ export function ManualOperacao() {
               'Itens da lista usada em Em Fechamento (incluir, renomear, reordenar, remover). Vale para os próximos pedidos.',
             ],
             ['Impressão', 'Instruções especiais (só na impressão/PDF) e rodapé.'],
-            ['Sistema', 'Enviar notas para o Kommo (ligado/desligado).'],
+            ['Sistema', 'Enviar notas para o Kommo (só vale com a integração religada no servidor).'],
           ]}
         />
       </Secao>
 
       {/* ─────────────────────────────── 21 */}
-      <Secao id="man-tabelas" titulo="Tabelas gerais de precificação" numero={22}>
+      <Secao id="man-tabelas" titulo="Tabelas gerais de precificação" numero={23}>
         <Passos
           itens={[
             <>
@@ -764,7 +842,7 @@ export function ManualOperacao() {
       </Secao>
 
       {/* ─────────────────────────────── 22 */}
-      <Secao id="man-usuarios" titulo="Usuários e acessos" numero={23}>
+      <Secao id="man-usuarios" titulo="Usuários e acessos" numero={24}>
         <h4>Usuários</h4>
         <ul>
           <li>Inclua com nome, login e senha inicial. O login não pode ser alterado nem reaproveitado.</li>
@@ -790,7 +868,7 @@ export function ManualOperacao() {
       </Secao>
 
       {/* ─────────────────────────────── 23 */}
-      <Secao id="man-atualizacao" titulo="Atualização de produtos" numero={24}>
+      <Secao id="man-atualizacao" titulo="Atualização de produtos" numero={25}>
         <Passos
           itens={[
             <>
@@ -809,25 +887,26 @@ export function ManualOperacao() {
       </Secao>
 
       {/* ─────────────────────────────── 24 */}
-      <Secao id="man-kommo" titulo="Integração com o Kommo" numero={25}>
+      <Secao id="man-kommo" titulo="Integração com o Kommo" numero={26}>
+        <Dica tipo="atencao">
+          A integração está <b>desligada</b>: os clientes ficam no cadastro do próprio sistema (<Menu>Cadastros › Clientes</Menu>).
+          Os clientes criados a partir dos orçamentos antigos guardam o código do contato no Kommo só como referência.
+        </Dica>
+        <p>Se a integração for religada no servidor (variável KOMMO_ATIVO=1, com subdomínio e token):</p>
         <ul>
           <li>
-            Os contatos do Kommo são copiados para o sistema e atualizados a cada poucos minutos; uma vez por dia, de madrugada, é
-            feita a conferência completa.
+            Em <Menu>Sistema › Atualização</Menu>, o cartão <i>Clientes do Kommo</i> mostra a cópia dos contatos e a última
+            sincronização.
           </li>
           <li>
-            Em <Menu>Sistema › Atualização</Menu>, o cartão <i>Clientes do Kommo</i> mostra o total e a última sincronização, com{' '}
-            <Bt>Sincronizar clientes agora</Bt> e <Bt>Conferência completa</Bt>.
-          </li>
-          <li>
-            Notas no contato: envio do orçamento (com o link), aceite, recusa e pedido gerado. Se o Kommo estiver fora do ar, a
-            nota fica na fila e é reenviada. Podem ser desligadas em <Menu>Parâmetros › Sistema</Menu>.
+            Envio do orçamento, aceite, recusa e pedido gerado viram notas no contato do Kommo dos clientes que têm esse código.
+            Podem ser desligadas em <Menu>Parâmetros › Sistema</Menu>.
           </li>
         </ul>
       </Secao>
 
       {/* ─────────────────────────────── 25 */}
-      <Secao id="man-problemas" titulo="Problemas comuns" numero={26}>
+      <Secao id="man-problemas" titulo="Problemas comuns" numero={27}>
         <Tabela
           colunas={['Situação', 'Causa e solução']}
           linhas={[
@@ -841,7 +920,7 @@ export function ManualOperacao() {
             ],
             [
               'Não consigo enviar para o cliente',
-              'Com o Kommo ligado, o orçamento precisa de cliente vinculado: edite e escolha o cliente.',
+              'O orçamento precisa de cliente vinculado: edite e escolha (ou inclua) o cliente no carrinho.',
             ],
             [
               'O cliente diz que o link não abre',
@@ -852,7 +931,10 @@ export function ManualOperacao() {
               'O link venceu (7 dias) ou o cliente já respondeu. Volte para aberto e reenvie para renovar a validade.',
             ],
             ['Não aparece o botão de mockup', 'Mockups só com o orçamento Aberto.'],
-            ['Cliente não aparece na busca', 'Contato recém-criado no Kommo: use Buscar direto no Kommo.'],
+            [
+              'Cliente não aparece na busca',
+              'Ele pode estar inativo ou ter sido mesclado em outro cadastro: confira em Cadastros › Clientes (filtro Mostrar: Todos).',
+            ],
             [
               'Preço muito alto em pedido pequeno',
               'Custos fixos (designer + logística) divididos por poucas peças, ou fração mínima grande na técnica. Ajuste no item ou nas tabelas.',
@@ -870,7 +952,7 @@ export function ManualOperacao() {
       </Secao>
 
       {/* ─────────────────────────────── 26 */}
-      <Secao id="man-glossario" titulo="Glossário" numero={27}>
+      <Secao id="man-glossario" titulo="Glossário" numero={28}>
         <Tabela
           colunas={['Termo', 'Significado']}
           linhas={[

@@ -20,13 +20,11 @@ import { useParametrosImpressao } from './impressao';
 import { TagStatusOrcamento, useSituacaoOrcamento } from './situacao';
 import { ClienteVinculado } from '../clientes/ClienteVinculado';
 import { ResumoFaturamento } from '../clientes/FormularioFaturamento';
-import { useConfigClientes } from '../clientes/config';
 
 /** Aba "Detalhes": situação, ações e folha do orçamento selecionado. */
 export function DetalheOrcamento() {
   const { folha, irPara, setAbaOrcamentos, abrirPedido, versaoOrcamentos, abaOrcamentos, tela, abrirMockups } = useApp();
   const { pode } = useSessao();
-  const kommo = useConfigClientes();
   const [gerando, setGerando] = useState(false);
   const [historico, setHistorico] = useState(false);
   /** Dados atuais do orçamento salvo (situação e histórico) */
@@ -183,18 +181,16 @@ export function DetalheOrcamento() {
             </div>
           </div>
 
-          {(kommo.ativo || cliente) && (
-            <div className={`orc-cliente-painel${cliente ? '' : ' sem-cliente'}`} id="orc-cliente-painel">
-              <span className="orc-situacao-rotulo">Cliente</span>
-              {cliente ? (
-                <ClienteVinculado cliente={cliente} />
-              ) : (
-                <span className="cliente-vazio">
-                  Nenhum cliente vinculado{status === 'ABERTO' ? ' — escolha o cliente ao editar o orçamento (obrigatório para enviar).' : '.'}
-                </span>
-              )}
-            </div>
-          )}
+          <div className={`orc-cliente-painel${cliente ? '' : ' sem-cliente'}`} id="orc-cliente-painel">
+            <span className="orc-situacao-rotulo">Cliente</span>
+            {cliente ? (
+              <ClienteVinculado cliente={cliente} />
+            ) : (
+              <span className="cliente-vazio">
+                Nenhum cliente vinculado{status === 'ABERTO' ? ' — escolha o cliente ao editar o orçamento (obrigatório para enviar).' : '.'}
+              </span>
+            )}
+          </div>
 
           {info && (
             <div className={`orc-cliente-painel orc-faturamento-painel${info.faturamento ? '' : ' sem-cliente'}`} id="orc-faturamento">

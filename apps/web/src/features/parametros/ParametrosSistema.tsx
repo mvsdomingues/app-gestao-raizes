@@ -82,8 +82,8 @@ export function ParametrosSistema({ visitas }: { visitas: number }) {
 
       {!kommo.ativo && (
         <p className="param-nota">
-          A integração com o Kommo está desligada no servidor (sem <code>KOMMO_SUBDOMINIO</code> e <code>KOMMO_TOKEN</code> no{' '}
-          <code>.env</code>). Este parâmetro só vale quando ela estiver ligada.
+          A integração com o Kommo está desligada no servidor (os clientes ficam no cadastro do sistema). Este parâmetro só vale se
+          ela for religada com <code>KOMMO_ATIVO=1</code>, <code>KOMMO_SUBDOMINIO</code> e <code>KOMMO_TOKEN</code> no <code>.env</code>.
         </p>
       )}
 

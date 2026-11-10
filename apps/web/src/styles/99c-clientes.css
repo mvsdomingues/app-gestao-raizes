@@ -1,5 +1,5 @@
 /* ═══════════════════════════════════════════════
-   CLIENTES (Kommo) — seletor, vínculo e sincronização
+   CLIENTES — cadastro, seletor, vínculo e sincronização do Kommo
 ═══════════════════════════════════════════════ */
 
 /* ── Exibição "nome · telefone · Abrir no Kommo" ── */
@@ -103,3 +103,79 @@
   .cliente-link-kommo { display: none !important; }
   .orc-cliente { background: none; padding: 0 0 6px; border-bottom: 1px solid #E5E0D8; border-radius: 0; }
 }
+
+/* ── Cadastro de clientes ── */
+.cliente-ver-cadastro { margin-left: 8px; font-size: .76rem; font-weight: 600; white-space: nowrap; }
+.opcao-situacao {
+  font-size: .62rem; font-weight: 600; text-transform: uppercase; letter-spacing: .5px;
+  padding: 1px 6px; border-radius: 10px; background: var(--creme2); color: var(--grafite);
+}
+.tag-cliente {
+  display: inline-block; font-size: .66rem; font-weight: 600; text-transform: uppercase; letter-spacing: .5px;
+  padding: 2px 8px; border-radius: 10px; vertical-align: middle; font-family: 'Jost', sans-serif;
+}
+.tag-cliente.s-PRE_CADASTRO { background: #FFF3D6; color: #8A5A00; }
+.tag-cliente.s-COMPLETO { background: #E3F2E6; color: #2E6B3A; }
+.tag-cliente.inativo { background: var(--creme2); color: var(--muted); }
+.cliente-col-nome { font-weight: 600; }
+.cliente-col-nome .opcao-duplicado { margin-left: 6px; }
+.cliente-col-contato { font-size: .82rem; color: var(--grafite); }
+.clientes-paginacao { display: flex; align-items: center; justify-content: center; gap: 14px; margin: 16px 0; font-size: .84rem; }
+
+/* Novo cliente (carrinho) e clientes parecidos */
+.novo-cliente-campos { display: grid; gap: 10px; margin: 8px 0 4px; }
+.novo-cliente-campos label { display: grid; gap: 4px; font-size: .78rem; font-weight: 600; color: var(--grafite); }
+.novo-cliente-parecidos { display: grid; gap: 8px; margin: 8px 0; }
+.novo-cliente-parecido {
+  display: flex; justify-content: space-between; align-items: center; gap: 12px;
+  padding: 10px 12px; border: 1px solid var(--border); border-radius: var(--radius); background: var(--creme);
+}
+.novo-cliente-parecido .opcao-duplicado { display: inline-block; margin-top: 4px; }
+
+/* Ficha */
+.clientes-titulo { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; margin-top: 8px; }
+.clientes-acoes-topo { display: flex; gap: 8px; align-items: flex-start; }
+.btn-secondary.perigo { color: var(--danger); border-color: var(--danger); }
+.clientes-aviso {
+  display: flex; justify-content: space-between; align-items: center; gap: 12px; flex-wrap: wrap;
+  margin: 0 0 14px; padding: 10px 14px; border-radius: var(--radius); background: #FFF3D6; color: #6B4600; font-size: .86rem;
+}
+.clientes-duplicidades { margin: 0 0 16px; padding: 12px 14px; border: 1px solid #EBCF8F; border-radius: var(--radius); background: #FFFBF0; }
+.clientes-duplicidade { display: flex; justify-content: space-between; align-items: center; gap: 12px; flex-wrap: wrap; padding: 8px 0; border-top: 1px solid #F1E2BC; }
+.clientes-duplicidade:first-of-type { border-top: 0; }
+.clientes-duplicidade-acoes { display: flex; gap: 8px; flex-wrap: wrap; }
+.clientes-ficha { display: grid; grid-template-columns: minmax(0, 1.6fr) minmax(260px, 1fr); gap: 24px; align-items: start; }
+@media (max-width: 900px) { .clientes-ficha { grid-template-columns: 1fr; } }
+.clientes-dados, .clientes-lateral { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); padding: 16px 18px; }
+.clientes-secao-titulo {
+  margin: 14px 0 8px; font-size: .7rem; font-weight: 600; letter-spacing: 1px; text-transform: uppercase; color: var(--muted);
+}
+.clientes-secao-titulo:first-child { margin-top: 0; }
+.clientes-telefone, .clientes-observacoes { display: grid; gap: 4px; margin-bottom: 12px; font-size: .8rem; font-weight: 600; color: var(--grafite); }
+.clientes-observacoes { margin-top: 12px; }
+.clientes-salvar { display: flex; justify-content: flex-end; gap: 8px; margin: 12px 0 6px; }
+.clientes-contatos { list-style: none; padding: 0; margin: 0 0 8px; display: grid; gap: 4px; font-size: .86rem; }
+.clientes-contatos li { display: flex; align-items: baseline; gap: 8px; }
+.clientes-novo-contato { display: grid; grid-template-columns: 110px 1fr 1fr auto; gap: 8px; }
+@media (max-width: 640px) { .clientes-novo-contato { grid-template-columns: 1fr; } }
+.clientes-totais { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; text-align: center; }
+.clientes-totais div { padding: 8px 4px; border-radius: var(--radius); background: var(--creme); display: grid; }
+.clientes-totais b { font-family: 'Cormorant Garamond', serif; font-size: 1.25rem; color: var(--berinjela); }
+.clientes-totais span { font-size: .7rem; color: var(--muted); }
+.clientes-lista-mini { list-style: none; padding: 0; margin: 0; display: grid; gap: 4px; font-size: .84rem; max-height: 220px; overflow-y: auto; }
+.clientes-historico { list-style: none; padding: 0; margin: 0; display: grid; gap: 10px; max-height: 420px; overflow-y: auto; }
+.clientes-historico-texto { white-space: pre-line; font-size: .82rem; color: var(--text); }
+
+/* Mesclagem */
+.mesclar-modal { max-width: 820px; width: 100%; }
+.mesclar-principal { display: inline-block; width: auto; max-width: 100%; }
+.mesclar-tabela td { vertical-align: top; font-size: .84rem; }
+.mesclar-opcao { display: flex; gap: 6px; align-items: flex-start; cursor: pointer; }
+
+/* Pedido: levar o faturamento ao cadastro */
+.pedido-atualizar-cadastro { margin-top: 8px; font-size: .8rem; }
+.novo-cliente-parecido > div { min-width: 0; }
+.novo-cliente-parecido .btn-primary { flex: 0 0 auto; width: auto; padding: 8px 14px; font-size: .74rem; white-space: nowrap; }
+.clientes-duplicidade-acoes button, .clientes-aviso button { width: auto; padding: 7px 14px; font-size: .74rem; white-space: nowrap; }
+.clientes-duplicidade > div:first-child { min-width: 0; flex: 1 1 320px; }
+.clientes-totais b { font-size: 1.05rem; white-space: nowrap; }

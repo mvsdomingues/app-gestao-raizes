@@ -12,9 +12,10 @@ import { ServicoKommo } from '../src/kommo/servico';
 import { reiniciarLimitesPublicos } from '../src/routes/publico';
 import { GerenciadorAtualizacao } from '../src/services/gerenciador-atualizacao';
 import { iniciarKommoMock, TOKEN_MOCK, type KommoMock } from './kommo-mock';
-import { entrar } from './sessao-teste';
+import { entrar, clienteDeTeste } from './sessao-teste';
 
 const db = abrirBanco(':memory:');
+const CLI = clienteDeTeste(db, { nome: 'Thaís Lima', kommo_id: 7 });
 const imagens = mkdtempSync(join(tmpdir(), 'raizes-img-'));
 mkdirSync(join(imagens, 'proprios'));
 writeFileSync(join(imagens, 'proprios', 'caneca.png'), Buffer.from([0x89, 0x50, 0x4e, 0x47]));
@@ -89,7 +90,7 @@ async function req(metodo: string, url: string, corpo?: unknown, comLogin = true
 
 /** Cria um orçamento com cliente e envia; devolve id, número e código do link. */
 async function enviado(total = 200) {
-  const c = await req('POST', '/api/orcamentos', { itens: [item(1), { ...item(2), descricao: 'Caneca de cerâmica com alça', medidas: '9 x 8 cm', material: 'Cerâmica', personalizacao: PERS }, { ...item(3), personalizacoes: PERS_V2 }], subtotal: total, frete: 15, total: total + 15, cliente_kommo_id: 7 });
+  const c = await req('POST', '/api/orcamentos', { cliente_id: CLI, itens: [item(1), { ...item(2), descricao: 'Caneca de cerâmica com alça', medidas: '9 x 8 cm', material: 'Cerâmica', personalizacao: PERS }, { ...item(3), personalizacoes: PERS_V2 }], subtotal: total, frete: 15, total: total + 15 });
   const o = await req('POST', `/api/orcamentos/${c.json.id}/status`, { status: 'ENVIADO' });
   expect(o.status).toBe(200);
   const codigo = (o.json.link.url as string).split('/o/')[1]!;
@@ -127,7 +128,7 @@ describe('status Cancelado', () => {
   });
 
   it('cancelar exige motivo, bloqueia edição e pedido; reabrir volta para Aberto', async () => {
-    const c = await req('POST', '/api/orcamentos', { itens: [item()], subtotal: 1, frete: 0, total: 1 });
+    const c = await req('POST', '/api/orcamentos', { cliente_id: CLI, itens: [item()], subtotal: 1, frete: 0, total: 1 });
     expect((await req('POST', `/api/orcamentos/${c.json.id}/status`, { status: 'CANCELADO' })).status).toBe(400);
     const r = await req('POST', `/api/orcamentos/${c.json.id}/status`, { status: 'CANCELADO', motivo: 'Cliente desistiu' });
     expect(r.status).toBe(200);
@@ -145,7 +146,7 @@ describe('status Cancelado', () => {
   });
 
   it('orçamento com pedido não pode ser cancelado', async () => {
-    const c = await req('POST', '/api/orcamentos', { itens: [item()], subtotal: 1, frete: 0, total: 1 });
+    const c = await req('POST', '/api/orcamentos', { cliente_id: CLI, itens: [item()], subtotal: 1, frete: 0, total: 1 });
     await req('POST', '/api/pedidos', { orcamento_id: c.json.id });
     expect((await req('POST', `/api/orcamentos/${c.json.id}/status`, { status: 'CANCELADO', motivo: 'teste' })).status).toBe(409);
   });
@@ -241,7 +242,7 @@ describe('link do cliente', () => {
   });
 
   it('orçamento ainda não enviado não abre pelo link', async () => {
-    const c = await req('POST', '/api/orcamentos', { itens: [item()], subtotal: 1, frete: 0, total: 1 });
+    const c = await req('POST', '/api/orcamentos', { cliente_id: CLI, itens: [item()], subtotal: 1, frete: 0, total: 1 });
     const l = await req('POST', `/api/orcamentos/${c.json.id}/link`, {});
     const codigo = (l.json.link.url as string).split('/o/')[1];
     expect((await req('GET', `/api/publico/orcamentos/${codigo}`, undefined, false)).status).toBe(404);

@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import type { ClienteKommo, ClienteVinculado, ConfigClientes } from '@raizes/shared';
+import type { ClienteVinculado, ConfigClientes, ResumoCliente } from '@raizes/shared';
 import { api } from '../../lib/api';
 
 const DESLIGADO: ConfigClientes = { ativo: false, subdominio: null };
@@ -12,12 +12,12 @@ export function invalidarConfigClientes(): void {
   valor = null;
 }
 
-/** Integração com o Kommo ligada? (consulta uma vez por sessão do navegador) */
+/** Integração com o Kommo ligada? (desligada por padrão; consulta uma vez por sessão do navegador) */
 export function useConfigClientes(): ConfigClientes {
   const [c, setC] = useState<ConfigClientes>(valor ?? DESLIGADO);
   useEffect(() => {
     if (valor) return;
-    cache ??= api.configClientes().then(
+    cache ??= api.configKommo().then(
       (r) => (valor = r),
       () => {
         cache = null; // tenta de novo na próxima tela
@@ -33,7 +33,7 @@ export function useConfigClientes(): ConfigClientes {
   return c;
 }
 
-/** Contato da busca → dados gravados no orçamento. */
-export function paraVinculo(c: ClienteKommo): ClienteVinculado {
-  return { id: c.id, nome: c.nome, telefone: c.telefones[0] ?? null };
+/** Cliente da busca → dados gravados no orçamento. */
+export function paraVinculo(c: Pick<ResumoCliente, 'id' | 'nome' | 'telefone' | 'email' | 'codigo'>): ClienteVinculado {
+  return { id: c.id, nome: c.nome, telefone: c.telefone || null, email: c.email || null, codigo: c.codigo };
 }

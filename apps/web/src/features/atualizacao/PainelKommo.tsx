@@ -12,7 +12,7 @@ export function PainelKommo({ visivel }: { visivel: boolean }) {
 
   const carregar = async () => {
     try {
-      const r = await api.statusSincronizacaoClientes();
+      const r = await api.statusSincronizacaoKommo();
       setS(r);
       // Enquanto sincroniza, acompanha a cada 2 s
       if (timer.current) clearTimeout(timer.current);
@@ -34,7 +34,7 @@ export function PainelKommo({ visivel }: { visivel: boolean }) {
   const sincronizar = async (completa: boolean) => {
     setDisparando(true);
     try {
-      setS(await api.sincronizarClientes(completa));
+      setS(await api.sincronizarKommo(completa));
       timer.current = setTimeout(() => void carregar(), 1000);
     } catch (e) {
       void erroDe('Não foi possível iniciar a sincronização.', e);
@@ -57,8 +57,9 @@ export function PainelKommo({ visivel }: { visivel: boolean }) {
               </>
             ) : (
               <>
-                Integração desligada. Defina <code>KOMMO_SUBDOMINIO</code> e <code>KOMMO_TOKEN</code> no <code>.env</code> do servidor e
-                reinicie.
+                Integração desligada: os clientes agora ficam no cadastro do próprio sistema (Cadastros › Clientes). Para religar a cópia e
+                as notas no Kommo, defina <code>KOMMO_ATIVO=1</code>, <code>KOMMO_SUBDOMINIO</code> e <code>KOMMO_TOKEN</code> no{' '}
+                <code>.env</code> do servidor e reinicie.
               </>
             )}
           </p>

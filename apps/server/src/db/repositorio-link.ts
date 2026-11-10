@@ -16,6 +16,7 @@ import {
 } from '@raizes/shared';
 import { isoLocal } from '../lib/datas';
 import { faturamentoDoBanco, lerFaturamento } from '../lib/faturamento';
+import { aplicarFaturamentoNoCliente, criarClienteDoFaturamento, obterClienteCadastro, vincularOrcamentoECliente } from './repositorio-cadastro-clientes';
 import { ErroHttp } from '../lib/http';
 import type { Banco } from './conexao';
 import { SQL_STATUS_ORCAMENTO } from './repositorio-orcamentos';
@@ -265,6 +266,12 @@ export function aceitarPeloLink(
         .faturamento_json,
     );
     db.prepare('UPDATE orcamentos SET faturamento_json = ? WHERE id = ?').run(JSON.stringify(faturamento), l.id);
+    // Cadastro do cliente: os dados confirmados no aceite atualizam o cliente deste orçamento
+    // (ou criam o cliente, em orçamento antigo sem cliente); vale antes de gerar o pedido
+    const autor = { usuarioId: null, nome: 'Cliente (link)', origem: 'ACEITE' as const };
+    const vinculado = (db.prepare('SELECT cliente_id FROM orcamentos WHERE id = ?').get(l.id) as { cliente_id: number | null }).cliente_id;
+    if (vinculado && obterClienteCadastro(db, vinculado)) aplicarFaturamentoNoCliente(db, vinculado, faturamento, autor);
+    else vincularOrcamentoECliente(db, l.id, criarClienteDoFaturamento(db, faturamento, l.cliente_telefone, autor));
     const pedido = criarPedido(db, l.id, obs, l.usuario_id, {
       origem: 'CLIENTE',
       observacaoMovimento: 'Aceito pelo cliente pelo link' + (obs ? ` — ${obs}` : ''),

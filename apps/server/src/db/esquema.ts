@@ -291,6 +291,73 @@ export function garantirEsquema(db: Database.Database): void {
       fechado_por   INTEGER REFERENCES usuarios(id),
       pago_em       TEXT
     );
+    -- Cadastro de clientes da plataforma (pré-cadastro no carrinho, completo no aceite)
+    CREATE TABLE IF NOT EXISTS clientes (
+      id            INTEGER PRIMARY KEY AUTOINCREMENT,
+      tipo_pessoa   TEXT NOT NULL DEFAULT 'PJ',
+      nome          TEXT NOT NULL,
+      nome_chave    TEXT NOT NULL DEFAULT '',
+      contato       TEXT NOT NULL DEFAULT '',
+      telefone      TEXT NOT NULL DEFAULT '',
+      telefone_chave TEXT NOT NULL DEFAULT '',
+      email         TEXT NOT NULL DEFAULT '',
+      documento     TEXT NOT NULL DEFAULT '',
+      cep           TEXT NOT NULL DEFAULT '',
+      logradouro    TEXT NOT NULL DEFAULT '',
+      numero        TEXT NOT NULL DEFAULT '',
+      complemento   TEXT NOT NULL DEFAULT '',
+      bairro        TEXT NOT NULL DEFAULT '',
+      cidade        TEXT NOT NULL DEFAULT '',
+      uf            TEXT NOT NULL DEFAULT '',
+      situacao      TEXT NOT NULL DEFAULT 'PRE_CADASTRO',
+      ativo         INTEGER NOT NULL DEFAULT 1,
+      observacoes   TEXT NOT NULL DEFAULT '',
+      alerta        TEXT,
+      kommo_id      INTEGER,
+      mesclado_em   INTEGER REFERENCES clientes(id),
+      criado        TEXT NOT NULL,
+      atualizado    TEXT NOT NULL,
+      criado_por    INTEGER REFERENCES usuarios(id),
+      alterado_por  INTEGER REFERENCES usuarios(id)
+    );
+    CREATE INDEX IF NOT EXISTS ix_clientes_nome ON clientes(nome_chave);
+    CREATE INDEX IF NOT EXISTS ix_clientes_telefone ON clientes(telefone_chave);
+    CREATE INDEX IF NOT EXISTS ix_clientes_email ON clientes(email);
+    CREATE INDEX IF NOT EXISTS ix_clientes_documento ON clientes(documento);
+    -- Telefones e e-mails adicionais
+    CREATE TABLE IF NOT EXISTS clientes_contatos (
+      id         INTEGER PRIMARY KEY AUTOINCREMENT,
+      cliente_id INTEGER NOT NULL REFERENCES clientes(id),
+      tipo       TEXT NOT NULL,
+      valor      TEXT NOT NULL,
+      chave      TEXT NOT NULL,
+      descricao  TEXT NOT NULL DEFAULT ''
+    );
+    CREATE INDEX IF NOT EXISTS ix_clientes_contatos_chave ON clientes_contatos(chave);
+    -- Histórico de alterações do cadastro
+    CREATE TABLE IF NOT EXISTS clientes_historico (
+      id         INTEGER PRIMARY KEY AUTOINCREMENT,
+      cliente_id INTEGER NOT NULL REFERENCES clientes(id),
+      data_hora  TEXT NOT NULL,
+      usuario_id INTEGER REFERENCES usuarios(id),
+      autor      TEXT,
+      origem     TEXT NOT NULL,
+      texto      TEXT NOT NULL
+    );
+    CREATE INDEX IF NOT EXISTS ix_clientes_historico ON clientes_historico(cliente_id);
+    -- Suspeitas de duplicidade (par a < b), tratadas pela equipe
+    CREATE TABLE IF NOT EXISTS clientes_duplicidades (
+      id           INTEGER PRIMARY KEY AUTOINCREMENT,
+      cliente_a    INTEGER NOT NULL REFERENCES clientes(id),
+      cliente_b    INTEGER NOT NULL REFERENCES clientes(id),
+      motivos      TEXT NOT NULL,
+      situacao     TEXT NOT NULL DEFAULT 'ABERTA',
+      criado       TEXT NOT NULL,
+      resolvido_em TEXT,
+      resolvido_por INTEGER REFERENCES usuarios(id),
+      UNIQUE (cliente_a, cliente_b)
+    );
+
     CREATE TABLE IF NOT EXISTS comissao_fechamentos_movimentos (
       id          INTEGER PRIMARY KEY AUTOINCREMENT,
       competencia TEXT NOT NULL,
@@ -429,6 +496,12 @@ function migrarColunas(db: Database.Database): void {
   if (!colunas(db, 'orcamentos').includes('observacao')) {
     db.exec(`ALTER TABLE orcamentos ADD COLUMN observacao TEXT`);
   }
+  // Vínculo com o cadastro de clientes da plataforma
+  if (!colunas(db, 'orcamentos').includes('cliente_id')) db.exec('ALTER TABLE orcamentos ADD COLUMN cliente_id INTEGER REFERENCES clientes(id)');
+  if (!colunas(db, 'orcamentos').includes('cliente_email')) db.exec('ALTER TABLE orcamentos ADD COLUMN cliente_email TEXT');
+  if (!colunas(db, 'pedidos').includes('cliente_id')) db.exec('ALTER TABLE pedidos ADD COLUMN cliente_id INTEGER REFERENCES clientes(id)');
+  db.exec('CREATE INDEX IF NOT EXISTS ix_orcamentos_cliente_id ON orcamentos(cliente_id)');
+  db.exec('CREATE INDEX IF NOT EXISTS ix_pedidos_cliente_id ON pedidos(cliente_id)');
   // Carteira de clientes especiais do pedido (comissões)
   if (!colunas(db, 'pedidos').includes('carteira_id')) {
     db.exec(`ALTER TABLE pedidos ADD COLUMN carteira_id INTEGER REFERENCES carteiras(id)`);

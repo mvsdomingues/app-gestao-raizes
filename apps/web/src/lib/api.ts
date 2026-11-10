@@ -45,9 +45,15 @@ import type {
   StatusOrcamentoManual,
   StatusFornecedor,
   OrdemCatalogo,
-  ClienteKommo,
+  CampoMesclagem,
+  MotivoDuplicidade,
+  Cliente,
   ConfigClientes,
-  RespostaBuscaClientes,
+  FichaCliente,
+  ResumoCliente,
+  SituacaoCliente,
+  SuspeitaDuplicidade,
+  TipoContatoCliente,
   StatusSincronizacaoClientes,
 } from '@raizes/shared';
 
@@ -81,6 +87,8 @@ export class ErroApi extends Error {
   constructor(
     message: string,
     readonly status = 0,
+    /** Corpo completo da resposta (ex.: clientes parecidos no 409 do cadastro) */
+    readonly dados: Record<string, unknown> = {},
   ) {
     super(message);
   }
@@ -94,8 +102,14 @@ async function enviar<T>(metodo: string, url: string, corpo?: unknown): Promise<
     body: corpo === undefined ? undefined : JSON.stringify(corpo),
   });
   const dados = (await resp.json().catch(() => ({}))) as T & { erro?: string };
-  if (!resp.ok) throw new ErroApi(dados.erro || `Erro ${resp.status}`, resp.status);
+  if (!resp.ok) throw new ErroApi(dados.erro || `Erro ${resp.status}`, resp.status, dados as Record<string, unknown>);
   return dados;
+}
+
+/** Resposta da inclusão/alteração: o cliente e os cadastros parecidos (telefone/e-mail iguais). */
+export interface RespostaCliente {
+  cliente: Cliente;
+  coincidencias: { cliente: ResumoCliente; motivos: MotivoDuplicidade[] }[];
 }
 
 export interface FiltrosProdutos {
@@ -225,8 +239,8 @@ export const api = {
   retrocederPedido: (codigo: string, statusAtual: string) =>
     enviar<Pedido>('POST', `/api/pedidos/${encodeURIComponent(codigo)}/retroceder`, { status_atual: statusAtual }),
   /** Dados de faturamento do pedido em andamento (cada mudança vira uma observação) */
-  alterarFaturamentoPedido: (codigo: string, faturamento: DadosFaturamento) =>
-    enviar<Pedido>('PUT', `/api/pedidos/${encodeURIComponent(codigo)}/faturamento`, { faturamento }),
+  alterarFaturamentoPedido: (codigo: string, faturamento: DadosFaturamento, atualizarCadastro = false) =>
+    enviar<Pedido>('PUT', `/api/pedidos/${encodeURIComponent(codigo)}/faturamento`, { faturamento, atualizar_cadastro: atualizarCadastro }),
 
   /** Data prevista de entrega do pedido (só na etapa Criado; a mudança vira uma observação) */
   alterarEntregaPedido: (codigo: string, data: string | null) =>
@@ -253,16 +267,41 @@ export const api = {
   acessos: () => enviar<AcessoUsuario[]>('GET', '/api/acessos'),
   salvarAcessos: (id: number, permissoes: IdTela[]) => enviar<AcessoUsuario>('PUT', `/api/acessos/${id}`, { permissoes }),
 
-  // ── Clientes (Kommo) ──
-  configClientes: () => enviar<ConfigClientes>('GET', '/api/clientes/config'),
+  // ── Kommo (desligado por padrão; só referência) ──
+  configKommo: () => enviar<ConfigClientes>('GET', '/api/kommo/config'),
+  statusSincronizacaoKommo: () => enviar<StatusSincronizacaoClientes>('GET', '/api/kommo/sincronizacao'),
+  sincronizarKommo: (completa = false) => enviar<StatusSincronizacaoClientes>('POST', '/api/kommo/sincronizar', { completa }),
+
+  // ── Cadastro de clientes ──
+  /** Busca rápida (carrinho e filtros): só ativos */
   buscarClientes: (busca: string, limite = 10) =>
-    enviar<RespostaBuscaClientes>('GET', `/api/clientes?busca=${encodeURIComponent(busca)}&limite=${limite}`),
-  buscarClientesKommo: (busca: string) =>
-    enviar<RespostaBuscaClientes>('GET', `/api/clientes/kommo?busca=${encodeURIComponent(busca)}`),
-  cliente: (id: number) => enviar<ClienteKommo>('GET', `/api/clientes/${id}`),
-  statusSincronizacaoClientes: () => enviar<StatusSincronizacaoClientes>('GET', '/api/clientes/sincronizacao'),
-  sincronizarClientes: (completa = false) =>
-    enviar<StatusSincronizacaoClientes>('POST', '/api/clientes/sincronizar', { completa }),
+    enviar<{ clientes: ResumoCliente[] }>('GET', `/api/clientes?busca=${encodeURIComponent(busca)}&limite=${limite}`),
+  listarClientes: (f: { busca?: string; situacao?: string; ativos?: string; pendencias?: boolean; limit?: number; offset?: number }) => {
+    const p = new URLSearchParams();
+    if (f.busca) p.set('busca', f.busca);
+    if (f.situacao) p.set('situacao', f.situacao);
+    if (f.ativos) p.set('ativos', f.ativos);
+    if (f.pendencias) p.set('pendencias', '1');
+    p.set('limit', String(f.limit ?? 30));
+    p.set('offset', String(f.offset ?? 0));
+    return enviar<{ total: number; clientes: ResumoCliente[] }>('GET', `/api/clientes?${p}`);
+  },
+  /** Com a tela Clientes: ficha completa; sem: só { cliente } */
+  fichaCliente: (id: number) => enviar<FichaCliente>('GET', `/api/clientes/${id}`),
+  cliente: (id: number) => enviar<{ cliente: Cliente }>('GET', `/api/clientes/${id}`),
+  faturamentoCliente: (id: number) =>
+    enviar<{ faturamento: DadosFaturamento; telefone: string; situacao: SituacaoCliente }>('GET', `/api/clientes/${id}/faturamento`),
+  criarCliente: (dados: Record<string, unknown>) => enviar<RespostaCliente>('POST', '/api/clientes', dados),
+  alterarCliente: (id: number, dados: Record<string, unknown>) => enviar<RespostaCliente>('PUT', `/api/clientes/${id}`, dados),
+  ativoCliente: (id: number, ativo: boolean) => enviar<Cliente>('POST', `/api/clientes/${id}/ativo`, { ativo }),
+  conferirCliente: (id: number) => enviar<Cliente>('POST', `/api/clientes/${id}/conferido`),
+  incluirContatoCliente: (id: number, dados: { tipo: TipoContatoCliente; valor: string; descricao: string }) =>
+    enviar<RespostaCliente>('POST', `/api/clientes/${id}/contatos`, dados),
+  excluirContatoCliente: (id: number, contato: number) => enviar<Cliente>('DELETE', `/api/clientes/${id}/contatos/${contato}`),
+  duplicidadesClientes: () => enviar<SuspeitaDuplicidade[]>('GET', '/api/clientes/duplicidades'),
+  descartarDuplicidade: (id: number) => enviar<{ ok: true }>('POST', `/api/clientes/duplicidades/${id}/descartar`),
+  mesclarClientes: (principal: number, outro: number, escolhas: Partial<Record<CampoMesclagem, 'principal' | 'outro'>>) =>
+    enviar<Cliente>('POST', '/api/clientes/mesclar', { principal, outro, escolhas }),
 
   // ── Parâmetros da calculadora ──
   parametros: () => enviar<RespostaParametros>('GET', '/api/parametros'),

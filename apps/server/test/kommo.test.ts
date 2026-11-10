@@ -9,7 +9,7 @@ import { ApiKommo, ErroKommo } from '../src/kommo/api';
 import { ServicoKommo } from '../src/kommo/servico';
 import { GerenciadorAtualizacao } from '../src/services/gerenciador-atualizacao';
 import { iniciarKommoMock, TOKEN_MOCK, type KommoMock } from './kommo-mock';
-import { entrar } from './sessao-teste';
+import { clienteDeTeste, entrar } from './sessao-teste';
 
 const semEspera = () => Promise.resolve();
 const novaApi = (url: string, token = TOKEN_MOCK) => new ApiKommo({ baseUrl: url, token, intervaloMs: 0, dormir: semEspera });
@@ -173,7 +173,7 @@ describe('sincronização e busca local', () => {
   });
 });
 
-describe('API de clientes, vínculo ao orçamento e nota no pedido', () => {
+describe('Kommo ligado (KOMMO_ATIVO=1): status e notas no contato dos clientes migrados', () => {
   const db = abrirBanco(':memory:');
   let mock: KommoMock;
   let servico: ServicoKommo;
@@ -183,6 +183,9 @@ describe('API de clientes, vínculo ao orçamento e nota no pedido', () => {
   let baseSem = '';
   let cookie = '';
   let cookieSem = '';
+  let beatriz = 0;
+  let bruno = 0;
+  let semContato = 0;
   const item = { nome: 'Caneca', codigo: 'C1', fornecedor: 'XBZ', imagem_url: '', qty: 10, preco: 20, composicao: 'c' };
 
   async function req(metodo: string, url: string, corpo?: unknown, b = base, c = cookie) {
@@ -201,12 +204,14 @@ describe('API de clientes, vínculo ao orçamento e nota no pedido', () => {
     ]);
     servico = new ServicoKommo(db, novaApi(mock.url), 'conta', 10, () => {});
     await servico.sincronizar('completa');
+    beatriz = clienteDeTeste(db, { nome: 'Beatriz Alves', telefone: '11977771111', kommo_id: 10 });
+    bruno = clienteDeTeste(db, { nome: 'Bruno Costa', telefone: '11966662222', kommo_id: 11 });
+    semContato = clienteDeTeste(db, { nome: 'Cliente Novo', telefone: '11955553333' });
     const gerenciador = new GerenciadorAtualizacao({ exe: process.execPath, args: ['-e', ''] });
     servidor = criarApp({ db, gerenciador, imagensDir: '/nao-existe', kommo: servico }).listen(0, '127.0.0.1');
     await new Promise((r) => servidor.once('listening', r));
     base = `http://127.0.0.1:${(servidor.address() as AddressInfo).port}`;
     cookie = await entrar(base);
-    // Mesmo banco, integração desligada
     semKommo = criarApp({ db: abrirBanco(':memory:'), gerenciador, imagensDir: '/nao-existe' }).listen(0, '127.0.0.1');
     await new Promise((r) => semKommo.once('listening', r));
     baseSem = `http://127.0.0.1:${(semKommo.address() as AddressInfo).port}`;
@@ -218,106 +223,47 @@ describe('API de clientes, vínculo ao orçamento e nota no pedido', () => {
     await mock.fechar();
   });
 
-  it('config e busca local', async () => {
-    expect((await req('GET', '/api/clientes/config')).json).toEqual({ ativo: true, subdominio: 'conta', notas: true });
-    const r = await req('GET', '/api/clientes?busca=97777-1111');
-    expect(r.json).toMatchObject({ tipo: 'telefone', fonte: 'local', clientes: [{ id: 10, nome: 'Beatriz Alves', orcamentos: 0 }] });
-    expect((await req('GET', '/api/clientes/10')).json).toMatchObject({ id: 10 });
-    expect((await req('GET', '/api/clientes/999')).status).toBe(404);
-  });
-
-  it('busca direta no Kommo grava o contato novo na base', async () => {
-    mock.contatos.push({ id: 12, name: 'Bianca Recente', phone: ['11 95555-3333'] });
-    expect((await req('GET', '/api/clientes?busca=Bianca')).json.clientes).toEqual([]);
-    const r = await req('GET', '/api/clientes/kommo?busca=Bianca');
-    expect(r.json).toMatchObject({ fonte: 'kommo', clientes: [{ id: 12 }] });
-    expect((await req('GET', '/api/clientes?busca=Bianca')).json.clientes).toHaveLength(1);
-  });
-
-  it('sincronização manual e status (tela Atualização)', async () => {
-    const r = await req('POST', '/api/clientes/sincronizar', { completa: true });
+  it('config e sincronização manual (tela Atualização)', async () => {
+    expect((await req('GET', '/api/kommo/config')).json).toEqual({ ativo: true, subdominio: 'conta', notas: true });
+    const r = await req('POST', '/api/kommo/sincronizar', { completa: true });
     expect(r.status).toBe(202);
-    await servico.sincronizar(); // espera a que está rodando
-    const s = await req('GET', '/api/clientes/sincronizacao');
-    expect(s.json).toMatchObject({ configurado: true, total: 3, ultima: { status: 'OK' } });
+    await servico.sincronizar();
+    expect((await req('GET', '/api/kommo/sincronizacao')).json).toMatchObject({ configurado: true, total: 2, ultima: { status: 'OK' } });
   });
 
-  it('grava o cliente no orçamento (código + cópia de nome e telefone)', async () => {
-    const r = await req('POST', '/api/orcamentos', { itens: [item], subtotal: 200, frete: 0, total: 200, cliente_kommo_id: 10 });
-    expect(r.status).toBe(200);
-    const o = await req('GET', `/api/orcamentos/${r.json.id}`);
-    expect(o.json.cliente).toEqual({ id: 10, nome: 'Beatriz Alves', telefone: '+55 11 97777-1111' });
-    // Cliente que não existe na base: recusado
-    const ruim = await req('POST', '/api/orcamentos', { itens: [item], subtotal: 1, frete: 0, total: 1, cliente_kommo_id: 4242 });
-    expect(ruim.status).toBe(400);
-    // Contagem de orçamentos do cliente aparece na busca
-    expect((await req('GET', '/api/clientes?busca=Beatriz')).json.clientes[0].orcamentos).toBe(1);
-  });
-
-  it('orçamento sem cliente pode ser gerado, mas não enviado', async () => {
-    const r = await req('POST', '/api/orcamentos', { itens: [item], subtotal: 50, frete: 0, total: 50 });
-    expect(r.status).toBe(200);
-    const env = await req('POST', `/api/orcamentos/${r.json.id}/status`, { status: 'ENVIADO' });
-    expect(env.status).toBe(409);
-    expect(env.json.erro).toMatch(/cliente/);
-    // Vincula o cliente na alteração e envia
-    const alt = await req('PUT', `/api/orcamentos/${r.json.id}`, { itens: [item], subtotal: 50, frete: 0, total: 50, cliente_kommo_id: 11 });
-    expect(alt.status).toBe(200);
-    expect((await req('POST', `/api/orcamentos/${r.json.id}/status`, { status: 'ENVIADO' })).status).toBe(200);
-  });
-
-  it('"Enviar para o Cliente" registra a nota "orçamento enviado" no contato', async () => {
-    const r = await req('POST', '/api/orcamentos', { itens: [item, item], subtotal: 400, frete: 0, total: 400, cliente_kommo_id: 10 });
+  it('"Enviar para o Cliente" registra a nota no contato do Kommo do cliente', async () => {
+    const r = await req('POST', '/api/orcamentos', { itens: [item, item], subtotal: 400, frete: 0, total: 400, cliente_id: beatriz });
     const antes = mock.notas.length;
     expect((await req('POST', `/api/orcamentos/${r.json.id}/status`, { status: 'ENVIADO' })).status).toBe(200);
     await servico.enviarNotas();
     expect(mock.notas.length).toBe(antes + 1);
     expect(mock.notas.at(-1)).toMatchObject({ entity_id: 10, note_type: 'common' });
     expect(mock.notas.at(-1)!.params.text).toMatch(new RegExp(`Orçamento ${r.json.numero} enviado ao cliente .*2 itens · por Administrador`));
-    // Enviar de novo um orçamento já enviado não duplica a nota; voltar para aberto também não gera nota
     await req('POST', `/api/orcamentos/${r.json.id}/status`, { status: 'ENVIADO' });
-    await req('POST', `/api/orcamentos/${r.json.id}/status`, { status: 'ABERTO' });
     await servico.enviarNotas();
     expect(mock.notas.length).toBe(antes + 1);
-    // Volta para Aberto, envia de novo: nova nota (reenvio ao cliente)
-    await req('POST', `/api/orcamentos/${r.json.id}/status`, { status: 'ENVIADO' });
+  });
+
+  it('cliente sem contato no Kommo: envia normalmente, sem nota', async () => {
+    const r = await req('POST', '/api/orcamentos', { itens: [item], subtotal: 1, frete: 0, total: 1, cliente_id: semContato });
+    const antes = mock.notas.length;
+    expect((await req('POST', `/api/orcamentos/${r.json.id}/status`, { status: 'ENVIADO' })).status).toBe(200);
     await servico.enviarNotas();
-    expect(mock.notas.length).toBe(antes + 2);
-    // Fica de fora dos filtros por cliente dos próximos testes
-    await req('POST', `/api/orcamentos/${r.json.id}/status`, { status: 'ABERTO' });
-    await req('PUT', `/api/orcamentos/${r.json.id}`, { itens: [item], subtotal: 1, frete: 0, total: 1, cliente_kommo_id: null });
+    expect(mock.notas.length).toBe(antes);
   });
 
-  it('alteração sem informar o cliente mantém o atual; null remove', async () => {
-    const r = await req('POST', '/api/orcamentos', { itens: [item], subtotal: 1, frete: 0, total: 1, cliente_kommo_id: 11 });
-    await req('PUT', `/api/orcamentos/${r.json.id}`, { itens: [item], subtotal: 2, frete: 0, total: 2 });
-    expect((await req('GET', `/api/orcamentos/${r.json.id}`)).json.cliente).toMatchObject({ id: 11 });
-    await req('PUT', `/api/orcamentos/${r.json.id}`, { itens: [item], subtotal: 2, frete: 0, total: 2, cliente_kommo_id: null });
-    expect((await req('GET', `/api/orcamentos/${r.json.id}`)).json.cliente).toBeNull();
-  });
-
-  it('lista e filtra orçamentos e pedidos por cliente', async () => {
-    const l = await req('GET', '/api/orcamentos?cliente=10');
-    expect(l.json.total).toBe(1);
-    expect(l.json.orcamentos[0].cliente).toMatchObject({ id: 10, nome: 'Beatriz Alves' });
-    expect((await req('GET', '/api/orcamentos?cliente=11')).json.total).toBe(1);
-  });
-
-  it('gerar pedido registra uma nota no contato do Kommo', async () => {
-    const o = await req('GET', '/api/orcamentos?cliente=10');
-    const p = await req('POST', '/api/pedidos', { orcamento_id: o.json.orcamentos[0].id });
+  it('gerar pedido registra uma nota no contato', async () => {
+    const o = await req('POST', '/api/orcamentos', { itens: [item], subtotal: 9, frete: 0, total: 9, cliente_id: bruno });
+    const p = await req('POST', '/api/pedidos', { orcamento_id: o.json.id });
     expect(p.status).toBe(201);
-    expect(p.json.cliente).toMatchObject({ id: 10, nome: 'Beatriz Alves' });
+    expect(p.json.cliente).toMatchObject({ id: bruno, nome: 'Bruno Costa', codigo: `CLI-${String(bruno).padStart(6, '0')}` });
     await servico.enviarNotas();
-    expect(mock.notas.at(-1)).toMatchObject({ entity_id: 10, note_type: 'common' });
+    expect(mock.notas.at(-1)).toMatchObject({ entity_id: 11 });
     expect(mock.notas.at(-1)!.params.text).toContain(p.json.codigo);
-    expect(mock.notas.at(-1)!.params.text).toContain(o.json.orcamentos[0].numero);
-    expect((await req('GET', '/api/pedidos?cliente=10')).json.pedidos).toHaveLength(1);
-    expect((await req('GET', '/api/pedidos?cliente=11')).json.pedidos).toHaveLength(0);
   });
 
   it('nota que falha fica na fila e é reenviada', async () => {
-    const o = await req('POST', '/api/orcamentos', { itens: [item], subtotal: 9, frete: 0, total: 9, cliente_kommo_id: 11 });
+    const o = await req('POST', '/api/orcamentos', { itens: [item], subtotal: 9, frete: 0, total: 9, cliente_id: bruno });
     mock.falhar(500, 3);
     const antes = mock.notas.length;
     await req('POST', '/api/pedidos', { orcamento_id: o.json.id });
@@ -328,46 +274,32 @@ describe('API de clientes, vínculo ao orçamento e nota no pedido', () => {
     expect(mock.notas.length).toBe(antes + 1);
   });
 
-  it('com a integração desligada: busca vazia, envio sem cliente liberado, 503 nas ações', async () => {
-    expect((await req('GET', '/api/clientes/config', undefined, baseSem, cookieSem)).json).toEqual({ ativo: false, subdominio: null, notas: false });
-    expect((await req('GET', '/api/clientes/sincronizacao', undefined, baseSem, cookieSem)).json.configurado).toBe(false);
-    expect((await req('POST', '/api/clientes/sincronizar', {}, baseSem, cookieSem)).status).toBe(503);
-    const r = await req('POST', '/api/orcamentos', { itens: [item], subtotal: 1, frete: 0, total: 1 }, baseSem, cookieSem);
-    expect((await req('POST', `/api/orcamentos/${r.json.id}/status`, { status: 'ENVIADO' }, baseSem, cookieSem)).status).toBe(200);
+  it('desligado (padrão): config inativa, 503 ao sincronizar', async () => {
+    expect((await req('GET', '/api/kommo/config', undefined, baseSem, cookieSem)).json).toEqual({ ativo: false, subdominio: null, notas: false });
+    expect((await req('GET', '/api/kommo/sincronizacao', undefined, baseSem, cookieSem)).json.configurado).toBe(false);
+    expect((await req('POST', '/api/kommo/sincronizar', {}, baseSem, cookieSem)).status).toBe(503);
   });
 
-  it('parâmetro de sistema: notas no Kommo desligadas não criam nem enviam notas', async () => {
+  it('parâmetro de sistema: notas desligadas não criam nem enviam notas', async () => {
     await servico.enviarNotas();
-    expect((await req('GET', '/api/parametros/sistema')).json).toMatchObject({ valores: { kommo_notas_ativo: true } });
-    expect((await req('PUT', '/api/parametros/sistema', { kommo_notas_ativo: 'nao' })).status).toBe(400);
     const off = await req('PUT', '/api/parametros/sistema', { kommo_notas_ativo: false });
     expect(off.json.valores.kommo_notas_ativo).toBe(false);
-    expect(off.json.atualizado).toBeTruthy();
-    expect((await req('GET', '/api/clientes/config')).json.notas).toBe(false);
-    expect((await req('GET', '/api/clientes/sincronizacao')).json.notas_ativas).toBe(false);
-    // Uma nota que já estava na fila (falhou antes) não é reenviada enquanto desligado
-    db.prepare(`INSERT INTO kommo_notas (contato_id, texto, criado) VALUES (10, 'pendente antiga', '2026-01-01T00:00:00')`).run();
+    expect((await req('GET', '/api/kommo/config')).json.notas).toBe(false);
     const antes = mock.notas.length;
-    const pendentesAntes = servico.status().notas_pendentes;
-    // Envio, pedido: nada novo na fila e nada enviado
-    const o = await req('POST', '/api/orcamentos', { itens: [item], subtotal: 5, frete: 0, total: 5, cliente_kommo_id: 10 });
+    const o = await req('POST', '/api/orcamentos', { itens: [item], subtotal: 5, frete: 0, total: 5, cliente_id: beatriz });
     await req('POST', `/api/orcamentos/${o.json.id}/status`, { status: 'ENVIADO' });
     await req('POST', '/api/pedidos', { orcamento_id: o.json.id });
     await servico.enviarNotas();
     expect(mock.notas.length).toBe(antes);
-    expect(servico.status().notas_pendentes).toBe(pendentesAntes);
-    // Ligando de novo: a pendente antiga sai; as ações feitas enquanto desligado não geram nota
     await req('PUT', '/api/parametros/sistema', { kommo_notas_ativo: true });
-    await servico.enviarNotas();
-    expect(mock.notas.map((n) => n.params.text).slice(antes)).toEqual(['pendente antiga']);
   });
 
-  it('permissões: busca para quem acessa carrinho/orçamentos/pedidos; sincronizar só com a tela Atualização', async () => {
+  it('sincronizar só com a tela Atualização', async () => {
     const u = await req('POST', '/api/usuarios', { nome: 'Vendas', login: 'vendas1', senha: 'abc123' });
     await req('PUT', `/api/acessos/${u.json.id}`, { permissoes: ['carrinho'] });
     const c = await entrar(base, 'vendas1', 'abc123');
-    expect((await req('GET', '/api/clientes?busca=Bruno', undefined, base, c)).status).toBe(200);
-    expect((await req('POST', '/api/clientes/sincronizar', {}, base, c)).status).toBe(403);
-    expect((await req('GET', '/api/clientes/sincronizacao', undefined, base, c)).status).toBe(403);
+    expect((await req('POST', '/api/kommo/sincronizar', {}, base, c)).status).toBe(403);
+    expect((await req('GET', '/api/kommo/sincronizacao', undefined, base, c)).status).toBe(403);
+    expect((await req('GET', '/api/kommo/config', undefined, base, c)).status).toBe(200);
   });
 });

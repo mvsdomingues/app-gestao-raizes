@@ -11,7 +11,6 @@ import { useEditarOrcamento } from './editar-orcamento';
 import { TagStatusOrcamento, useSituacaoOrcamento } from './situacao';
 import { erro } from '../../lib/dialogo';
 import { ClienteVinculado } from '../clientes/ClienteVinculado';
-import { useConfigClientes } from '../clientes/config';
 import { SeletorCliente } from '../clientes/SeletorCliente';
 import type { ClienteVinculado as Cliente } from '@raizes/shared';
 
@@ -44,7 +43,6 @@ export function ListaOrcamentos() {
   const [estado, setEstado] = useState<Estado>({ tipo: 'carregando' });
   const [gerarPara, setGerarPara] = useState<ResumoOrcamento | null>(null);
   const seq = useRef(0);
-  const kommo = useConfigClientes();
   const [clienteFiltro, setClienteFiltro] = useState<Cliente | null>(null);
 
   const carregar = useCallback(async (f: FiltrosOrcamentos, pag: number) => {
@@ -182,12 +180,10 @@ export function ListaOrcamentos() {
             <input id="filtro-max" className="custom-input" type="number" min="0" step="0.01" placeholder="máx." {...campo('max')} />
           </div>
         </div>
-        {(kommo.ativo || clienteFiltro) && (
-          <div className="orc-filtro orc-filtro-cliente">
-            <label htmlFor="filtro-cliente-orc">Cliente</label>
-            <SeletorCliente id="filtro-cliente-orc" compacto valor={clienteFiltro} aoMudar={filtrarCliente} placeholder="Telefone ou nome" />
-          </div>
-        )}
+        <div className="orc-filtro orc-filtro-cliente">
+          <label htmlFor="filtro-cliente-orc">Cliente</label>
+          <SeletorCliente id="filtro-cliente-orc" compacto valor={clienteFiltro} aoMudar={filtrarCliente} placeholder="Nome, telefone ou código" />
+        </div>
         <div className="orc-filtro">
           <label htmlFor="filtro-status-orc">Situação</label>
           <select id="filtro-status-orc" className="custom-input" {...campo('status')}>
@@ -244,7 +240,7 @@ export function ListaOrcamentos() {
               <tr>
                 <th style={{ width: 120 }}>Número</th>
                 <th>Data</th>
-                {kommo.ativo && <th>Cliente</th>}
+                <th>Cliente</th>
                 <th style={{ width: 160 }}>Responsável</th>
                 <th className="num" style={{ width: 80 }}>
                   Itens
@@ -263,11 +259,9 @@ export function ListaOrcamentos() {
                     <span className="orc-num-badge">{r.numero}</span>
                   </td>
                   <td>{formatarData(r.data_hora)}</td>
-                  {kommo.ativo && (
-                    <td className="col-cliente">
-                      <ClienteVinculado cliente={r.cliente} link={false} />
-                    </td>
-                  )}
+                  <td className="col-cliente">
+                    <ClienteVinculado cliente={r.cliente} link={false} />
+                  </td>
                   <td>
                     <NomeUsuario usuario={r.responsavel} />
                   </td>

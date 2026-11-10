@@ -84,9 +84,14 @@ export interface ClienteKommo {
 
 /** Cliente gravado no orçamento: código do Kommo + cópia de nome e telefone no momento do vínculo. */
 export interface ClienteVinculado {
+  /** Id do cliente no cadastro da plataforma */
   id: number;
   nome: string;
   telefone: string | null;
+  /** E-mail principal (cópia no orçamento) */
+  email?: string | null;
+  /** CLI-000001 */
+  codigo?: string;
 }
 
 export interface RespostaBuscaClientes {
