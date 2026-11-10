@@ -3,6 +3,7 @@ import {
   CALC_DEFAULTS,
   FAIXAS,
   apurarComissoes,
+  faixasPercentualFixo,
   calcComPersonalizacao,
   calcPreco,
   calcularPersonalizacao,
@@ -180,67 +181,71 @@ export function MemoriasCalculo() {
     [SUBLIMACAO],
   ).get(1)!;
 
-  // Comissões: Ana em outubro, R$ 25.000 normais + R$ 8.000 na carteira Corporativo (5%)
+  // Comissões: Ana em outubro, em três carteiras, cada uma com as suas faixas
+  const pedAna = (n: number, valor: number, carteira_id: number) => ({
+    pedido_id: n,
+    codigo: `PED-00010${n}`,
+    orcamento: `ORC-010${n}`,
+    cliente: null,
+    vendedor_id: 1,
+    vendedor: 'Ana',
+    data_conclusao: `2026-10-${String(n * 5).padStart(2, '0')}T10:00:00`,
+    valor,
+    carteira_id,
+  });
   const comAna = apurarComissoes(
     '2026-10',
-    [
-      {
-        pedido_id: 1,
-        codigo: 'PED-000101',
-        orcamento: 'ORC-0101',
-        cliente: null,
-        vendedor_id: 1,
-        vendedor: 'Ana',
-        data_conclusao: '2026-10-05T10:00:00',
-        valor: 15000,
-        carteira_id: null,
-      },
-      {
-        pedido_id: 2,
-        codigo: 'PED-000102',
-        orcamento: 'ORC-0102',
-        cliente: null,
-        vendedor_id: 1,
-        vendedor: 'Ana',
-        data_conclusao: '2026-10-12T10:00:00',
-        valor: 10000,
-        carteira_id: null,
-      },
-      {
-        pedido_id: 3,
-        codigo: 'PED-000103',
-        orcamento: 'ORC-0103',
-        cliente: null,
-        vendedor_id: 1,
-        vendedor: 'Ana',
-        data_conclusao: '2026-10-20T10:00:00',
-        valor: 8000,
-        carteira_id: 9,
-      },
-    ],
+    [pedAna(1, 15000, 1), pedAna(2, 10000, 1), pedAna(3, 8000, 2), pedAna(4, 3000, 3)],
     [
       {
         id: 1,
-        vigente_de: '2026-01-01',
-        descricao: 'Exemplo',
-        faixas: [
-          { de: 0, ate: 10000, percentual: 0.025 },
-          { de: 10000, ate: 30000, percentual: 0.04 },
-          { de: 30000, ate: null, percentual: 0.05 },
+        nome: 'Geral',
+        descricao: '',
+        ativa: true,
+        geral: true,
+        tabelas: [
+          {
+            id: 1,
+            vigente_de: '2026-01-01',
+            descricao: 'Exemplo',
+            faixas: [
+              { de: 0, ate: 10000, percentual: 0.025 },
+              { de: 10000, ate: 30000, percentual: 0.04 },
+              { de: 30000, ate: null, percentual: 0.05 },
+            ],
+          },
         ],
       },
-    ],
-    [
       {
-        id: 9,
+        id: 2,
         nome: 'Corporativo',
         descricao: '',
         ativa: true,
-        percentuais: [{ id: 1, vigente_de: '2026-01-01', percentual: 0.05 }],
+        geral: false,
+        tabelas: [
+          {
+            id: 2,
+            vigente_de: '2026-01-01',
+            descricao: '',
+            faixas: [
+              { de: 0, ate: 5000, percentual: 0.03 },
+              { de: 5000, ate: null, percentual: 0.04 },
+            ],
+          },
+        ],
+      },
+      {
+        id: 3,
+        nome: 'Carteira Raízes',
+        descricao: '',
+        ativa: true,
+        geral: false,
+        tabelas: [{ id: 3, vigente_de: '2026-01-01', descricao: '', faixas: faixasPercentualFixo(0.015) }],
       },
     ],
     '',
   ).vendedores[0]!;
+  const cartAna = (nome: string) => comAna.carteiras.find((c) => c.nome === nome)!;
 
   // Sem técnica: R$ 1,00 + R$ 3,00 por unidade (padrão)
   const semTec = calcularPersonalizacao(personalizacaoVazia(), 50, [], {
@@ -736,8 +741,9 @@ export function MemoriasCalculo() {
 
       <Secao id="calc-comissoes" titulo="Comissões dos vendedores (apuração mensal)" numero={15}>
         <p>
-          A comissão de cada vendedor no mês soma duas partes calculadas separadamente: a <b>progressiva</b>, sobre os pedidos
-          normais, e a das <b>carteiras especiais</b>, sobre os pedidos marcados. Entram os pedidos que chegaram à etapa{' '}
+          Todo cliente está numa <b>carteira</b> e o pedido recebe a carteira do cliente quando é criado. Cada carteira tem a sua
+          tabela de faixas (um percentual fixo é uma faixa só). No mês, a comissão é calculada <b>carteira por carteira</b>: as
+          vendas do vendedor em cada carteira passam pelas faixas daquela carteira. Entram os pedidos que chegaram à etapa{' '}
           <b>Em Produção</b> no mês (pela primeira vez), não cancelados; a base é o valor dos produtos, sem o frete; o vendedor é
           o responsável pelo orçamento.
         </p>
@@ -745,43 +751,51 @@ export function MemoriasCalculo() {
           titulo="Fórmula"
           linhas={[
             <>
-              <b>Progressiva</b> = soma, faixa a faixa, de (parte das vendas normais do mês dentro da faixa × % da faixa)
+              <b>Comissão da carteira</b> = soma, faixa a faixa, de (parte das vendas do vendedor na carteira dentro da faixa × %
+              da faixa)
             </>,
             <>
-              <b>Comissão de carteira</b> = valor do pedido × % fixo da carteira — as vendas de carteira <u>não contam</u> para as
-              faixas
+              <b>Percentual fixo</b> = uma faixa de R$ 0 sem limite → vendas na carteira × %
             </>,
             <>
-              <b>Total do vendedor</b> = progressiva + comissões das carteiras
+              <b>Total do vendedor</b> = soma das comissões das carteiras — as vendas de uma carteira <u>não</u> ajudam a subir de
+              faixa em outra
             </>,
           ]}
         />
         <Exemplo
-          titulo="Exemplo: Ana em outubro — R$ 25.000 em pedidos normais e R$ 8.000 na carteira Corporativo (5%)"
-          dados={<>Faixas: até R$ 10.000 → 2,5% · R$ 10.000 a R$ 30.000 → 4% · acima de R$ 30.000 → 5%</>}
+          titulo="Exemplo: Ana em outubro — R$ 25.000 na Geral, R$ 8.000 na Corporativo e R$ 3.000 na Carteira Raízes"
+          dados={
+            <>
+              Geral: até R$ 10.000 → 2,5% · R$ 10.000 a R$ 30.000 → 4% · acima → 5%. Corporativo: até R$ 5.000 → 3% · acima → 4%.
+              Carteira Raízes: 1,5% fixo.
+            </>
+          }
           passos={[
-            ['Vendas normais (base das faixas)', 'R$ 15.000 + R$ 10.000', brl(comAna.vendas_normais)],
-            ...comAna.faixas
-              .filter((f) => f.base > 0)
-              .map(
-                (f, i) =>
-                  [`Faixa ${i + 1}`, `${brl(f.base)} × ${num(f.percentual * 100, 2)}%`, brl(f.comissao)] as [
-                    string,
-                    string,
-                    string,
-                  ],
-              ),
-            ['Comissão progressiva', 'soma das faixas', brl(comAna.comissao_normais)],
-            ['Carteira Corporativo', `${brl(comAna.vendas_carteiras)} × 5%`, brl(comAna.comissao_carteiras)],
-            ['Total da Ana', `${brl(comAna.comissao_normais)} + ${brl(comAna.comissao_carteiras)}`, brl(comAna.total)],
+            ...comAna.carteiras.flatMap((c) =>
+              c.faixas
+                .filter((f) => f.base > 0)
+                .map(
+                  (f, i) =>
+                    [
+                      `${c.nome}${c.faixas.length > 1 ? ` · faixa ${i + 1}` : ''}`,
+                      `${brl(f.base)} × ${num(f.percentual * 100, 2)}%`,
+                      brl(f.comissao),
+                    ] as [string, string, string],
+                ),
+            ),
+            ['Geral', `sobre ${brl(cartAna('Geral').vendas)}`, brl(cartAna('Geral').comissao)],
+            ['Corporativo', `sobre ${brl(cartAna('Corporativo').vendas)}`, brl(cartAna('Corporativo').comissao)],
+            ['Carteira Raízes', `sobre ${brl(cartAna('Carteira Raízes').vendas)}`, brl(cartAna('Carteira Raízes').comissao)],
+            ['Total da Ana', 'soma das carteiras', brl(comAna.total)],
           ]}
-          conclusao="Os R$ 8.000 da carteira não entram nas faixas: a Ana fica na faixa de 4% com R$ 25.000. Na lista de pedidos, a progressiva é dividida entre os pedidos normais pelo valor (taxa média = progressiva ÷ vendas normais)."
+          conclusao="Cada carteira começa da sua primeira faixa. Na lista de pedidos, a comissão de cada carteira é dividida entre os pedidos dela pelo valor (taxa média = comissão da carteira ÷ vendas nela)."
         />
         <Dica tipo="regra">
-          Vigência: valem a tabela de faixas e os percentuais de carteira vigentes no <b>último dia do mês</b>. Ao{' '}
-          <b>fechar o mês</b>, o resultado fica gravado e não muda mais (mesmo que se alterem faixas, carteiras ou pedidos); para
-          corrigir, reabre-se o mês, com motivo. Arredondamento em centavos; os centavos que sobram ao dividir a progressiva entre
-          os pedidos ficam no último pedido normal do vendedor.
+          Vigência: vale a tabela de cada carteira vigente no <b>último dia do mês</b>; carteira sem tabela vigente fica com
+          comissão zerada (com aviso). Ao <b>fechar o mês</b>, o resultado fica gravado e não muda mais (mesmo que se alterem
+          tabelas, carteiras ou pedidos); para corrigir, reabre-se o mês, com motivo. Arredondamento em centavos; os centavos que
+          sobram ao dividir a comissão de uma carteira ficam no último pedido dela.
         </Dica>
       </Secao>
 

@@ -65,3 +65,16 @@
   .com-linha-vendedor .com-seta { display: none; }
 }
 #com-filtro-mes, .com-mes input[type=month] { min-width: 170px; }
+
+/* Carteiras de clientes */
+.com-tag-geral { display: inline-block; margin-left: 8px; background: #E3F2E6; color: #2E6B3A; border-radius: 999px; padding: 1px 8px; font-size: .66rem; font-weight: 600; text-transform: uppercase; letter-spacing: .4px; vertical-align: middle; }
+.com-acoes-linha { display: inline-flex; gap: 4px; }
+.com-tipo-tabela { display: flex; gap: 18px; margin: 10px 0 12px; font-size: .86rem; }
+.com-tipo-tabela label { display: flex; align-items: center; gap: 6px; cursor: pointer; }
+.com-aviso-linha { margin-top: 3px; font-size: .74rem; color: #8A5A00; }
+.com-por-carteira { margin-bottom: 18px; }
+.clientes-carteira { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; margin: 0 0 16px; padding: 10px 14px; border: 1px solid var(--border); border-radius: var(--radius); background: var(--surface); }
+.clientes-carteira .clientes-secao-titulo { margin: 0; }
+.clientes-carteira select { width: auto; min-width: 200px; }
+.clientes-carteira button { width: auto; padding: 7px 14px; font-size: .74rem; }
+.com-tag-carteira { white-space: nowrap; }

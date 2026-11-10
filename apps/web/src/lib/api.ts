@@ -1,9 +1,10 @@
 import type {
   CarteiraComissao,
+  CarteiraResumo,
+  ClienteCarteira,
   MovimentoCarteira,
   PedidoCarteira,
   RespostaApuracao,
-  TabelaComissao,
   TecnicaComValores,
   ParametroMaoObra,
   ParametroMaterial,
@@ -276,12 +277,13 @@ export const api = {
   /** Busca rápida (carrinho e filtros): só ativos */
   buscarClientes: (busca: string, limite = 10) =>
     enviar<{ clientes: ResumoCliente[] }>('GET', `/api/clientes?busca=${encodeURIComponent(busca)}&limite=${limite}`),
-  listarClientes: (f: { busca?: string; situacao?: string; ativos?: string; pendencias?: boolean; limit?: number; offset?: number }) => {
+  listarClientes: (f: { busca?: string; situacao?: string; ativos?: string; pendencias?: boolean; carteira?: string; limit?: number; offset?: number }) => {
     const p = new URLSearchParams();
     if (f.busca) p.set('busca', f.busca);
     if (f.situacao) p.set('situacao', f.situacao);
     if (f.ativos) p.set('ativos', f.ativos);
     if (f.pendencias) p.set('pendencias', '1');
+    if (f.carteira) p.set('carteira', f.carteira);
     p.set('limit', String(f.limit ?? 30));
     p.set('offset', String(f.offset ?? 0));
     return enviar<{ total: number; clientes: ResumoCliente[] }>('GET', `/api/clientes?${p}`);
@@ -340,29 +342,41 @@ export const api = {
     enviar<RespostaParametrosSistema>('PUT', '/api/parametros/sistema', valores),
 
   // ── Comissões ──
-  tabelasComissao: () => enviar<TabelaComissao[]>('GET', '/api/comissoes/parametros/tabelas'),
-  salvarTabelaComissao: (dados: { vigente_de: string; descricao: string; faixas: { de: string; ate: string; percentual: string }[] }, id?: number) =>
-    id
-      ? enviar<TabelaComissao>('PUT', `/api/comissoes/parametros/tabelas/${id}`, dados)
-      : enviar<TabelaComissao>('POST', '/api/comissoes/parametros/tabelas', dados),
-  excluirTabelaComissao: (id: number) => enviar<{ ok: boolean }>('DELETE', `/api/comissoes/parametros/tabelas/${id}`),
+  /** Lista curta (seletores de carteira nas telas de clientes) */
+  carteirasResumo: () => enviar<CarteiraResumo[]>('GET', '/api/carteiras'),
   carteiras: () => enviar<CarteiraComissao[]>('GET', '/api/comissoes/parametros/carteiras'),
-  salvarCarteira: (dados: { nome: string; descricao: string; ativa: boolean; vigente_de?: string; percentual?: string }, id?: number) =>
+  salvarCarteira: (
+    dados: { nome: string; descricao: string; ativa: boolean; geral: boolean; vigente_de?: string; percentual?: string },
+    id?: number,
+  ) =>
     id
       ? enviar<CarteiraComissao>('PUT', `/api/comissoes/parametros/carteiras/${id}`, dados)
       : enviar<CarteiraComissao>('POST', '/api/comissoes/parametros/carteiras', dados),
   excluirCarteira: (id: number) => enviar<{ ok: boolean }>('DELETE', `/api/comissoes/parametros/carteiras/${id}`),
-  incluirPercentualCarteira: (id: number, dados: { vigente_de: string; percentual: string }) =>
-    enviar<CarteiraComissao>('POST', `/api/comissoes/parametros/carteiras/${id}/percentuais`, dados),
-  excluirPercentualCarteira: (id: number, pid: number) =>
-    enviar<CarteiraComissao>('DELETE', `/api/comissoes/parametros/carteiras/${id}/percentuais/${pid}`),
+  salvarTabelaCarteira: (
+    carteira: number,
+    dados: { vigente_de: string; descricao: string; faixas: { de: string; ate: string; percentual: string }[] },
+    id?: number,
+  ) =>
+    id
+      ? enviar<CarteiraComissao>('PUT', `/api/comissoes/parametros/carteiras/${carteira}/tabelas/${id}`, dados)
+      : enviar<CarteiraComissao>('POST', `/api/comissoes/parametros/carteiras/${carteira}/tabelas`, dados),
+  excluirTabelaCarteira: (carteira: number, id: number) =>
+    enviar<CarteiraComissao>('DELETE', `/api/comissoes/parametros/carteiras/${carteira}/tabelas/${id}`),
+  clientesCarteira: (f: { busca?: string; carteira?: string; conferir?: string; limit: number; offset: number }) => {
+    const q = new URLSearchParams();
+    for (const [k, v] of Object.entries(f)) if (v !== undefined && v !== '') q.set(k, String(v));
+    return enviar<{ total: number; clientes: ClienteCarteira[] }>('GET', `/api/comissoes/clientes?${q}`);
+  },
+  moverClientesCarteira: (clientes: number[], carteira_id: number, levar_pedidos: boolean) =>
+    enviar<{ clientes: number; pedidos: number }>('PUT', '/api/comissoes/clientes/carteira', { clientes, carteira_id, levar_pedidos }),
+  carteiraDoCliente: (id: number, carteira_id: number, levar_pedidos: boolean) =>
+    enviar<FichaCliente>('PUT', `/api/clientes/${id}/carteira`, { carteira_id, levar_pedidos }),
   pedidosCarteira: (f: { mes?: string; busca?: string; carteira?: string; limit: number; offset: number }) => {
     const q = new URLSearchParams();
     for (const [k, v] of Object.entries(f)) if (v !== undefined && v !== '') q.set(k, String(v));
     return enviar<{ total: number; pedidos: PedidoCarteira[] }>('GET', `/api/comissoes/pedidos?${q}`);
   },
-  marcarCarteira: (pedidos: string[], carteira_id: number | null) =>
-    enviar<{ alterados: number }>('PUT', '/api/comissoes/pedidos/carteira', { pedidos, carteira_id }),
   historicoCarteira: (codigo: string) => enviar<MovimentoCarteira[]>('GET', `/api/comissoes/pedidos/${codigo}/historico`),
   competenciasComissao: () => enviar<{ competencia: string; fechado: boolean }[]>('GET', '/api/comissoes/apuracao'),
   apuracao: (c: string) => enviar<RespostaApuracao>('GET', `/api/comissoes/apuracao/${c}`),

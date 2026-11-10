@@ -273,6 +273,19 @@ export function garantirEsquema(db: Database.Database): void {
       usuario_id  INTEGER REFERENCES usuarios(id),
       UNIQUE (carteira_id, vigente_de)
     );
+    -- Tabelas de faixas de cada carteira (com vigência; percentual fixo = uma faixa sem limite).
+    -- Substituem comissao_tabelas (tabela geral) e carteira_percentuais, mantidas só como histórico.
+    CREATE TABLE IF NOT EXISTS carteira_tabelas (
+      id          INTEGER PRIMARY KEY AUTOINCREMENT,
+      carteira_id INTEGER NOT NULL REFERENCES carteiras(id),
+      vigente_de  TEXT NOT NULL,
+      descricao   TEXT NOT NULL DEFAULT '',
+      faixas_json TEXT NOT NULL,
+      criado      TEXT NOT NULL,
+      atualizado  TEXT NOT NULL,
+      usuario_id  INTEGER REFERENCES usuarios(id),
+      UNIQUE (carteira_id, vigente_de)
+    );
     -- Histórico da marcação de carteira nos pedidos
     CREATE TABLE IF NOT EXISTS pedidos_carteira_movimentos (
       id                INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -506,4 +519,10 @@ function migrarColunas(db: Database.Database): void {
   if (!colunas(db, 'pedidos').includes('carteira_id')) {
     db.exec(`ALTER TABLE pedidos ADD COLUMN carteira_id INTEGER REFERENCES carteiras(id)`);
   }
+  // Carteiras de clientes: a Carteira Geral (exatamente uma) e a carteira de cada cliente
+  if (!colunas(db, 'carteiras').includes('geral')) db.exec('ALTER TABLE carteiras ADD COLUMN geral INTEGER NOT NULL DEFAULT 0');
+  db.exec('CREATE UNIQUE INDEX IF NOT EXISTS ux_carteiras_geral ON carteiras(geral) WHERE geral = 1');
+  if (!colunas(db, 'clientes').includes('carteira_id')) db.exec('ALTER TABLE clientes ADD COLUMN carteira_id INTEGER REFERENCES carteiras(id)');
+  db.exec('CREATE INDEX IF NOT EXISTS ix_clientes_carteira ON clientes(carteira_id)');
+  db.exec('CREATE INDEX IF NOT EXISTS ix_pedidos_carteira ON pedidos(carteira_id)');
 }

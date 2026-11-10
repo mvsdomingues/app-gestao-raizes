@@ -233,6 +233,7 @@ export function ListaPedidos({ versao, aoAlterar }: Props) {
                   <td>{p.entrega_prevista ? formatarDataBr(p.entrega_prevista) : '—'}</td>
                   <td className="col-cliente">
                     <ClienteVinculado cliente={p.cliente} link={false} />
+                    {p.carteira && <div className="com-sub">{p.carteira}</div>}
                   </td>
                   <td>
                     <NomeUsuario usuario={p.responsavel} />

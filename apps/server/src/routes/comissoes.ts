@@ -1,27 +1,26 @@
 import { Router } from 'express';
 import type { Banco } from '../db/conexao';
 import {
+  carteirasResumo,
   competenciasDisponiveis,
   excluirCarteira,
-  excluirPercentualCarteira,
-  excluirTabelaComissao,
+  excluirTabelaCarteira,
   fecharCompetencia,
   historicoCarteira,
-  incluirPercentualCarteira,
   lerApuracao,
   listarCarteiras,
+  listarClientesCarteira,
   listarPedidosCarteira,
-  listarTabelasComissao,
-  marcarCarteira,
+  moverClientesCarteira,
   reabrirCompetencia,
   registrarPagamento,
   salvarCarteira,
-  salvarTabelaComissao,
+  salvarTabelaCarteira,
 } from '../db/repositorio-comissoes';
 import { corpoJson, ErroHttp } from '../lib/http';
 import { exigirUsuario } from '../lib/sessao';
 
-/** Comissões dos vendedores: parâmetros (faixas e carteiras), marcação de carteira e apuração mensal. */
+/** Comissões dos vendedores: carteiras (com as suas faixas), carteiras dos clientes e apuração mensal. */
 export function rotasComissoes(db: Banco): Router {
   const r = Router();
   const id = (v: string) => {
@@ -31,22 +30,12 @@ export function rotasComissoes(db: Banco): Router {
   };
   const q = (v: unknown) => (typeof v === 'string' && v.trim() ? v.trim() : undefined);
 
-  // ── Parâmetros: tabelas de faixas ──
-  r.get('/api/comissoes/parametros/tabelas', (_req, res) => {
-    res.json(listarTabelasComissao(db));
-  });
-  r.post('/api/comissoes/parametros/tabelas', (req, res) => {
-    res.status(201).json(salvarTabelaComissao(db, corpoJson(req), exigirUsuario(res).id));
-  });
-  r.put('/api/comissoes/parametros/tabelas/:id', (req, res) => {
-    res.json(salvarTabelaComissao(db, corpoJson(req), exigirUsuario(res).id, id(req.params.id)));
-  });
-  r.delete('/api/comissoes/parametros/tabelas/:id', (req, res) => {
-    excluirTabelaComissao(db, id(req.params.id));
-    res.json({ ok: true });
+  /** Lista curta das carteiras (seletores de clientes e filtros) */
+  r.get('/api/carteiras', (_req, res) => {
+    res.json(carteirasResumo(db));
   });
 
-  // ── Parâmetros: carteiras e seus percentuais ──
+  // ── Parâmetros: carteiras e suas tabelas de faixas ──
   r.get('/api/comissoes/parametros/carteiras', (_req, res) => {
     res.json(listarCarteiras(db));
   });
@@ -60,14 +49,36 @@ export function rotasComissoes(db: Banco): Router {
     excluirCarteira(db, id(req.params.id));
     res.json({ ok: true });
   });
-  r.post('/api/comissoes/parametros/carteiras/:id/percentuais', (req, res) => {
-    res.status(201).json(incluirPercentualCarteira(db, id(req.params.id), corpoJson(req), exigirUsuario(res).id));
+  r.post('/api/comissoes/parametros/carteiras/:id/tabelas', (req, res) => {
+    res.status(201).json(salvarTabelaCarteira(db, id(req.params.id), corpoJson(req), exigirUsuario(res).id));
   });
-  r.delete('/api/comissoes/parametros/carteiras/:id/percentuais/:pid', (req, res) => {
-    res.json(excluirPercentualCarteira(db, id(req.params.id), id(req.params.pid)));
+  r.put('/api/comissoes/parametros/carteiras/:id/tabelas/:tid', (req, res) => {
+    res.json(salvarTabelaCarteira(db, id(req.params.id), corpoJson(req), exigirUsuario(res).id, id(req.params.tid)));
+  });
+  r.delete('/api/comissoes/parametros/carteiras/:id/tabelas/:tid', (req, res) => {
+    res.json(excluirTabelaCarteira(db, id(req.params.id), id(req.params.tid)));
   });
 
-  // ── Carteiras dos pedidos (marcação) ──
+  // ── Carteiras dos clientes ──
+  r.get('/api/comissoes/clientes', (req, res) => {
+    res.json(
+      listarClientesCarteira(db, {
+        busca: q(req.query.busca),
+        carteira: q(req.query.carteira),
+        conferir: q(req.query.conferir),
+        limit: Number(req.query.limit) || undefined,
+        offset: Number(req.query.offset) || undefined,
+      }),
+    );
+  });
+  /** { clientes: [ids], carteira_id, levar_pedidos } */
+  r.put('/api/comissoes/clientes/carteira', (req, res) => {
+    const b = corpoJson(req);
+    const u = exigirUsuario(res);
+    res.json(moverClientesCarteira(db, b.clientes, b.carteira_id, b.levar_pedidos === true, { usuarioId: u.id, nome: u.nome, origem: 'CADASTRO' }));
+  });
+
+  // ── Pedidos por carteira (consulta) ──
   r.get('/api/comissoes/pedidos', (req, res) => {
     res.json(
       listarPedidosCarteira(db, {
@@ -79,10 +90,6 @@ export function rotasComissoes(db: Banco): Router {
         offset: Number(req.query.offset) || undefined,
       }),
     );
-  });
-  r.put('/api/comissoes/pedidos/carteira', (req, res) => {
-    const b = corpoJson(req);
-    res.json(marcarCarteira(db, b.pedidos, b.carteira_id, exigirUsuario(res).id));
   });
   r.get('/api/comissoes/pedidos/:codigo/historico', (req, res) => {
     res.json(historicoCarteira(db, String(req.params.codigo)));

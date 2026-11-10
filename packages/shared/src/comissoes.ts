@@ -1,15 +1,15 @@
 // ══════════════════════════════════════════════════════════
 // COMISSÕES DOS VENDEDORES (remuneração variável, fechamento mensal)
 //
+// - Todo cliente está em uma carteira; o pedido herda a carteira do cliente
+//   quando é criado. Sem escolha, vale a carteira marcada como "Carteira Geral".
+// - Não há regra geral: cada carteira tem a sua tabela de faixas progressivas,
+//   com vigência (percentual fixo = uma faixa só, de R$ 0 sem limite).
+// - Apuração separada por carteira: em cada carteira, o volume do vendedor nela
+//   passa pelas faixas daquela carteira; o total do vendedor é a soma.
 // - Pedido conta no mês em que entrou pela 1ª vez na etapa "Em Produção"
-//   (e não foi cancelado nem voltou para antes dela).
-// - Base: valor dos produtos do pedido, sem o frete de entrega.
-// - Vendedor: responsável pelo orçamento.
-// - Faixas progressivas (tabela geral, com vigência): cada percentual vale só
-//   para a parte das vendas NORMAIS do vendedor no mês dentro da faixa. As
-//   vendas de carteira NÃO contam para atingir as faixas.
-// - Carteiras especiais: percentual fixo da carteira sobre o pedido, à parte.
-// - Vigência: valem a tabela e os percentuais vigentes no último dia do mês.
+//   (e não foi cancelado nem voltou para antes dela). Base: produtos, sem frete.
+// - Vendedor: responsável pelo orçamento. Vigência: o último dia do mês.
 // ══════════════════════════════════════════════════════════
 
 export const LIMITE_NOME_CARTEIRA = 80;
@@ -26,6 +26,7 @@ export interface FaixaComissao {
   percentual: number;
 }
 
+/** Tabela de faixas de uma carteira, a partir de uma data. */
 export interface TabelaComissao {
   id: number;
   /** AAAA-MM-DD */
@@ -35,21 +36,34 @@ export interface TabelaComissao {
   atualizado?: string;
 }
 
-export interface PercentualCarteira {
-  id: number;
-  vigente_de: string;
-  percentual: number;
-}
-
 export interface CarteiraComissao {
   id: number;
   nome: string;
   descricao: string;
   ativa: boolean;
-  percentuais: PercentualCarteira[];
-  /** Pedidos marcados com a carteira (cadastro) */
+  /** Carteira Geral: destino dos clientes sem carteira escolhida (sempre exatamente uma) */
+  geral: boolean;
+  /** Tabelas de faixas com vigência, mais recentes primeiro */
+  tabelas: TabelaComissao[];
+  /** Clientes na carteira */
+  clientes?: number;
+  /** Pedidos na carteira */
   pedidos?: number;
 }
+
+/** Carteira resumida (seletores das telas de clientes e pedidos). */
+export interface CarteiraResumo {
+  id: number;
+  nome: string;
+  geral: boolean;
+  ativa: boolean;
+}
+
+/** Faixas de percentual fixo: uma faixa só, de R$ 0 sem limite. */
+export const faixasPercentualFixo = (percentual: number): FaixaComissao[] => [{ de: 0, ate: null, percentual }];
+
+/** A tabela é um percentual fixo (uma faixa sem limite)? */
+export const tabelaEhFixa = (faixas: FaixaComissao[]) => faixas.length === 1 && faixas[0]!.ate === null;
 
 const centavos = (v: number) => Math.round(v * 100) / 100;
 
@@ -132,79 +146,79 @@ export interface PedidoApuracao {
   data_conclusao: string;
   /** Valor dos produtos, sem frete */
   valor: number;
-  carteira_id: number | null;
+  carteira_id: number;
 }
 
 export interface PedidoApurado extends PedidoApuracao {
-  carteira: string | null;
-  /** Percentual aplicado (carteira) ou taxa efetiva da progressiva (normal) */
+  carteira: string;
+  /** Taxa efetiva da carteira para o vendedor (comissão da carteira ÷ vendas nela) */
   percentual: number;
   comissao: number;
 }
 
+/** Conta de um vendedor numa carteira. */
 export interface CarteiraApurada {
   carteira_id: number;
   nome: string;
-  /** null = carteira sem percentual vigente no mês */
-  percentual: number | null;
+  /** Tabela vigente no mês (null = sem tabela: comissão zerada) */
+  tabela: TabelaComissao | null;
+  /** Volume do vendedor nesta carteira (passa pelas faixas dela) */
   vendas: number;
+  faixas: DetalheFaixa[];
+  taxa_efetiva: number;
   comissao: number;
 }
 
 export interface VendedorApurado {
   vendedor_id: number | null;
   vendedor: string;
-  vendas_normais: number;
-  vendas_carteiras: number;
-  /** Volume usado para as faixas (só as vendas normais; carteiras não contam) */
-  volume: number;
-  /** Comissão progressiva sobre o volume */
-  progressiva_volume: number;
-  /** Comissão progressiva ÷ vendas normais (taxa média, usada para dividir entre os pedidos) */
-  taxa_efetiva: number;
-  faixas: DetalheFaixa[];
-  comissao_normais: number;
+  vendas: number;
   carteiras: CarteiraApurada[];
-  comissao_carteiras: number;
   total: number;
   pedidos: PedidoApurado[];
 }
 
+/** Total do mês numa carteira (todos os vendedores). */
+export interface TotalCarteira {
+  carteira_id: number;
+  nome: string;
+  tabela: TabelaComissao | null;
+  pedidos: number;
+  vendas: number;
+  comissao: number;
+}
+
 export interface ApuracaoComissoes {
+  /** 2 = apuração por carteira (fotos antigas, sem versão, são convertidas por normalizarApuracao) */
+  versao: 2;
   competencia: string;
   /** Último dia do mês: data das vigências usadas */
   data_referencia: string;
-  tabela: TabelaComissao | null;
   vendedores: VendedorApurado[];
-  totais: {
-    pedidos: number;
-    vendas_normais: number;
-    vendas_carteiras: number;
-    comissao_normais: number;
-    comissao_carteiras: number;
-    total: number;
-  };
-  /** Situações que pedem atenção (sem tabela vigente, carteira sem percentual…) */
+  carteiras: TotalCarteira[];
+  totais: { pedidos: number; vendas: number; total: number };
+  /** Situações que pedem atenção (carteira sem tabela vigente…) */
   avisos: string[];
   calculado_em: string;
+  /** Foto de um mês fechado antes das carteiras de clientes (tabela geral + carteiras fixas) */
+  formato_antigo?: boolean;
 }
 
-/** Calcula as comissões do mês a partir dos pedidos, da tabela de faixas e das carteiras. */
+const ordemPedido = (a: PedidoApuracao, b: PedidoApuracao) => a.data_conclusao.localeCompare(b.data_conclusao) || a.codigo.localeCompare(b.codigo);
+const porNome = (a: { nome: string }, b: { nome: string }) => a.nome.localeCompare(b.nome, 'pt-BR');
+
+/** Calcula as comissões do mês: por vendedor e carteira, cada carteira com as suas faixas. */
 export function apurarComissoes(
   competencia: string,
   pedidos: PedidoApuracao[],
-  tabelas: TabelaComissao[],
   carteiras: CarteiraComissao[],
   calculadoEm: string,
 ): ApuracaoComissoes {
   const ref = ultimoDiaCompetencia(competencia);
-  const tabela = vigenteEm(tabelas, ref);
   const avisos: string[] = [];
-  if (!tabela && pedidos.some((p) => p.carteira_id === null)) {
-    avisos.push(`Nenhuma tabela de faixas vigente em ${ref.split('-').reverse().join('/')}: a comissão progressiva ficou zerada.`);
-  }
-  const percCarteira = new Map<number, { nome: string; percentual: number | null }>();
-  for (const c of carteiras) percCarteira.set(c.id, { nome: c.nome, percentual: vigenteEm(c.percentuais, ref)?.percentual ?? null });
+  const info = new Map<number, { nome: string; tabela: TabelaComissao | null }>();
+  for (const c of carteiras) info.set(c.id, { nome: c.nome, tabela: vigenteEm(c.tabelas, ref) });
+  const infoDe = (id: number) => info.get(id) ?? { nome: `Carteira ${id}`, tabela: null };
 
   const porVendedor = new Map<string, PedidoApuracao[]>();
   for (const p of pedidos) {
@@ -212,84 +226,159 @@ export function apurarComissoes(
     porVendedor.set(k, [...(porVendedor.get(k) ?? []), p]);
   }
 
-  const semPercentual = new Set<string>();
+  const semTabela = new Set<string>();
   const vendedores: VendedorApurado[] = [...porVendedor.values()].map((lista) => {
-    const ordem = [...lista].sort((a, b) => a.data_conclusao.localeCompare(b.data_conclusao) || a.codigo.localeCompare(b.codigo));
-    const normais = ordem.filter((p) => p.carteira_id === null);
-    const deCarteira = ordem.filter((p) => p.carteira_id !== null);
-    const vendasNormais = centavos(normais.reduce((s, p) => s + p.valor, 0));
-    const vendasCarteiras = centavos(deCarteira.reduce((s, p) => s + p.valor, 0));
-    // Carteiras não contam para as faixas: o volume é só o das vendas normais
-    const volume = vendasNormais;
-    const prog = tabela ? comissaoProgressiva(volume, tabela.faixas) : { total: 0, faixas: [] };
-    const taxa = volume > 0 ? prog.total / volume : 0;
-    const comissaoNormais = prog.total;
-
-    // Comissão progressiva dividida entre os pedidos normais pelo valor; centavos que sobram no último
+    const ordem = [...lista].sort(ordemPedido);
+    const porCarteira = new Map<number, PedidoApuracao[]>();
+    for (const p of ordem) porCarteira.set(p.carteira_id, [...(porCarteira.get(p.carteira_id) ?? []), p]);
     const apurados: PedidoApurado[] = [];
-    let distribuido = 0;
-    normais.forEach((p, i) => {
-      const c = i === normais.length - 1 ? centavos(comissaoNormais - distribuido) : centavos(p.valor * taxa);
-      distribuido = centavos(distribuido + c);
-      apurados.push({ ...p, carteira: null, percentual: taxa, comissao: c });
+    const carteirasV: CarteiraApurada[] = [...porCarteira.entries()].map(([id, ps]) => {
+      const { nome, tabela } = infoDe(id);
+      if (!tabela) semTabela.add(nome);
+      const vendas = centavos(ps.reduce((s, p) => s + p.valor, 0));
+      const prog = tabela ? comissaoProgressiva(vendas, tabela.faixas) : { total: 0, faixas: [] };
+      const taxa = vendas > 0 ? prog.total / vendas : 0;
+      // Comissão da carteira dividida entre os pedidos dela pelo valor; centavos que sobram no último
+      let distribuido = 0;
+      ps.forEach((p, i) => {
+        const c = i === ps.length - 1 ? centavos(prog.total - distribuido) : centavos(p.valor * taxa);
+        distribuido = centavos(distribuido + c);
+        apurados.push({ ...p, carteira: nome, percentual: taxa, comissao: c });
+      });
+      return { carteira_id: id, nome, tabela, vendas, faixas: prog.faixas, taxa_efetiva: taxa, comissao: prog.total };
     });
-
-    const cart = new Map<number, CarteiraApurada>();
-    for (const p of deCarteira) {
-      const info = percCarteira.get(p.carteira_id!) ?? { nome: `Carteira ${p.carteira_id}`, percentual: null };
-      if (info.percentual === null) semPercentual.add(info.nome);
-      const pct = info.percentual ?? 0;
-      const c = centavos(p.valor * pct);
-      apurados.push({ ...p, carteira: info.nome, percentual: pct, comissao: c });
-      const atual = cart.get(p.carteira_id!) ?? { carteira_id: p.carteira_id!, nome: info.nome, percentual: info.percentual, vendas: 0, comissao: 0 };
-      atual.vendas = centavos(atual.vendas + p.valor);
-      atual.comissao = centavos(atual.comissao + c);
-      cart.set(p.carteira_id!, atual);
-    }
-    const carteirasApuradas = [...cart.values()].sort((a, b) => a.nome.localeCompare(b.nome, 'pt-BR'));
-    const comissaoCarteiras = centavos(carteirasApuradas.reduce((s, c) => s + c.comissao, 0));
-    apurados.sort((a, b) => a.data_conclusao.localeCompare(b.data_conclusao) || a.codigo.localeCompare(b.codigo));
+    carteirasV.sort(porNome);
+    apurados.sort(ordemPedido);
     return {
       vendedor_id: lista[0]!.vendedor_id,
       vendedor: lista[0]!.vendedor,
-      vendas_normais: vendasNormais,
-      vendas_carteiras: vendasCarteiras,
-      volume,
-      progressiva_volume: prog.total,
-      taxa_efetiva: taxa,
-      faixas: prog.faixas,
-      comissao_normais: comissaoNormais,
-      carteiras: carteirasApuradas,
-      comissao_carteiras: comissaoCarteiras,
-      total: centavos(comissaoNormais + comissaoCarteiras),
+      vendas: centavos(ordem.reduce((s, p) => s + p.valor, 0)),
+      carteiras: carteirasV,
+      total: centavos(carteirasV.reduce((s, c) => s + c.comissao, 0)),
       pedidos: apurados,
     };
   });
   vendedores.sort((a, b) => b.total - a.total || a.vendedor.localeCompare(b.vendedor, 'pt-BR'));
-  for (const nome of semPercentual) avisos.push(`A carteira "${nome}" não tem percentual vigente no mês: comissão zerada nos pedidos dela.`);
-
-  const soma = (f: (v: VendedorApurado) => number) => centavos(vendedores.reduce((s, v) => s + f(v), 0));
+  for (const nome of semTabela) {
+    avisos.push(`A carteira "${nome}" não tem tabela de faixas vigente em ${ref.split('-').reverse().join('/')}: comissão zerada nos pedidos dela.`);
+  }
   return {
+    versao: 2,
     competencia,
     data_referencia: ref,
-    tabela,
     vendedores,
+    carteiras: totaisPorCarteira(vendedores),
     totais: {
       pedidos: pedidos.length,
-      vendas_normais: soma((v) => v.vendas_normais),
-      vendas_carteiras: soma((v) => v.vendas_carteiras),
-      comissao_normais: soma((v) => v.comissao_normais),
-      comissao_carteiras: soma((v) => v.comissao_carteiras),
-      total: soma((v) => v.total),
+      vendas: centavos(vendedores.reduce((s, v) => s + v.vendas, 0)),
+      total: centavos(vendedores.reduce((s, v) => s + v.total, 0)),
     },
     avisos,
     calculado_em: calculadoEm,
   };
 }
 
+function totaisPorCarteira(vendedores: VendedorApurado[]): TotalCarteira[] {
+  const mapa = new Map<number, TotalCarteira>();
+  for (const v of vendedores) {
+    for (const c of v.carteiras) {
+      const t = mapa.get(c.carteira_id) ?? { carteira_id: c.carteira_id, nome: c.nome, tabela: c.tabela, pedidos: 0, vendas: 0, comissao: 0 };
+      t.pedidos += v.pedidos.filter((p) => p.carteira_id === c.carteira_id).length;
+      t.vendas = centavos(t.vendas + c.vendas);
+      t.comissao = centavos(t.comissao + c.comissao);
+      mapa.set(c.carteira_id, t);
+    }
+  }
+  return [...mapa.values()].sort(porNome);
+}
+
+/** Foto antiga (antes das carteiras de clientes): tabela geral + carteiras de percentual fixo. */
+interface ApuracaoAntiga {
+  competencia: string;
+  data_referencia: string;
+  tabela: TabelaComissao | null;
+  vendedores: {
+    vendedor_id: number | null;
+    vendedor: string;
+    vendas_normais: number;
+    taxa_efetiva: number;
+    faixas: DetalheFaixa[];
+    comissao_normais: number;
+    carteiras: { carteira_id: number; nome: string; percentual: number | null; vendas: number; comissao: number }[];
+    total: number;
+    pedidos: (Omit<PedidoApurado, 'carteira' | 'carteira_id'> & { carteira: string | null; carteira_id: number | null })[];
+  }[];
+  totais: { pedidos: number; total: number };
+  avisos: string[];
+  calculado_em: string;
+}
+
+/** Id usado nas fotos antigas para as "vendas normais" (tabela geral). */
+const ID_NORMAIS = 0;
+const NOME_NORMAIS = 'Vendas normais (tabela geral)';
+
+/**
+ * Apuração no formato atual. Meses fechados antes das carteiras de clientes guardam
+ * a foto antiga: ela é só convertida para exibição (os valores não mudam).
+ */
+export function normalizarApuracao(a: unknown): ApuracaoComissoes {
+  const x = a as Partial<ApuracaoComissoes> & Partial<ApuracaoAntiga>;
+  if (x.versao === 2) return x as ApuracaoComissoes;
+  const antiga = x as ApuracaoAntiga;
+  const vendedores: VendedorApurado[] = antiga.vendedores.map((v) => {
+    const carteiras: CarteiraApurada[] = [];
+    if (v.vendas_normais > 0 || v.comissao_normais > 0) {
+      carteiras.push({
+        carteira_id: ID_NORMAIS,
+        nome: NOME_NORMAIS,
+        tabela: antiga.tabela,
+        vendas: v.vendas_normais,
+        faixas: v.faixas,
+        taxa_efetiva: v.taxa_efetiva,
+        comissao: v.comissao_normais,
+      });
+    }
+    for (const c of v.carteiras) {
+      const pct = c.percentual ?? 0;
+      carteiras.push({
+        carteira_id: c.carteira_id,
+        nome: c.nome,
+        tabela: c.percentual === null ? null : { id: 0, vigente_de: '', descricao: 'Percentual fixo', faixas: faixasPercentualFixo(pct) },
+        vendas: c.vendas,
+        faixas: comissaoProgressiva(c.vendas, faixasPercentualFixo(pct)).faixas,
+        taxa_efetiva: pct,
+        comissao: c.comissao,
+      });
+    }
+    return {
+      vendedor_id: v.vendedor_id,
+      vendedor: v.vendedor,
+      vendas: centavos(carteiras.reduce((s, c) => s + c.vendas, 0)),
+      carteiras,
+      total: v.total,
+      pedidos: v.pedidos.map((p) => ({ ...p, carteira_id: p.carteira_id ?? ID_NORMAIS, carteira: p.carteira ?? NOME_NORMAIS })),
+    };
+  });
+  return {
+    versao: 2,
+    competencia: antiga.competencia,
+    data_referencia: antiga.data_referencia,
+    vendedores,
+    carteiras: totaisPorCarteira(vendedores),
+    totais: {
+      pedidos: antiga.totais.pedidos,
+      vendas: centavos(vendedores.reduce((s, v) => s + v.vendas, 0)),
+      total: antiga.totais.total,
+    },
+    avisos: antiga.avisos,
+    calculado_em: antiga.calculado_em,
+    formato_antigo: true,
+  };
+}
+
 // ── Tipos da API ─────────────────────────────────────────
 
-/** Pedido na tela "Carteiras dos pedidos". */
+/** Pedido na consulta "Pedidos por carteira". */
 export interface PedidoCarteira {
   codigo: string;
   orcamento: string;
@@ -302,8 +391,26 @@ export interface PedidoCarteira {
   data_conclusao: string | null;
   carteira_id: number | null;
   carteira: string | null;
-  /** Mês da conclusão já fechado: carteira não pode mudar */
+  /** Mês da conclusão já fechado */
   bloqueado: boolean;
+}
+
+/** Cliente na tela "Carteiras dos clientes". */
+export interface ClienteCarteira {
+  id: number;
+  codigo: string;
+  nome: string;
+  documento: string;
+  cidade: string;
+  uf: string;
+  ativo: boolean;
+  carteira_id: number;
+  carteira: string;
+  /** Pedidos do cliente que ainda não entraram em Em Produção (podem acompanhar a troca) */
+  pedidos_abertos: number;
+  pedidos: number;
+  /** Pendência da migração (pedidos em várias carteiras) ou outra a conferir */
+  alerta: string | null;
 }
 
 export interface MovimentoCarteira {

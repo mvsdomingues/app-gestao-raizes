@@ -157,7 +157,8 @@ describe('cadastro de clientes (API)', () => {
     expect((await req('GET', `/api/clientes/${thais}`, undefined, vendedor)).json.historico).toBeUndefined();
     expect((await req('GET', `/api/clientes/${thais}/faturamento`, undefined, vendedor)).status).toBe(200);
     const f = await req('GET', `/api/clientes/${thais}`);
-    expect(f.json.historico.at(-1)).toMatchObject({ origem: 'Carrinho', autor: 'Vendedora', texto: 'Cliente incluído' });
+    expect(f.json.historico.at(-1)).toMatchObject({ origem: 'Carrinho', autor: 'Vendedora', texto: 'Cliente incluído na carteira Geral' });
+    expect(f.json.cliente).toMatchObject({ carteira: 'Geral' });
   });
 
   it('orçamento leva a cópia do cliente; sem cliente não é enviado', async () => {

@@ -27,6 +27,7 @@ import { registrarMovimentoOrcamento } from './repositorio-orcamentos';
 import { colunasResponsavel, extrairResponsavel } from './repositorio-usuarios';
 import { isoLocal } from '../lib/datas';
 import { faturamentoDoBanco } from '../lib/faturamento';
+import { carteiraParaPedido } from './repositorio-comissoes';
 import type { Banco } from './conexao';
 import { checklistDoPedido, copiarChecklistParaPedido } from './repositorio-checklist';
 
@@ -46,6 +47,7 @@ interface LinhaPedido {
 const SELECT_PEDIDO = `
   SELECT p.id, p.codigo, p.status, p.orcamento_id, p.observacao, p.criado, p.atualizado, p.entrega_prevista,
          o.total, o.qtd_itens, p.cliente_id, o.cliente_nome, o.cliente_telefone, o.cliente_email,
+         (SELECT ca.nome FROM carteiras ca WHERE ca.id = p.carteira_id) AS carteira,
          (SELECT COUNT(*) FROM pedidos_checklist c WHERE c.pedido_id = p.id) AS checklist_total,
          (SELECT COUNT(*) FROM pedidos_checklist c WHERE c.pedido_id = p.id AND c.feito = 1) AS checklist_feitos,
          ${colunasResponsavel('ur', 'resp')}
@@ -275,9 +277,12 @@ export function criarPedido(
     const codigo = codigoPedido(id);
     const agora = isoLocal();
     db.prepare(
-      `INSERT INTO pedidos (id, codigo, orcamento_id, status, observacao, criado, atualizado, usuario_id, entrega_prevista, faturamento_json, cliente_id)
-       VALUES (?, ?, ?, 'CRIADO', ?, ?, ?, ?, ?, ?, ?)`,
-    ).run(id, codigo, orcamentoId, observacao, agora, agora, usuarioId, existe.entrega_prevista, existe.faturamento_json, existe.cliente_id);
+      `INSERT INTO pedidos (id, codigo, orcamento_id, status, observacao, criado, atualizado, usuario_id, entrega_prevista, faturamento_json, cliente_id, carteira_id)
+       VALUES (?, ?, ?, 'CRIADO', ?, ?, ?, ?, ?, ?, ?, ?)`,
+    ).run(id, codigo, orcamentoId, observacao, agora, agora, usuarioId, existe.entrega_prevista, existe.faturamento_json, existe.cliente_id,
+      // Carteira do cliente no momento da criação (sem cliente: Carteira Geral)
+      carteiraParaPedido(db, existe.cliente_id),
+    );
     registrarMovimento(db, id, null, 'CRIADO', agora, opcoes.observacaoMovimento ?? observacao, quemMovimenta, origem);
     if (observacao) inserirObservacao(db, id, observacao, agora, quemMovimenta, origem);
     // Situação do orçamento passa a "Pedido gerado"

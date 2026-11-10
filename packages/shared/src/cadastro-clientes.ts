@@ -41,6 +41,9 @@ export interface Cliente extends DadosFaturamento {
   kommo_id: number | null;
   /** Cliente em que este foi mesclado (inativo) */
   mesclado_em: string | null;
+  /** Carteira do cliente (comissões); sempre preenchida — sem escolha, a Carteira Geral */
+  carteira_id: number | null;
+  carteira: string | null;
   criado: string;
   atualizado: string;
   criado_por: string | null;
@@ -66,6 +69,8 @@ export interface ResumoCliente {
   pedidos: number;
   /** Suspeitas de duplicidade em aberto */
   duplicidades: number;
+  carteira_id: number | null;
+  carteira: string | null;
 }
 
 export interface HistoricoCliente {
@@ -77,6 +82,8 @@ export interface HistoricoCliente {
 
 export interface FichaCliente {
   cliente: Cliente;
+  /** Pedidos que ainda não entraram em Em Produção (podem acompanhar uma troca de carteira) */
+  pedidos_abertos: number;
   historico: HistoricoCliente[];
   orcamentos: { id: number; numero: string; data_hora: string; status: string; total: number }[];
   pedidos: { codigo: string; criado: string; status: string; total: number }[];

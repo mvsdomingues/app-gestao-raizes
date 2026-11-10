@@ -98,6 +98,8 @@ const REGRAS: Regra[] = [
   { metodos: 'GET', caminho: /^\/api\/comissoes\/parametros(\/|$)/, telas: ['comissoes-parametros', 'comissoes-carteiras', 'comissoes-apuracao'] },
   { metodos: 'ESCRITA', caminho: /^\/api\/comissoes\/parametros(\/|$)/, telas: ['comissoes-parametros'] },
   { metodos: 'TODOS', caminho: /^\/api\/comissoes\/pedidos(\/|$)/, telas: ['comissoes-carteiras'] },
+  { metodos: 'TODOS', caminho: /^\/api\/comissoes\/clientes(\/|$)/, telas: ['comissoes-carteiras'] },
+  { metodos: 'GET', caminho: /^\/api\/carteiras$/, telas: [] },
   { metodos: 'TODOS', caminho: /^\/api\/comissoes\/apuracao(\/|$)/, telas: ['comissoes-apuracao'] },
   { metodos: 'TODOS', caminho: /^\/api\/comissoes(\/|$)/, telas: ['comissoes-apuracao'] },
   // Mockups dos produtos de um orçamento (estúdio)

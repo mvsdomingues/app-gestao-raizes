@@ -1,4 +1,4 @@
-import { formatarDataBr, vigenteEm, type CarteiraComissao, type FaixaComissao } from '@raizes/shared';
+import { formatarDataBr, tabelaEhFixa, vigenteEm, type CarteiraComissao, type FaixaComissao } from '@raizes/shared';
 
 export const pct = (v: number, casas = 2) =>
   `${(v * 100).toLocaleString('pt-BR', { minimumFractionDigits: 0, maximumFractionDigits: casas })}%`;
@@ -24,10 +24,13 @@ export function resumoFaixas(faixas: FaixaComissao[]): string {
     .join(' · ');
 }
 
-/** "5% desde 01/01/2026" (percentual vigente hoje) */
-export function percentualAtual(c: CarteiraComissao): string {
-  const v = vigenteEm(c.percentuais, hojeIso());
-  if (v) return `${pct(v.percentual)} desde ${formatarDataBr(v.vigente_de)}`;
-  const futuro = [...c.percentuais].sort((a, b) => a.vigente_de.localeCompare(b.vigente_de))[0];
-  return futuro ? `a partir de ${formatarDataBr(futuro.vigente_de)}: ${pct(futuro.percentual)}` : 'sem percentual';
+/** Faixas resumidas, ou "1,5% fixo" quando é uma faixa só. */
+export const resumoRegra = (faixas: FaixaComissao[]) => (tabelaEhFixa(faixas) ? `${pct(faixas[0]!.percentual)} fixo` : resumoFaixas(faixas));
+
+/** Tabela vigente hoje: "desde 01/11/2026: até R$ 10.000 → 2,5% · …" */
+export function tabelaAtual(c: CarteiraComissao): string {
+  const v = vigenteEm(c.tabelas, hojeIso());
+  if (v) return `desde ${formatarDataBr(v.vigente_de)}: ${resumoRegra(v.faixas)}`;
+  const futuro = [...c.tabelas].sort((a, b) => a.vigente_de.localeCompare(b.vigente_de))[0];
+  return futuro ? `a partir de ${formatarDataBr(futuro.vigente_de)}: ${resumoRegra(futuro.faixas)}` : 'sem tabela (comissão zerada)';
 }

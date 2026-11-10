@@ -18,6 +18,7 @@ import {
   suspeitasDe,
   type Autor,
 } from '../db/repositorio-cadastro-clientes';
+import { exigirCarteiraAtiva, moverClientesCarteira } from '../db/repositorio-comissoes';
 import { notasKommoAtivas } from '../db/repositorio-parametros';
 import type { ServicoKommo } from '../kommo/servico';
 import { corpoJson, ErroHttp } from '../lib/http';
@@ -90,6 +91,7 @@ export function rotasClientes(db: Banco, kommo: ServicoKommo | null): Router {
         situacao: texto(req.query.situacao),
         ativos: texto(req.query.ativos),
         pendencias: texto(req.query.pendencias),
+        carteira: texto(req.query.carteira),
         limit: Number(req.query.limit) || 30,
         offset: Number(req.query.offset) || 0,
       }),
@@ -101,6 +103,9 @@ export function rotasClientes(db: Banco, kommo: ServicoKommo | null): Router {
     const u = exigirUsuario(res);
     const corpo = corpoJson(req);
     const completo = u.permissoes.includes('clientes') && corpo.origem !== 'carrinho';
+    // Carteira escolhida só por quem cuida do cadastro ou das carteiras; no carrinho vai para a Carteira Geral
+    const podeCarteira = (u.permissoes.includes('clientes') || u.permissoes.includes('comissoes-carteiras')) && corpo.origem !== 'carrinho';
+    const carteiraId = podeCarteira && corpo.carteira_id ? exigirCarteiraAtiva(db, corpo.carteira_id) : null;
     try {
       const r2 = criarClienteCadastro(
         db,
@@ -109,6 +114,7 @@ export function rotasClientes(db: Banco, kommo: ServicoKommo | null): Router {
         {
           basico: !completo,
           criarMesmoAssim: corpo.criar_mesmo_assim === true,
+          carteiraId,
         },
       );
       res.status(201).json(r2);
@@ -166,6 +172,15 @@ export function rotasClientes(db: Banco, kommo: ServicoKommo | null): Router {
 
   r.post('/api/clientes/:id/ativo', (req, res) => {
     res.json(definirAtivo(db, idDe(req.params.id), corpoJson(req).ativo === true, autorDe(res, 'CADASTRO')));
+  });
+
+  /** Troca a carteira: { carteira_id, levar_pedidos } (levar = também os pedidos que ainda não entraram em produção) */
+  r.put('/api/clientes/:id/carteira', (req, res) => {
+    const corpo = corpoJson(req);
+    const u = exigirUsuario(res);
+    const id = idDe(req.params.id);
+    moverClientesCarteira(db, [id], corpo.carteira_id, corpo.levar_pedidos === true, { usuarioId: u.id, nome: u.nome, origem: 'CADASTRO' });
+    res.json(fichaCliente(db, id));
   });
 
   r.post('/api/clientes/:id/conferido', (req, res) => {

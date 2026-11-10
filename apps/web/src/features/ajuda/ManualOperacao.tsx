@@ -676,6 +676,10 @@ export function ManualOperacao() {
         <h4>Ficha do cliente</h4>
         <ul>
           <li>Dados (os mesmos do faturamento, mais telefone principal e observações internas) e <Bt>Salvar alterações</Bt>.</li>
+          <li>
+            <b>Carteira</b> (comissões): mostrada no topo da ficha; <Bt>Mudar carteira</Bt> vale para os próximos pedidos e pode
+            levar os que ainda não entraram em produção.
+          </li>
           <li>Telefones e e-mails adicionais, com descrição (ex.: financeiro). Também são usados na busca e na conferência de duplicidade.</li>
           <li>Totais, pedidos e orçamentos do cliente, e o <b>histórico</b>: quem alterou o quê, quando e por onde (cadastro, carrinho, aceite pelo link, pedido, mesclagem).</li>
           <li>
@@ -726,41 +730,53 @@ export function ManualOperacao() {
           Grupo <b>Comissões</b> do menu, com três telas, cada uma com permissão própria em Acessos. As contas estão em{' '}
           <Menu>Ajuda › Memórias de cálculo › Comissões</Menu>.
         </p>
-        <h4>1. Parâmetros de comissão</h4>
+        <Dica tipo="regra">
+          Todo cliente está numa <b>carteira</b>; o pedido recebe a carteira do cliente quando é criado e a comissão usa a tabela
+          dessa carteira. Não há regra geral: cada carteira tem as suas faixas. Cliente sem carteira escolhida entra na carteira
+          marcada como <b>Carteira Geral</b> (sempre uma).
+        </Dica>
+        <h4>1. Parâmetros de comissão (carteiras)</h4>
         <ul>
           <li>
-            <b>Faixas progressivas</b>: <Bt>+ Incluir</Bt> uma tabela com <i>vigente a partir de</i>, descrição e as faixas (até
-            quanto e o %). Cada faixa começa onde a anterior termina; a última vale para tudo acima. Para mudar valores a partir
-            de uma data, inclua uma nova tabela com essa vigência — ela já vem preenchida com a mais recente. As anteriores
-            continuam valendo para os meses delas.
+            <Bt>+ Incluir</Bt> uma carteira: nome, descrição e, se quiser, já um percentual fixo com vigência. Marque{' '}
+            <b>Carteira Geral</b> para que ela receba os clientes sem carteira (a marca sai da carteira anterior).
           </li>
           <li>
-            <b>Carteiras especiais</b>: nome, descrição, ativa/inativa e o percentual com vigência. Para mudar o percentual, abra
-            a carteira e use <Bt>+ Nova vigência</Bt>. Carteira já usada em pedidos não é excluída: inative-a.
+            Abra a carteira e use <Bt>+ Nova vigência</Bt> para incluir a tabela: <b>faixas progressivas</b> (até quanto e o %;
+            cada faixa começa onde a anterior termina e a última vale para tudo acima) ou <b>percentual fixo</b>. A nova tabela
+            vem preenchida com a mais recente; as anteriores continuam valendo para os meses delas.
+          </li>
+          <li>
+            A Carteira Geral não é inativada nem excluída. Carteira com clientes ativos não é inativada: mova os clientes antes.
+            Carteira que já teve cliente ou pedido não é excluída.
           </li>
         </ul>
-        <h4>2. Carteiras dos pedidos (acesso restrito)</h4>
+        <h4>2. Carteiras dos clientes (acesso restrito)</h4>
         <Passos
           itens={[
-            'Filtre pelo mês de conclusão (entrada em Em Produção), pelo pedido/orçamento/cliente ou pela carteira. "Todos os pedidos" mostra também os ainda não concluídos.',
-            'Marque um ou vários pedidos na caixa de seleção.',
+            'Na aba Clientes, filtre por nome/telefone/documento, pela carteira ou por “Para conferir”.',
+            'Marque um ou vários clientes na caixa de seleção.',
             <>
-              Escolha a carteira e clique em <Bt>Marcar carteira</Bt> (ou <Bt>Tirar carteira</Bt>).
+              Escolha a carteira e clique em <Bt>Mover</Bt>. Vale para os próximos pedidos; o sistema pergunta se leva também os
+              pedidos que ainda não entraram em produção (os que já entraram continuam na carteira de antes).
             </>,
             <>
-              <Bt>Histórico</Bt> mostra quem mudou a carteira do pedido, quando e de qual para qual.
+              A aba <b>Pedidos por carteira</b> é só consulta; <Bt>Histórico</Bt> mostra quando a carteira do pedido mudou.
             </>,
           ]}
         />
-        <p>Pedidos de um mês já fechado aparecem com 🔒 e não podem ser alterados; para corrigir, reabra o mês na apuração.</p>
+        <p>
+          A carteira também é escolhida na inclusão do cliente e trocada na ficha (<Menu>Cadastros › Clientes</Menu>), por quem
+          tem essas telas. O cliente incluído pelo carrinho entra na Carteira Geral.
+        </p>
         <h4>3. Apuração mensal</h4>
         <ul>
           <li>
             Escolha o mês: a tela mostra a <b>prévia</b>, recalculada com os dados atuais a cada abertura.
           </li>
           <li>
-            Cartões com o total de comissões, a parte progressiva e a de carteiras; tabela por vendedor com o total a pagar.
-            Clique no vendedor para ver a conta por faixa, por carteira e pedido a pedido.
+            Cartões com o total de comissões e de pedidos; quadro por carteira (tabela usada, vendas e comissão); tabela por
+            vendedor com o total a pagar. Clique no vendedor para ver a conta de cada carteira, faixa a faixa, e pedido a pedido.
           </li>
           <li>
             <Bt>⬇ Exportar planilha (CSV)</Bt> gera o arquivo para o Excel (um pedido por linha e o resumo por vendedor);{' '}
@@ -772,7 +788,8 @@ export function ManualOperacao() {
             mês.
           </li>
           <li>
-            Avisos em laranja indicam o que pede atenção: mês sem tabela de faixas vigente ou carteira sem percentual no mês.
+            Avisos em laranja indicam o que pede atenção: carteira sem tabela vigente no mês. Meses fechados antes das carteiras
+            de clientes mostram a foto antiga, com “Vendas normais (tabela geral)”.
           </li>
         </ul>
       </Secao>

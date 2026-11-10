@@ -127,6 +127,12 @@ export function DetalhePedido() {
         <EntregaPedido pedido={p} aoSalvar={atualizarPedidoAberto} />
         <div className="pedido-cliente" id="pedido-cliente">
           <span>Cliente:</span> <ClienteVinculado cliente={p.cliente} vazio="sem cliente vinculado" />
+          {p.carteira && (
+            <span className="pedido-carteira" title="Carteira do cliente quando o pedido foi criado (comissões)">
+              {' '}
+              · Carteira: <span className="com-tag-carteira">{p.carteira}</span>
+            </span>
+          )}
         </div>
         {cancelamento && (
           <div className="pedido-cancelado">

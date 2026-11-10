@@ -3,7 +3,7 @@ import { formatarDataBr, rotuloCompetencia, type RespostaApuracao, type Vendedor
 import { useApp } from '../../app/contexto';
 import { api } from '../../lib/api';
 import { avisar, confirmar, erroDe, perguntar } from '../../lib/dialogo';
-import { brl, hojeIso, mesAtual, pct, resumoFaixas } from './comum';
+import { brl, hojeIso, mesAtual, pct, resumoRegra } from './comum';
 
 const ACOES: Record<string, string> = {
   FECHADO: 'Mês fechado',
@@ -42,7 +42,7 @@ function gerarCsv(r: RespostaApuracao): string {
         p.orcamento,
         p.cliente ?? '',
         formatarDataBr(p.data_conclusao),
-        p.carteira ?? 'Progressiva',
+        p.carteira,
         p.valor,
         (p.percentual * 100).toFixed(4).replace('.', ','),
         p.comissao,
@@ -50,35 +50,17 @@ function gerarCsv(r: RespostaApuracao): string {
     }
   }
   linhas.push([]);
-  linhas.push([
-    'Resumo',
-    'Vendedor',
-    'Vendas normais',
-    'Vendas carteiras',
-    'Comissão progressiva',
-    'Comissão carteiras',
-    'Total a pagar',
-  ]);
+  linhas.push(['Resumo', 'Vendedor', 'Carteira', 'Vendas (R$)', 'Taxa efetiva (%)', 'Comissão (R$)']);
   for (const v of a.vendedores) {
-    linhas.push([
-      a.competencia,
-      v.vendedor,
-      v.vendas_normais,
-      v.vendas_carteiras,
-      v.comissao_normais,
-      v.comissao_carteiras,
-      v.total,
-    ]);
+    for (const c of v.carteiras) {
+      linhas.push([a.competencia, v.vendedor, c.nome, c.vendas, (c.taxa_efetiva * 100).toFixed(4).replace('.', ','), c.comissao]);
+    }
+    linhas.push([a.competencia, v.vendedor, 'Total a pagar', v.vendas, '', v.total]);
   }
-  linhas.push([
-    'Total',
-    '',
-    a.totais.vendas_normais,
-    a.totais.vendas_carteiras,
-    a.totais.comissao_normais,
-    a.totais.comissao_carteiras,
-    a.totais.total,
-  ]);
+  linhas.push([]);
+  linhas.push(['Por carteira', 'Carteira', 'Pedidos', 'Vendas (R$)', 'Comissão (R$)']);
+  for (const c of a.carteiras) linhas.push([a.competencia, c.nome, c.pedidos, c.vendas, c.comissao]);
+  linhas.push(['Total', '', a.totais.pedidos, a.totais.vendas, a.totais.total]);
   linhas.push([]);
   linhas.push([
     'Situação',
@@ -135,7 +117,7 @@ export function ApuracaoComissoes() {
     const t = dados.apuracao.totais;
     if (
       !(await confirmar(
-        `Fechar as comissões de ${rotuloCompetencia(competencia)}?\n\nTotal: ${brl(t.total)} em ${t.pedidos} pedido${t.pedidos !== 1 ? 's' : ''}.\n\nO resultado fica gravado e não muda mais, mesmo que se alterem faixas, carteiras ou pedidos. As carteiras dos pedidos deste mês ficam bloqueadas.`,
+        `Fechar as comissões de ${rotuloCompetencia(competencia)}?\n\nTotal: ${brl(t.total)} em ${t.pedidos} pedido${t.pedidos !== 1 ? 's' : ''}.\n\nO resultado fica gravado e não muda mais, mesmo que se alterem tabelas, carteiras ou pedidos.`,
         { titulo: 'Fechar mês', ok: 'Fechar mês' },
       ))
     )
@@ -252,17 +234,12 @@ export function ApuracaoComissoes() {
                 <span className="com-pago"> · Pago em {formatarDataBr(dados.fechamento!.pago_em)}</span>
               )}
             </div>
-            <div className="com-tabela-usada">
-              Faixas:{' '}
-              {a.tabela ? (
-                <>
-                  tabela vigente a partir de {formatarDataBr(a.tabela.vigente_de)}
-                  {a.tabela.descricao && ` (${a.tabela.descricao})`} — {resumoFaixas(a.tabela.faixas)}
-                </>
-              ) : (
-                'nenhuma tabela vigente'
-              )}
-            </div>
+            {a.formato_antigo && (
+              <div className="com-tabela-usada">
+                Mês fechado antes das carteiras de clientes: “Vendas normais (tabela geral)” são os pedidos sem carteira daquela
+                época. Os valores são os da foto do fechamento.
+              </div>
+            )}
             {a.avisos.map((av) => (
               <div key={av} className="com-aviso">
                 ⚠ {av}
@@ -273,25 +250,48 @@ export function ApuracaoComissoes() {
               <div className="com-card destaque">
                 <span>Total de comissões</span>
                 <b>{brl(a.totais.total)}</b>
-              </div>
-              <div className="com-card">
-                <span>Comissão progressiva</span>
-                <b>{brl(a.totais.comissao_normais)}</b>
-                <small>sobre {brl(a.totais.vendas_normais)} em vendas</small>
-              </div>
-              <div className="com-card">
-                <span>Comissão de carteiras</span>
-                <b>{brl(a.totais.comissao_carteiras)}</b>
-                <small>sobre {brl(a.totais.vendas_carteiras)} em vendas</small>
+                <small>sobre {brl(a.totais.vendas)} em vendas</small>
               </div>
               <div className="com-card">
                 <span>Pedidos no mês</span>
                 <b>{a.totais.pedidos}</b>
                 <small>
-                  {a.vendedores.length} vendedor{a.vendedores.length !== 1 ? 'es' : ''}
+                  {a.vendedores.length} vendedor{a.vendedores.length !== 1 ? 'es' : ''} · {a.carteiras.length} carteira
+                  {a.carteiras.length !== 1 ? 's' : ''}
                 </small>
               </div>
             </div>
+
+            {a.carteiras.length > 0 && (
+              <table className="orc-table com-tabela com-por-carteira" id="com-carteiras-mes">
+                <thead>
+                  <tr>
+                    <th>Carteira</th>
+                    <th>Tabela usada</th>
+                    <th className="num">Pedidos</th>
+                    <th className="num">Vendas</th>
+                    <th className="num">Comissão</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {a.carteiras.map((c) => (
+                    <tr key={c.carteira_id}>
+                      <td>
+                        <span className="com-tag-carteira">{c.nome}</span>
+                      </td>
+                      <td className="com-faixas-resumo">
+                        {c.tabela
+                          ? `${c.tabela.vigente_de ? `desde ${formatarDataBr(c.tabela.vigente_de)}: ` : ''}${resumoRegra(c.tabela.faixas)}`
+                          : 'sem tabela vigente'}
+                      </td>
+                      <td className="num">{c.pedidos}</td>
+                      <td className="num">{brl(c.vendas)}</td>
+                      <td className="num">{brl(c.comissao)}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            )}
 
             {!a.vendedores.length ? (
               <div className="orc-empty-state">
@@ -303,10 +303,8 @@ export function ApuracaoComissoes() {
                 <thead>
                   <tr>
                     <th>Vendedor</th>
-                    <th className="num">Vendas normais</th>
-                    <th className="num">Vendas carteiras</th>
-                    <th className="num">Comissão progressiva</th>
-                    <th className="num">Comissão carteiras</th>
+                    <th>Carteiras</th>
+                    <th className="num">Vendas</th>
                     <th className="num">Total a pagar</th>
                   </tr>
                 </thead>
@@ -320,17 +318,15 @@ export function ApuracaoComissoes() {
                           <td>
                             <span className="com-seta">{aberto ? '▾' : '▸'}</span> <b>{v.vendedor}</b>
                           </td>
-                          <td className="num">{brl(v.vendas_normais)}</td>
-                          <td className="num">{brl(v.vendas_carteiras)}</td>
-                          <td className="num">{brl(v.comissao_normais)}</td>
-                          <td className="num">{brl(v.comissao_carteiras)}</td>
+                          <td className="com-sub">{v.carteiras.map((c) => c.nome).join(' · ')}</td>
+                          <td className="num">{brl(v.vendas)}</td>
                           <td className="num">
                             <b>{brl(v.total)}</b>
                           </td>
                         </tr>
                         {aberto && (
                           <tr className="com-detalhe-linha">
-                            <td colSpan={6}>
+                            <td colSpan={4}>
                               <DetalheVendedor v={v} />
                             </td>
                           </tr>
@@ -344,10 +340,8 @@ export function ApuracaoComissoes() {
                     <td>
                       <b>Total</b>
                     </td>
-                    <td className="num">{brl(a.totais.vendas_normais)}</td>
-                    <td className="num">{brl(a.totais.vendas_carteiras)}</td>
-                    <td className="num">{brl(a.totais.comissao_normais)}</td>
-                    <td className="num">{brl(a.totais.comissao_carteiras)}</td>
+                    <td />
+                    <td className="num">{brl(a.totais.vendas)}</td>
                     <td className="num">
                       <b>{brl(a.totais.total)}</b>
                     </td>
@@ -408,60 +402,50 @@ export function ApuracaoComissoes() {
   );
 }
 
-/** Conta por faixa, por carteira e a lista de pedidos de um vendedor. */
+/** Conta de cada carteira (faixas da carteira sobre as vendas do vendedor nela) e a lista de pedidos. */
 function DetalheVendedor({ v }: { v: VendedorApurado }) {
   return (
     <div className="com-detalhe">
       <div className="com-detalhe-blocos">
-        <div>
-          <div className="com-detalhe-titulo">Faixas progressivas sobre as vendas normais ({brl(v.volume)})</div>
-          <table className="com-mini">
-            <tbody>
-              {v.faixas
-                .filter((f) => f.base > 0)
-                .map((f, i) => (
-                  <tr key={i}>
-                    <td>{f.ate === null ? `acima de ${brl(f.de)}` : `${brl(f.de)} a ${brl(f.ate)}`}</td>
+        {v.carteiras.map((c) => (
+          <div key={c.carteira_id}>
+            <div className="com-detalhe-titulo">
+              {c.nome} — {brl(c.vendas)} em vendas
+            </div>
+            {!c.tabela ? (
+              <p className="param-nota">Sem tabela vigente no mês: comissão zerada.</p>
+            ) : (
+              <table className="com-mini">
+                <tbody>
+                  {c.faixas
+                    .filter((f) => f.base > 0)
+                    .map((f, i) => (
+                      <tr key={i}>
+                        <td>
+                          {f.ate === null
+                            ? f.de === 0
+                              ? 'qualquer valor'
+                              : `acima de ${brl(f.de)}`
+                            : `${brl(f.de)} a ${brl(f.ate)}`}
+                        </td>
+                        <td className="num">
+                          {brl(f.base)} × {pct(f.percentual)}
+                        </td>
+                        <td className="num">{brl(f.comissao)}</td>
+                      </tr>
+                    ))}
+                  <tr className="com-mini-total">
+                    <td>Comissão da carteira</td>
+                    <td className="num">taxa média {pct(c.taxa_efetiva, 4)}</td>
                     <td className="num">
-                      {brl(f.base)} × {pct(f.percentual)}
+                      <b>{brl(c.comissao)}</b>
                     </td>
-                    <td className="num">{brl(f.comissao)}</td>
                   </tr>
-                ))}
-              <tr className="com-mini-total">
-                <td>Comissão progressiva</td>
-                <td className="num">taxa média {pct(v.taxa_efetiva, 4)}</td>
-                <td className="num">
-                  <b>{brl(v.comissao_normais)}</b>
-                </td>
-              </tr>
-            </tbody>
-          </table>
-        </div>
-        {v.carteiras.length > 0 && (
-          <div>
-            <div className="com-detalhe-titulo">Carteiras especiais</div>
-            <table className="com-mini">
-              <tbody>
-                {v.carteiras.map((c) => (
-                  <tr key={c.carteira_id}>
-                    <td>{c.nome}</td>
-                    <td className="num">
-                      {brl(c.vendas)} × {c.percentual === null ? 'sem %' : pct(c.percentual)}
-                    </td>
-                    <td className="num">{brl(c.comissao)}</td>
-                  </tr>
-                ))}
-                <tr className="com-mini-total">
-                  <td colSpan={2}>Total das carteiras</td>
-                  <td className="num">
-                    <b>{brl(v.comissao_carteiras)}</b>
-                  </td>
-                </tr>
-              </tbody>
-            </table>
+                </tbody>
+              </table>
+            )}
           </div>
-        )}
+        ))}
       </div>
       <table className="com-mini com-pedidos">
         <thead>
@@ -470,7 +454,7 @@ function DetalheVendedor({ v }: { v: VendedorApurado }) {
             <th>Orçamento</th>
             <th>Cliente</th>
             <th>Concluído em</th>
-            <th>Cálculo</th>
+            <th>Carteira</th>
             <th className="num">Valor base</th>
             <th className="num">%</th>
             <th className="num">Comissão</th>
@@ -483,9 +467,11 @@ function DetalheVendedor({ v }: { v: VendedorApurado }) {
               <td>{p.orcamento}</td>
               <td>{p.cliente ?? '—'}</td>
               <td>{formatarDataBr(p.data_conclusao)}</td>
-              <td>{p.carteira ? <span className="com-tag-carteira">{p.carteira}</span> : 'Progressiva'}</td>
+              <td>
+                <span className="com-tag-carteira">{p.carteira}</span>
+              </td>
               <td className="num">{brl(p.valor)}</td>
-              <td className="num">{pct(p.percentual, p.carteira ? 2 : 4)}</td>
+              <td className="num">{pct(p.percentual, 4)}</td>
               <td className="num">{brl(p.comissao)}</td>
             </tr>
           ))}

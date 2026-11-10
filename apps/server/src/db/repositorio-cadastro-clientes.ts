@@ -69,6 +69,8 @@ interface LinhaCliente {
   alerta: string | null;
   kommo_id: number | null;
   mesclado_em: number | null;
+  carteira_id: number | null;
+  carteira_nome: string | null;
   criado: string;
   atualizado: string;
   criado_por_nome: string | null;
@@ -76,10 +78,11 @@ interface LinhaCliente {
 }
 
 const SELECT_CLIENTE = `
-  SELECT c.*, uc.nome AS criado_por_nome, ua.nome AS alterado_por_nome
+  SELECT c.*, uc.nome AS criado_por_nome, ua.nome AS alterado_por_nome, ca.nome AS carteira_nome
     FROM clientes c
     LEFT JOIN usuarios uc ON uc.id = c.criado_por
-    LEFT JOIN usuarios ua ON ua.id = c.alterado_por`;
+    LEFT JOIN usuarios ua ON ua.id = c.alterado_por
+    LEFT JOIN carteiras ca ON ca.id = c.carteira_id`;
 
 function contatosDe(db: Banco, id: number): ContatoCliente[] {
   return db
@@ -109,6 +112,8 @@ function paraCliente(db: Banco, l: LinhaCliente): Cliente {
     observacoes: l.observacoes,
     alerta: l.alerta,
     kommo_id: l.kommo_id,
+    carteira_id: l.carteira_id,
+    carteira: l.carteira_nome,
     mesclado_em: l.mesclado_em ? codigoCliente(l.mesclado_em) : null,
     criado: l.criado,
     atualizado: l.atualizado,
@@ -354,8 +359,8 @@ function gravarLinha(db: Banco, id: number | null, d: DadosCliente, usuarioId: n
       db
         .prepare(
           `INSERT INTO clientes (tipo_pessoa, nome, nome_chave, contato, telefone, telefone_chave, email, documento, cep, logradouro, numero,
-                                 complemento, bairro, cidade, uf, situacao, observacoes, criado, atualizado, criado_por, alterado_por)
-           VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+                                 complemento, bairro, cidade, uf, situacao, observacoes, criado, atualizado, criado_por, alterado_por, carteira_id)
+           VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, (SELECT id FROM carteiras WHERE geral = 1))`,
         )
         .run(...valores, agora, agora, usuarioId, usuarioId).lastInsertRowid,
     );
@@ -394,7 +399,7 @@ export function criarClienteCadastro(
   db: Banco,
   corpo: Record<string, unknown>,
   autor: Autor,
-  opcoes: { basico: boolean; criarMesmoAssim?: boolean },
+  opcoes: { basico: boolean; criarMesmoAssim?: boolean; carteiraId?: number | null },
 ): { cliente: Cliente; coincidencias: Coincidencia[] } {
   const d = lerDados(corpo, opcoes.basico);
   validar(d);
@@ -405,11 +410,14 @@ export function criarClienteCadastro(
       throw new ErroHttp(409, `Este CPF/CNPJ já está no cadastro: ${mesmoDoc[0]!.cliente.codigo} ${mesmoDoc[0]!.cliente.nome}`);
     if (iguais.length && !opcoes.criarMesmoAssim) throw new ErroDuplicidade(iguais);
     const id = gravarLinha(db, null, d, autor.usuarioId);
+    // Carteira escolhida na inclusão; sem escolha, fica a Carteira Geral (gravada pelo INSERT)
+    if (opcoes.carteiraId) db.prepare('UPDATE clientes SET carteira_id = ? WHERE id = ?').run(opcoes.carteiraId, id);
+    const carteira = (db.prepare('SELECT ca.nome FROM clientes c JOIN carteiras ca ON ca.id = c.carteira_id WHERE c.id = ?').get(id) as { nome: string } | undefined)?.nome;
     registrarHistorico(
       db,
       id,
       autor,
-      iguais.length ? 'Cliente incluído (marcado como possível duplicidade)' : 'Cliente incluído',
+      (iguais.length ? 'Cliente incluído (marcado como possível duplicidade)' : 'Cliente incluído') + (carteira ? ` na carteira ${carteira}` : ''),
     );
     suspeitarDe(db, id, iguais);
     return { cliente: exigirCliente(db, id), coincidencias: iguais };
@@ -581,6 +589,7 @@ export function excluirContato(db: Banco, id: number, contatoId: number, autor: 
 
 const SELECT_RESUMO = `
   SELECT c.id, c.tipo_pessoa, c.nome, c.telefone, c.email, c.documento, c.cidade, c.uf, c.situacao, c.ativo, c.alerta,
+         c.carteira_id, (SELECT ca.nome FROM carteiras ca WHERE ca.id = c.carteira_id) AS carteira,
          (SELECT COUNT(*) FROM orcamentos o WHERE o.cliente_id = c.id) AS orcamentos,
          (SELECT COUNT(*) FROM pedidos p WHERE p.cliente_id = c.id AND p.status <> 'CANCELADO') AS pedidos,
          (SELECT COUNT(*) FROM clientes_duplicidades d WHERE d.situacao = 'ABERTA' AND (d.cliente_a = c.id OR d.cliente_b = c.id)) AS duplicidades
@@ -597,6 +606,11 @@ function resumosPorIds(db: Banco, ids: number[]): ResumoCliente[] {
 }
 
 /** Condição de busca única: nome, telefone (qualquer formato), e-mail, CPF/CNPJ ou CLI-000001. */
+export function condicaoBuscaClientes(termo: string, alias = 'c'): { sql: string; args: unknown[] } | null {
+  const r = condicaoBusca(termo);
+  return r && alias !== 'c' ? { ...r, sql: r.sql.replace(/\bc\./g, `${alias}.`) } : r;
+}
+
 function condicaoBusca(termo: string): { sql: string; args: unknown[] } | null {
   const t = termo.trim();
   if (!t) return null;
@@ -655,6 +669,7 @@ export interface FiltroClientes {
   situacao?: string;
   ativos?: string;
   pendencias?: string;
+  carteira?: string;
   limit?: number;
   offset?: number;
 }
@@ -673,6 +688,10 @@ export function listarClientesCadastro(db: Banco, f: FiltroClientes): { total: n
   }
   if (f.ativos === 'inativos') cond.push('c.ativo = 0');
   else if (f.ativos !== 'todos') cond.push('c.ativo = 1');
+  if (f.carteira && /^\d+$/.test(f.carteira)) {
+    cond.push('c.carteira_id = ?');
+    args.push(Number(f.carteira));
+  }
   if (f.pendencias === '1') {
     cond.push(
       "(c.alerta IS NOT NULL OR EXISTS (SELECT 1 FROM clientes_duplicidades d WHERE d.situacao = 'ABERTA' AND (d.cliente_a = c.id OR d.cliente_b = c.id)))",
@@ -743,6 +762,14 @@ export function fichaCliente(db: Banco, id: number): FichaCliente {
       ultimo_pedido: ativos[0]?.criado ?? null,
     },
     duplicidades: suspeitasDe(db, id),
+    pedidos_abertos: (
+      db
+        .prepare(
+          `SELECT COUNT(*) AS n FROM pedidos p WHERE p.cliente_id = ? AND p.status <> 'CANCELADO'
+             AND NOT EXISTS (SELECT 1 FROM pedidos_movimentos m WHERE m.pedido_id = p.id AND m.status_novo = 'EM_PRODUCAO')`,
+        )
+        .get(id) as { n: number }
+    ).n,
   };
 }
 

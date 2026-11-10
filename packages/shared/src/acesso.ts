@@ -20,7 +20,7 @@ export const TELAS_SISTEMA = [
   { id: 'status', rotulo: 'Atualização', grupo: 'Sistema' },
   { id: 'dash-geral', rotulo: 'Visão geral', grupo: 'Dashboards' },
   { id: 'comissoes-apuracao', rotulo: 'Apuração mensal', grupo: 'Comissões' },
-  { id: 'comissoes-carteiras', rotulo: 'Carteiras dos pedidos', grupo: 'Comissões' },
+  { id: 'comissoes-carteiras', rotulo: 'Carteiras dos clientes', grupo: 'Comissões' },
   { id: 'comissoes-parametros', rotulo: 'Parâmetros de comissão', grupo: 'Comissões' },
   { id: 'ajuda-calculos', rotulo: 'Memórias de cálculo', grupo: 'Ajuda' },
   { id: 'ajuda-manual', rotulo: 'Manual de operação', grupo: 'Ajuda' },

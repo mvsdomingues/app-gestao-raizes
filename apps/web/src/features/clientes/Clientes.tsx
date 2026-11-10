@@ -18,6 +18,7 @@ import {
   validarFaturamento,
   type CampoFaturamento,
   type CampoMesclagem,
+  type CarteiraResumo,
   type Cliente,
   type DadosFaturamento,
   type FichaCliente,
@@ -60,7 +61,18 @@ function TagSituacao({ c }: { c: Pick<ResumoCliente, 'situacao' | 'ativo'> }) {
   return <span className={`tag-cliente s-${c.situacao}`}>{ROTULOS_SITUACAO_CLIENTE[c.situacao]}</span>;
 }
 
+/** Carteiras para os seletores (a Carteira Geral vem primeiro). */
+function useCarteiras(visita: number): CarteiraResumo[] {
+  const [lista, setLista] = useState<CarteiraResumo[]>([]);
+  useEffect(() => {
+    api.carteirasResumo().then(setLista, () => setLista([]));
+  }, [visita]);
+  return lista;
+}
+
 function Lista({ visita, abrir }: { visita: number; abrir: (id: number) => void }) {
+  const carteiras = useCarteiras(visita);
+  const [carteira, setCarteira] = useState('');
   const [busca, setBusca] = useState('');
   const [situacao, setSituacao] = useState('');
   const [ativos, setAtivos] = useState('');
@@ -70,7 +82,7 @@ function Lista({ visita, abrir }: { visita: number; abrir: (id: number) => void 
   const [erro, setErro] = useState('');
   const [novo, setNovo] = useState(false);
   const [versao, setVersao] = useState(0);
-  const [filtro, setFiltro] = useState({ busca: '', situacao: '', ativos: '', pendencias: false });
+  const [filtro, setFiltro] = useState({ busca: '', situacao: '', ativos: '', pendencias: false, carteira: '' });
 
   useEffect(() => {
     if (!visita) return;
@@ -88,7 +100,7 @@ function Lista({ visita, abrir }: { visita: number; abrir: (id: number) => void 
   const filtrar = (e: FormEvent) => {
     e.preventDefault();
     setPagina(0);
-    setFiltro({ busca, situacao, ativos, pendencias });
+    setFiltro({ busca, situacao, ativos, pendencias, carteira });
   };
 
   const paginas = dados ? Math.max(1, Math.ceil(dados.total / POR_PAGINA)) : 1;
@@ -129,6 +141,17 @@ function Lista({ visita, abrir }: { visita: number; abrir: (id: number) => void 
             <option value="">Todas</option>
             <option value="PRE_CADASTRO">Pré-cadastro</option>
             <option value="COMPLETO">Completo</option>
+          </select>
+        </div>
+        <div className="orc-filtro">
+          <label htmlFor="filtro-cli-carteira">Carteira</label>
+          <select id="filtro-cli-carteira" className="custom-input" value={carteira} onChange={(e) => setCarteira(e.target.value)}>
+            <option value="">Todas</option>
+            {carteiras.map((c) => (
+              <option key={c.id} value={c.id}>
+                {c.nome}
+              </option>
+            ))}
           </select>
         </div>
         <div className="orc-filtro">
@@ -175,6 +198,7 @@ function Lista({ visita, abrir }: { visita: number; abrir: (id: number) => void 
                 <th>Contato</th>
                 <th>CPF/CNPJ</th>
                 <th>Cidade</th>
+                <th>Carteira</th>
                 <th>Situação</th>
                 <th className="num">Orç.</th>
                 <th className="num">Ped.</th>
@@ -200,6 +224,7 @@ function Lista({ visita, abrir }: { visita: number; abrir: (id: number) => void 
                   </td>
                   <td>{c.documento ? formatarDocumento(c.documento) : '—'}</td>
                   <td>{c.cidade ? `${c.cidade}/${c.uf}` : '—'}</td>
+                  <td className="cliente-col-contato">{c.carteira ?? '—'}</td>
                   <td>
                     <TagSituacao c={c} />
                   </td>
@@ -315,6 +340,8 @@ async function avisarParecidos(r: RespostaCliente) {
 }
 
 function ModalCliente({ fechar, salvo }: { fechar: () => void; salvo: (c: Cliente) => void }) {
+  const carteiras = useCarteiras(0).filter((c) => c.ativa);
+  const [carteiraId, setCarteiraId] = useState('');
   const [v, setV] = useState<DadosForm>(formDe(null));
   const [erros, setErros] = useState<Partial<Record<CampoFaturamento, string>>>({});
   const [falha, setFalha] = useState('');
@@ -332,7 +359,7 @@ function ModalCliente({ fechar, salvo }: { fechar: () => void; salvo: (c: Client
     }
     setSalvando(true);
     try {
-      const r = await api.criarCliente({ ...corpo, criar_mesmo_assim: mesmoAssim });
+      const r = await api.criarCliente({ ...corpo, carteira_id: carteiraId ? Number(carteiraId) : null, criar_mesmo_assim: mesmoAssim });
       salvo(r.cliente);
       await avisarParecidos(r);
     } catch (e) {
@@ -390,6 +417,18 @@ function ModalCliente({ fechar, salvo }: { fechar: () => void; salvo: (c: Client
           </>
         ) : (
           <>
+            <div className="clientes-telefone">
+              <label htmlFor="novo-cli-carteira">Carteira (comissões)</label>
+              <select id="novo-cli-carteira" className="custom-input" value={carteiraId} onChange={(e) => setCarteiraId(e.target.value)}>
+                {carteiras.map((c) => (
+                  <option key={c.id} value={c.geral ? '' : c.id}>
+                    {c.nome}
+                    {c.geral ? ' (Carteira Geral)' : ''}
+                  </option>
+                ))}
+              </select>
+              <span className="fat-dica">Sem escolha, o cliente entra na Carteira Geral.</span>
+            </div>
             <CamposCliente v={v} mudar={setV} erros={erros} prefixo="novo-cli" />
             {falha && <div className="form-mensagem erro">{falha}</div>}
             <div className="custom-modal-actions">
@@ -418,6 +457,8 @@ function ModalCliente({ fechar, salvo }: { fechar: () => void; salvo: (c: Client
 function Ficha({ id, voltar, abrir }: { id: number; voltar: () => void; abrir: (id: number) => void }) {
   const { abrirPedido } = useApp();
   const { pode } = useSessao();
+  const carteiras = useCarteiras(id).filter((c) => c.ativa);
+  const [novaCarteira, setNovaCarteira] = useState('');
   const [ficha, setFicha] = useState<FichaCliente | null>(null);
   const [v, setV] = useState<DadosForm>(formDe(null));
   const [erros, setErros] = useState<Partial<Record<CampoFaturamento, string>>>({});
@@ -591,6 +632,59 @@ function Ficha({ id, voltar, abrir }: { id: number; voltar: () => void; abrir: (
           })}
         </div>
       )}
+
+      <div className="clientes-carteira" id="cliente-carteira">
+        <span className="clientes-secao-titulo">Carteira</span>
+        <span className="com-tag-carteira">{c.carteira ?? '—'}</span>
+        {c.ativo && (
+          <>
+            <select
+              id="ficha-cli-carteira"
+              className="custom-input"
+              value={novaCarteira}
+              onChange={(e) => setNovaCarteira(e.target.value)}
+              aria-label="Nova carteira"
+            >
+              <option value="">Trocar para…</option>
+              {carteiras
+                .filter((x) => x.id !== c.carteira_id)
+                .map((x) => (
+                  <option key={x.id} value={x.id}>
+                    {x.nome}
+                    {x.geral ? ' (Geral)' : ''}
+                  </option>
+                ))}
+            </select>
+            <button
+              type="button"
+              className="btn-secondary"
+              id="btn-trocar-carteira"
+              disabled={!novaCarteira}
+              onClick={async () => {
+                const nome = carteiras.find((x) => x.id === Number(novaCarteira))?.nome;
+                if (!(await confirmar(`Mudar ${c.codigo} para a carteira "${nome}"? Vale para os próximos pedidos.`, { ok: 'Mudar carteira' })))
+                  return;
+                const levar =
+                  ficha.pedidos_abertos > 0 &&
+                  (await confirmar(
+                    `Levar também ${ficha.pedidos_abertos} pedido(s) que ainda não entraram em produção? Os que já entraram continuam na carteira de antes.`,
+                    { titulo: 'Pedidos em aberto', ok: 'Levar os pedidos', cancelar: 'Só os próximos' },
+                  ));
+                try {
+                  const f = await api.carteiraDoCliente(c.id, Number(novaCarteira), levar);
+                  setFicha(f);
+                  setNovaCarteira('');
+                  void avisar(`Carteira alterada para ${f.cliente.carteira}.`, { tipo: 'sucesso' });
+                } catch (e) {
+                  void erroDe('Não foi possível mudar a carteira.', e);
+                }
+              }}
+            >
+              Mudar carteira
+            </button>
+          </>
+        )}
+      </div>
 
       <div className="clientes-ficha">
         <section className="clientes-dados">

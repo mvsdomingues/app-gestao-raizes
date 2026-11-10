@@ -77,6 +77,8 @@ export interface ResumoPedido {
   responsavel: UsuarioResumo | null;
   /** Cliente do orçamento de origem */
   cliente: ClienteVinculado | null;
+  /** Carteira do pedido (comissões): a do cliente quando o pedido foi criado */
+  carteira?: string | null;
   /** Data prevista de entrega (AAAA-MM-DD), vinda do orçamento; alterável na etapa Criado */
   entrega_prevista: string | null;
   /** Checklist de fechamento: itens marcados / total (0/0 = sem checklist) */
