@@ -1,5 +1,6 @@
 import { useRef, useState } from 'react';
 import {
+  normalizarDocumento,
   rotuloFaturamento,
   UFS,
   type CampoFaturamento,
@@ -9,7 +10,7 @@ import {
 
 const soDigitos = (s: string) => s.replace(/\D/g, '');
 
-/** Máscara do CPF/CNPJ enquanto digita. */
+/** Máscara do CPF/CNPJ enquanto digita (CNPJ pode ter letras: formato alfanumérico da Receita). */
 function mascaraDocumento(d: string, tipo: TipoPessoa): string {
   if (tipo === 'PF') {
     return d
@@ -20,10 +21,10 @@ function mascaraDocumento(d: string, tipo: TipoPessoa): string {
   }
   return d
     .slice(0, 14)
-    .replace(/^(\d{2})(\d)/, '$1.$2')
-    .replace(/^(\d{2})\.(\d{3})(\d)/, '$1.$2.$3')
-    .replace(/\.(\d{3})(\d)/, '.$1/$2')
-    .replace(/(\d{4})(\d{1,2})$/, '$1-$2');
+    .replace(/^(\w{2})(\w)/, '$1.$2')
+    .replace(/^(\w{2})\.(\w{3})(\w)/, '$1.$2.$3')
+    .replace(/^(\w{2})\.(\w{3})\.(\w{3})(\w)/, '$1.$2.$3/$4')
+    .replace(/\/(\w{4})(\w{1,2})$/, '/$1-$2');
 }
 
 const mascaraCep = (d: string) => d.slice(0, 8).replace(/^(\d{5})(\d)/, '$1-$2');
@@ -80,7 +81,10 @@ export function FormularioFaturamento({ valor, mudar, erros = {}, obrigatorio = 
     }
   };
 
-  const campo = (c: CampoFaturamento, extra: { tipo?: string; inputMode?: 'numeric' | 'email' | 'text'; autoComplete?: string; classe?: string; placeholder?: string } = {}) => {
+  const campo = (
+    c: CampoFaturamento,
+    extra: { tipo?: string; inputMode?: 'numeric' | 'email' | 'text'; autoComplete?: string; classe?: string; placeholder?: string; dica?: string } = {},
+  ) => {
     const id = `${prefixo}-${c}`;
     const valorCampo = c === 'documento' ? mascaraDocumento(valor.documento, tipo) : c === 'cep' ? mascaraCep(valor.cep) : valor[c];
     return (
@@ -93,6 +97,7 @@ export function FormularioFaturamento({ valor, mudar, erros = {}, obrigatorio = 
           id={id}
           type={extra.tipo ?? 'text'}
           inputMode={extra.inputMode}
+          autoCapitalize={c === 'documento' && tipo === 'PJ' ? 'characters' : undefined}
           autoComplete={extra.autoComplete}
           placeholder={extra.placeholder}
           value={valorCampo}
@@ -101,7 +106,7 @@ export function FormularioFaturamento({ valor, mudar, erros = {}, obrigatorio = 
           aria-describedby={erros[c] ? `${id}-erro` : undefined}
           onChange={(e) => {
             const v = e.target.value;
-            if (c === 'documento') alterar({ documento: soDigitos(v).slice(0, tipo === 'PF' ? 11 : 14) });
+            if (c === 'documento') alterar({ documento: normalizarDocumento(v, tipo).slice(0, tipo === 'PF' ? 11 : 14) });
             else if (c === 'cep') {
               const cep = soDigitos(v).slice(0, 8);
               alterar({ cep });
@@ -110,6 +115,7 @@ export function FormularioFaturamento({ valor, mudar, erros = {}, obrigatorio = 
           }}
         />
         {c === 'cep' && (buscandoCep || avisoCep) && <span className="fat-dica">{buscandoCep ? 'Buscando endereço…' : avisoCep}</span>}
+        {extra.dica && !erros[c] && <span className="fat-dica">{extra.dica}</span>}
         {erros[c] && (
           <span className="fat-erro" id={`${id}-erro`}>
             {erros[c]}
@@ -138,7 +144,11 @@ export function FormularioFaturamento({ valor, mudar, erros = {}, obrigatorio = 
       </div>
       <div className="fat-grade">
         {campo('nome', { classe: 'largo', autoComplete: tipo === 'PJ' ? 'organization' : 'name' })}
-        {campo('documento', { inputMode: 'numeric', placeholder: tipo === 'PJ' ? '00.000.000/0000-00' : '000.000.000-00' })}
+        {campo('documento', {
+          inputMode: tipo === 'PJ' ? 'text' : 'numeric',
+          placeholder: tipo === 'PJ' ? '00.000.000/0000-00' : '000.000.000-00',
+          dica: tipo === 'PJ' ? 'Pode ter letras (formato novo da Receita)' : undefined,
+        })}
         {tipo === 'PJ' && campo('contato', { autoComplete: 'name' })}
         {campo('email', { tipo: 'email', inputMode: 'email', autoComplete: 'email', classe: tipo === 'PJ' ? '' : 'largo' })}
       </div>

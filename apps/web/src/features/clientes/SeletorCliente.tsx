@@ -181,7 +181,7 @@ export function SeletorCliente({
       />
       {!compacto && (
         <div className="seletor-cliente-dica">
-          Busque antes de incluir: nome, telefone com DDD, e-mail, CPF/CNPJ ou código CLI
+          Busque antes de incluir: nome, telefone com DDD, e-mail, CPF/CNPJ (o CNPJ pode ter letras) ou código CLI
         </div>
       )}
       {mostrarLista && (

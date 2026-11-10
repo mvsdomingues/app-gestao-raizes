@@ -256,7 +256,8 @@ export function coincidencias(
       mapa.get(id)!.add(m);
     }
   };
-  const doc = digitos(d.documento ?? '');
+  // CPF ou CNPJ (numérico ou alfanumérico), sem máscara e em maiúsculas, como fica gravado
+  const doc = (d.documento ?? '').toUpperCase().replace(/[^0-9A-Z]/g, '');
   if (doc)
     marcar(db.prepare('SELECT id FROM clientes WHERE documento = ? AND ativo = 1').all(doc) as { id: number }[], 'DOCUMENTO');
   const tels = [d.telefone ?? '', ...(d.contatos ?? []).filter((c) => c.tipo === 'TELEFONE').map((c) => c.valor)]
@@ -626,10 +627,16 @@ function condicaoBusca(termo: string): { sql: string; args: unknown[] } | null {
   }
   const palavras = semAcento(t).split(' ').map(chaveNome).filter(Boolean);
   if (!palavras.length) return null;
-  return {
+  const porNome = {
     sql: palavras.map(() => '(c.nome_chave LIKE ? OR c.contato LIKE ?)').join(' AND '),
     args: palavras.flatMap((p) => [`%${p}%`, `%${p}%`]),
   };
+  // Letras e números juntos podem ser um CNPJ alfanumérico (inteiro ou o começo, com ou sem máscara)
+  const doc = t.toUpperCase().replace(/[.\-/\s]/g, '');
+  if (/^[0-9A-Z]{4,14}$/.test(doc) && /\d/.test(doc)) {
+    return { sql: `(c.documento LIKE ? OR (${porNome.sql}))`, args: [`${doc}%`, ...porNome.args] };
+  }
+  return porNome;
 }
 
 /** Busca para o carrinho e filtros (só ativos). */

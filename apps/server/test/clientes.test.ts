@@ -272,6 +272,21 @@ describe('cadastro de clientes (API)', () => {
     expect(f.historico[0]).toMatchObject({ origem: 'Pedido', autor: 'Administrador' });
   });
 
+  it('CNPJ alfanumérico: grava em maiúsculas, bloqueia repetido, busca inteiro ou pelo começo', async () => {
+    const r = await req('POST', '/api/clientes', { ...FAT, nome: 'Nova Empresa Alfa', documento: '12.abc.345/01de-35', telefone: '11922223333', email: 'alfa@x.com' });
+    expect(r.status).toBe(201);
+    expect(r.json.cliente).toMatchObject({ documento: '12ABC34501DE35', situacao: 'COMPLETO' });
+    const repetido = await req('POST', '/api/clientes', { ...FAT, nome: 'Outra', documento: '12ABC34501DE35', telefone: '11933334444', email: 'b@x.com' });
+    expect(repetido.status).toBe(409);
+    expect((await req('POST', '/api/clientes', { ...FAT, nome: 'Errado', documento: '12ABC34501DE36', telefone: '11944445555' })).json.erro).toMatch(/CNPJ/);
+    const busca = async (t: string) =>
+      (await req('GET', `/api/clientes?limite=10&busca=${encodeURIComponent(t)}`)).json.clientes.map((c: { id: number }) => c.id);
+    expect(await busca('12.ABC.345/01DE-35')).toEqual([r.json.cliente.id]);
+    expect(await busca('12abc')).toEqual([r.json.cliente.id]);
+    expect(await busca('Alfa')).toEqual([r.json.cliente.id]);
+    await req('POST', `/api/clientes/${r.json.cliente.id}/ativo`, { ativo: false });
+  });
+
   it('contatos adicionais e inativação', async () => {
     const r = await req('POST', `/api/clientes/${thais}/contatos`, {
       tipo: 'TELEFONE',

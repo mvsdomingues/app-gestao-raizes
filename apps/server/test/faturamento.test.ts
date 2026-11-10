@@ -1,7 +1,7 @@
 import type { Server } from 'node:http';
 import type { AddressInfo } from 'node:net';
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
-import { cnpjValido, cpfValido, diferencasFaturamento, faturamentoVazio, validarFaturamento } from '@raizes/shared';
+import { cnpjValido, cpfValido, diferencasFaturamento, faturamentoVazio, formatarDocumento, normalizarFaturamento, validarFaturamento } from '@raizes/shared';
 import { criarApp } from '../src/app';
 import { abrirBanco } from '../src/db/conexao';
 import { GerenciadorAtualizacao } from '../src/services/gerenciador-atualizacao';
@@ -43,6 +43,23 @@ describe('validação dos dados de faturamento', () => {
     expect(cpfValido('111.111.111-11')).toBe(false);
     expect(cnpjValido('11.222.333/0001-81')).toBe(true);
     expect(cnpjValido('11.222.333/0001-80')).toBe(false);
+  });
+
+  it('CNPJ alfanumérico (Receita, desde 07/2026)', () => {
+    expect(cnpjValido('12.ABC.345/01DE-35')).toBe(true);
+    expect(cnpjValido('00.000.000/E08G-12')).toBe(true);
+    expect(cnpjValido('12abc34501de35')).toBe(true);
+    expect(cnpjValido('12.ABC.345/01DE-36')).toBe(false);
+    expect(cnpjValido('12.ABC.345/01DE-3A')).toBe(false);
+    expect(cnpjValido('12.ABC.345/01D-35')).toBe(false);
+    expect(cnpjValido('12.ÁBC.345/01DE-35')).toBe(false);
+    expect(formatarDocumento('12ABC34501DE35')).toBe('12.ABC.345/01DE-35');
+    expect(formatarDocumento('11222333000181')).toBe('11.222.333/0001-81');
+    expect(normalizarFaturamento({ tipo_pessoa: 'PJ', nome: 'X', documento: '12.abc.345/01de-35' })!.documento).toBe('12ABC34501DE35');
+    // CPF continua só com números
+    expect(normalizarFaturamento({ tipo_pessoa: 'PF', nome: 'X', documento: '529.982.247-25a' })!.documento).toBe('52998224725');
+    expect(validarFaturamento({ ...faturamentoVazio('PJ'), nome: 'X', documento: '12ABC34501DE35' }, false)).toEqual({});
+    expect(validarFaturamento({ ...faturamentoVazio('PJ'), nome: 'X', documento: '12ABC34501DE36' }, false)).toEqual({ documento: 'CNPJ inválido' });
   });
 
   it('parcial no orçamento, completo no aceite', () => {

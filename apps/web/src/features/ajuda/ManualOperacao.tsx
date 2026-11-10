@@ -328,7 +328,8 @@ export function ManualOperacao() {
         />
         <p>
           No orçamento esses dados são <b>opcionais</b> (só o que foi digitado é conferido: CPF/CNPJ com dígito verificador,
-          e-mail e CEP). No aceite pelo link eles passam a ser <b>obrigatórios</b> para o cliente e, confirmados, atualizam o
+          e-mail e CEP). O CNPJ aceita o <b>formato alfanumérico</b> da Receita (emitido desde julho de 2026, ex.: 12.ABC.345/01DE-35):
+          as 12 primeiras posições podem ter letras, os 2 dígitos finais são sempre números; letras minúsculas viram maiúsculas. No aceite pelo link eles passam a ser <b>obrigatórios</b> para o cliente e, confirmados, atualizam o
           cadastro do cliente (que passa a <b>Completo</b>). Aparecem no início da folha impressa.
         </p>
         <h4>Previsão de entrega e frete</h4>
@@ -665,7 +666,7 @@ export function ManualOperacao() {
         </p>
         <h4>Lista</h4>
         <ul>
-          <li>Busca por nome, telefone, e-mail, CPF/CNPJ ou código; filtros de situação, ativos/inativos e “Com pendência”.</li>
+          <li>Busca por nome, telefone, e-mail, CPF/CNPJ (inteiro ou o começo, inclusive com letras) ou código; filtros de situação, ativos/inativos e “Com pendência”.</li>
           <li>Clique na linha para abrir a ficha.</li>
           <li>
             <Bt>+ Novo cliente</Bt> abre o formulário completo. CPF/CNPJ já cadastrado <b>bloqueia</b>; telefone ou e-mail repetido

@@ -13,7 +13,7 @@ export interface DadosFaturamento {
   /** Pessoa de contato na empresa (opcional) */
   contato: string;
   email: string;
-  /** CNPJ (14 dígitos) ou CPF (11 dígitos), só números */
+  /** CNPJ (14 caracteres: 12 letras A–Z ou dígitos + 2 dígitos verificadores) ou CPF (11 dígitos), sem máscara */
   documento: string;
   /** Só números (8 dígitos) */
   cep: string;
@@ -73,6 +73,18 @@ export function faturamentoVazio(tipo: TipoPessoa = 'PJ'): DadosFaturamento {
 
 const soDigitos = (s: string) => s.replace(/\D/g, '');
 
+/**
+ * Documento sem máscara: CPF só com dígitos; CNPJ com letras e dígitos em
+ * maiúsculas (CNPJ alfanumérico da Receita, emitido desde 1º/07/2026).
+ */
+export function normalizarDocumento(doc: string, tipo: TipoPessoa): string {
+  if (tipo === 'PF') return soDigitos(doc);
+  return doc.toUpperCase().replace(/[^0-9A-Z]/g, '');
+}
+
+/** CNPJ com letras (formato alfanumérico)? */
+export const cnpjAlfanumerico = (cnpj: string) => /[A-Z]/i.test(cnpj);
+
 /** Normaliza o que veio de um formulário/JSON (tipos, espaços, máscaras). null = nada informado. */
 export function normalizarFaturamento(v: unknown): DadosFaturamento | null {
   if (!v || typeof v !== 'object') return null;
@@ -84,7 +96,7 @@ export function normalizarFaturamento(v: unknown): DadosFaturamento | null {
     nome: txt('nome'),
     contato: txt('contato'),
     email: txt('email').toLowerCase(),
-    documento: soDigitos(txt('documento')),
+    documento: normalizarDocumento(txt('documento'), o.tipo_pessoa === 'PF' ? 'PF' : 'PJ'),
     cep: soDigitos(txt('cep')),
     logradouro: txt('logradouro'),
     numero: txt('numero'),
@@ -113,12 +125,17 @@ export function cpfValido(cpf: string): boolean {
   return dv(9) === Number(c[9]) && dv(10) === Number(c[10]);
 }
 
+/**
+ * CNPJ numérico ou alfanumérico: 12 primeiros caracteres A–Z/0–9, 2 dígitos verificadores.
+ * Cada caractere vale o código ASCII − 48 (0–9 = 0–9, A = 17 … Z = 42), o que mantém
+ * o cálculo antigo para os CNPJs só com dígitos. Minúsculas são aceitas (viram maiúsculas).
+ */
 export function cnpjValido(cnpj: string): boolean {
-  const c = soDigitos(cnpj);
-  if (c.length !== 14 || /^(\d)\1+$/.test(c)) return false;
+  const c = normalizarDocumento(cnpj, 'PJ');
+  if (!/^[0-9A-Z]{12}\d{2}$/.test(c) || /^(\d)\1+$/.test(c)) return false;
   const dv = (n: number) => {
     const pesos = n === 12 ? [5, 4, 3, 2, 9, 8, 7, 6, 5, 4, 3, 2] : [6, 5, 4, 3, 2, 9, 8, 7, 6, 5, 4, 3, 2];
-    const s = pesos.reduce((acc, p, i) => acc + Number(c[i]) * p, 0);
+    const s = pesos.reduce((acc, p, i) => acc + (c.charCodeAt(i) - 48) * p, 0);
     const r = s % 11;
     return r < 2 ? 0 : 11 - r;
   };
@@ -151,10 +168,11 @@ export function validarFaturamento(
   return erros;
 }
 
+/** 000.000.000-00 (CPF) ou 12.ABC.345/01DE-35 (CNPJ, numérico ou alfanumérico). */
 export function formatarDocumento(doc: string): string {
-  const d = soDigitos(doc);
-  if (d.length === 11) return d.replace(/(\d{3})(\d{3})(\d{3})(\d{2})/, '$1.$2.$3-$4');
-  if (d.length === 14) return d.replace(/(\d{2})(\d{3})(\d{3})(\d{4})(\d{2})/, '$1.$2.$3/$4-$5');
+  const d = doc.toUpperCase().replace(/[^0-9A-Z]/g, '');
+  if (/^\d{11}$/.test(d)) return d.replace(/(\d{3})(\d{3})(\d{3})(\d{2})/, '$1.$2.$3-$4');
+  if (/^[0-9A-Z]{12}\d{2}$/.test(d)) return d.replace(/(\w{2})(\w{3})(\w{3})(\w{4})(\d{2})/, '$1.$2.$3/$4-$5');
   return doc;
 }
 
