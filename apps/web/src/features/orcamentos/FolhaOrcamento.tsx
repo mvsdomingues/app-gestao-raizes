@@ -1,3 +1,4 @@
+import { Logo } from '../../components/Logo';
 import {
   formatarCep,
   formatarDataBr,
@@ -79,9 +80,8 @@ export function FolhaOrcamento({
   return (
     <>
       <div className="orc-letterhead">
-        <div>
-          <div className="orc-brand-name">Raízes</div>
-          <div className="orc-brand-sub">Personalizados</div>
+        <div className="orc-brand">
+          <Logo className="orc-brand-logo" />
         </div>
         <div className="orc-meta-block">
           <div className="orc-num">{numero}</div>

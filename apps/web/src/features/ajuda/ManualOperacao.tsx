@@ -79,8 +79,9 @@ export function ManualOperacao() {
         />
         <h4>O menu</h4>
         <p>
-          O menu fica na barra lateral, em grupos: <b>Dashboards</b>, <b>Vendas</b>, <b>Cadastros</b>, <b>Sistema</b> e{' '}
-          <b>Ajuda</b>. Cada usuário vê só as telas liberadas para ele. O botão <Bt>Recolher menu</Bt>, no rodapé da barra, deixa
+          O menu fica na barra lateral, em grupos que abrem e fecham como uma sanfona: <b>Dashboards</b>, <b>Vendas</b>,{' '}
+          <b>Comissões</b>, <b>Cadastros</b>, <b>Sistema</b> e <b>Ajuda</b>. Clique no nome do grupo para ver as telas dele; só um
+          grupo fica aberto por vez, e o grupo da tela em uso abre sozinho. Cada usuário vê só as telas liberadas para ele. O botão <Bt>Recolher menu</Bt>, no rodapé da barra, deixa
           só os ícones (a escolha fica guardada no navegador). O número ao lado de <b>Carrinho</b> mostra quantos produtos estão
           nele.
         </p>

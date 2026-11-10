@@ -24,8 +24,7 @@
   padding: 34px 30px 28px;
 }
 .login-marca { display: flex; flex-direction: column; align-items: center; margin-bottom: 26px; }
-.login-raizes { font-family: var(--font-display); font-size: 2.6rem; font-weight: 700; color: var(--berinjela); line-height: 1; }
-.login-sub { margin-top: 4px; font-size: .68rem; letter-spacing: 4px; text-transform: uppercase; color: var(--muted); }
+.login-logo-img { width: 200px; height: auto; margin: 0 auto; }
 .login-card .form-mensagem { margin-bottom: 14px; }
 .login-entrar { width: 100%; margin-top: 6px; padding: 11px; }
 

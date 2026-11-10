@@ -68,6 +68,7 @@ code {
   padding-bottom: 24px;
   margin-bottom: 28px;
 }
+.orc-brand-logo { width: 170px; height: auto; }
 .orc-brand-name {
   font-family: var(--font-display);
   font-weight: 700;

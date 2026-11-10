@@ -1,3 +1,4 @@
+import { Logo } from '../components/Logo';
 import { useEffect, useState } from 'react';
 import {
   faturamentoVazio,
@@ -243,8 +244,7 @@ export function PaginaPublica() {
 function Marca() {
   return (
     <div className="pub-marca">
-      <div className="orc-brand-name">Raízes</div>
-      <div className="orc-brand-sub">Personalizados</div>
+      <Logo className="orc-brand-logo" />
     </div>
   );
 }

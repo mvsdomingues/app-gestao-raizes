@@ -121,3 +121,4 @@ body.pagina-publica { display: block; background: var(--creme); }
 @media print {
   .orc-link-painel, .orc-resposta, .orc-cancelado { display: none !important; }
 }
+.pub-marca .orc-brand-logo { margin: 0 auto; }

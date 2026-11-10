@@ -1,5 +1,6 @@
 import { useState, type FormEvent } from 'react';
 import { useSessao } from '../../app/sessao';
+import { Logo } from '../../components/Logo';
 
 /** Tela de entrada: apenas login e senha. */
 export function TelaLogin() {
@@ -28,8 +29,7 @@ export function TelaLogin() {
     <div className="login-fundo">
       <form className="login-card" onSubmit={enviar} id="form-login" noValidate>
         <div className="login-marca">
-          <span className="login-raizes">Raízes</span>
-          <span className="login-sub">Personalizados</span>
+          <Logo className="login-logo-img" />
         </div>
 
         {aviso && !erro && <div className="form-mensagem erro">{aviso}</div>}

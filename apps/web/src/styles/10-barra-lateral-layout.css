@@ -37,7 +37,7 @@
   transition: width .2s ease;
 }
 .sidebar-logo {
-  height: 68px;
+  height: 76px;
   padding: 0 24px;
   display: flex;
   flex-direction: column;
@@ -46,38 +46,46 @@
   border-bottom: 1px solid rgba(255,255,255,.08);
   flex-shrink: 0;
 }
-.logo-raizes {
-  font-family: var(--font-display);
-  font-weight: 700;
-  font-size: 1.7rem;
-  color: var(--creme);
-  letter-spacing: -.5px;
-}
-.logo-sub {
-  font-family: var(--font-body);
-  font-weight: 300;
-  font-size: .65rem;
-  color: rgba(246,244,239,.55);
-  letter-spacing: 3px;
-  text-transform: uppercase;
-  margin-top: 1px;
-}
+.logo-img { display: block; user-select: none; }
+.sidebar-logo-completa { width: 132px; height: auto; flex-shrink: 0; }
+.sidebar-logo-simbolo { display: none; width: 28px; height: auto; flex-shrink: 0; }
 
 .sidebar-nav {
   flex: 1;
   overflow-y: auto;
   padding: 14px 12px;
 }
-.sidebar-group + .sidebar-group { margin-top: 18px; }
-.sidebar-group-title {
-  font-size: .62rem;
+.sidebar-group + .sidebar-group { margin-top: 4px; }
+/* Cabeçalho do grupo (sanfona: um aberto por vez) */
+.sidebar-group-toggle {
+  display: flex;
+  align-items: center;
+  gap: 11px;
+  width: 100%;
+  background: none;
+  border: none;
+  border-radius: 6px;
+  padding: 9px 12px;
+  color: rgba(246,244,239,.72);
+  font-family: var(--font-body);
+  font-size: .7rem;
   font-weight: 600;
-  letter-spacing: 1.6px;
+  letter-spacing: 1.4px;
   text-transform: uppercase;
-  color: rgba(246,244,239,.38);
-  padding: 0 12px 6px;
+  text-align: left;
+  cursor: pointer;
   white-space: nowrap;
+  transition: background .2s, color .2s;
 }
+.sidebar-group-toggle:hover { background: rgba(255,255,255,.06); color: var(--creme); }
+.sidebar-group.com-ativa > .sidebar-group-toggle { color: var(--creme); }
+.sidebar-group.com-ativa:not(.aberto) > .sidebar-group-toggle { background: rgba(255,255,255,.08); }
+.sidebar-group-nome { flex: 1; overflow: hidden; text-overflow: ellipsis; }
+.sidebar-seta { font-size: .7rem; opacity: .7; transition: transform .2s; transform: rotate(-90deg); }
+.sidebar-group.aberto .sidebar-seta { transform: none; }
+.sidebar-group-itens { display: none; padding: 2px 0 6px 14px; margin-left: 13px; border-left: 1px solid rgba(255,255,255,.1); }
+.sidebar-group.aberto .sidebar-group-itens { display: block; }
+.sidebar-group-itens .sidebar-item { padding: 7px 10px; font-size: .74rem; }
 .sidebar-item {
   display: flex;
   align-items: center;
@@ -147,8 +155,13 @@
 /* Menu recolhido: só ícones (a dica com o nome aparece ao passar o mouse) */
 .sidebar.recolhida { width: 68px; }
 .sidebar.recolhida .sidebar-logo { padding: 0; align-items: center; }
+.sidebar.recolhida .sidebar-logo-completa { display: none; }
+.sidebar.recolhida .sidebar-logo-simbolo { display: block; }
+/* Recolhido: sem sanfona, todos os ícones das telas, grupos separados por um traço */
+.sidebar.recolhida .sidebar-group-toggle { display: none; }
+.sidebar.recolhida .sidebar-group-itens { display: block; padding: 0; margin: 0; border: 0; }
+.sidebar.recolhida .sidebar-group + .sidebar-group { margin-top: 8px; padding-top: 8px; border-top: 1px solid rgba(255,255,255,.08); }
 .sidebar.recolhida .sidebar-nav { padding: 14px 10px; }
-.sidebar.recolhida .sidebar-group-title { visibility: hidden; height: 6px; padding: 0; }
 .sidebar.recolhida .sidebar-item { justify-content: center; padding: 10px 0; position: relative; }
 .sidebar.recolhida .sidebar-label { display: none; }
 .sidebar.recolhida .tab-badge {
@@ -165,9 +178,12 @@
 @media (max-width: 900px) {
   .sidebar { width: 68px; }
   .sidebar .sidebar-logo { padding: 0; align-items: center; }
-  .sidebar .logo-sub, .sidebar .sidebar-label, .sidebar-toggle { display: none; }
-  .sidebar .logo-raizes { font-size: 1.15rem; }
-  .sidebar .sidebar-group-title { visibility: hidden; height: 6px; padding: 0; }
+  .sidebar .sidebar-label, .sidebar-toggle { display: none; }
+  .sidebar .sidebar-logo-completa { display: none; }
+  .sidebar .sidebar-logo-simbolo { display: block; }
+  .sidebar .sidebar-group-toggle { display: none; }
+  .sidebar .sidebar-group-itens { display: block; padding: 0; margin: 0; border: 0; }
+  .sidebar .sidebar-group + .sidebar-group { margin-top: 8px; padding-top: 8px; border-top: 1px solid rgba(255,255,255,.08); }
   .sidebar .sidebar-nav { padding: 14px 10px; }
   .sidebar .sidebar-item { justify-content: center; padding: 10px 0; position: relative; }
   .sidebar .tab-badge { position: absolute; top: 2px; right: 2px; padding: 0 5px; min-width: 16px; font-size: .58rem; }
