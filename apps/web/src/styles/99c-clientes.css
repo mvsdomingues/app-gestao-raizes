@@ -179,3 +179,27 @@
 .clientes-duplicidade-acoes button, .clientes-aviso button { width: auto; padding: 7px 14px; font-size: .74rem; white-space: nowrap; }
 .clientes-duplicidade > div:first-child { min-width: 0; flex: 1 1 320px; }
 .clientes-totais b { font-size: 1.05rem; white-space: nowrap; }
+
+/* Pedido sem cliente: vincular ao cadastro */
+.pedido-vincular-cliente {
+  margin: 10px 0 4px;
+  padding: 12px 14px;
+  border: 1px dashed var(--uva);
+  border-radius: 10px;
+  background: rgba(123, 79, 160, 0.05);
+  max-width: 560px;
+}
+.pedido-vincular-titulo {
+  font-weight: 600;
+  color: var(--berinjela);
+  margin-bottom: 2px;
+}
+.pedido-vincular-dica {
+  margin: 0 0 8px;
+  font-size: 0.85rem;
+  color: #6b5a70;
+}
+
+.cart-field-label .obrigatorio {
+  color: #b3261e;
+}

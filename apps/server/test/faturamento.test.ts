@@ -5,9 +5,10 @@ import { cnpjValido, cpfValido, diferencasFaturamento, faturamentoVazio, formata
 import { criarApp } from '../src/app';
 import { abrirBanco } from '../src/db/conexao';
 import { GerenciadorAtualizacao } from '../src/services/gerenciador-atualizacao';
-import { entrar } from './sessao-teste';
+import { clienteDeTeste, entrar } from './sessao-teste';
 
 const db = abrirBanco(':memory:');
+const CLI = clienteDeTeste(db);
 let servidor: Server;
 let base = '';
 let cookie = '';
@@ -22,7 +23,7 @@ async function req(metodo: string, url: string, corpo?: unknown) {
 }
 
 const item = { nome: 'Caneca', codigo: 'C1', fornecedor: 'XBZ', imagem_url: '', qty: 10, preco: 20, composicao: 'c' };
-const corpo = (extra: object = {}) => ({ itens: [item], subtotal: 200, frete: 0, total: 200, ...extra });
+const corpo = (extra: object = {}) => ({ cliente_id: CLI, itens: [item], subtotal: 200, frete: 0, total: 200, ...extra });
 
 beforeAll(async () => {
   servidor = criarApp({

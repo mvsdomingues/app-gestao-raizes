@@ -5,9 +5,10 @@ import { FLUXO_PEDIDO } from '@raizes/shared';
 import { criarApp } from '../src/app';
 import { abrirBanco } from '../src/db/conexao';
 import { GerenciadorAtualizacao } from '../src/services/gerenciador-atualizacao';
-import { entrar } from './sessao-teste';
+import { clienteDeTeste, entrar } from './sessao-teste';
 
 const db = abrirBanco(':memory:');
+const CLI = clienteDeTeste(db);
 let servidor: Server;
 let base = '';
 let cookie = '';
@@ -34,7 +35,7 @@ beforeAll(async () => {
   base = `http://127.0.0.1:${(servidor.address() as AddressInfo).port}`;
   cookie = await entrar(base);
   for (let i = 0; i < 3; i++) {
-    await req('POST', '/api/orcamentos', { itens: [item], subtotal: 200, frete: 0, total: 200 + i });
+    await req('POST', '/api/orcamentos', { cliente_id: CLI, itens: [item], subtotal: 200, frete: 0, total: 200 + i });
   }
 });
 

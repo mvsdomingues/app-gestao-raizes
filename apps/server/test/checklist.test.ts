@@ -5,9 +5,10 @@ import { FLUXO_PEDIDO } from '@raizes/shared';
 import { criarApp } from '../src/app';
 import { abrirBanco } from '../src/db/conexao';
 import { GerenciadorAtualizacao } from '../src/services/gerenciador-atualizacao';
-import { entrar } from './sessao-teste';
+import { clienteDeTeste, entrar } from './sessao-teste';
 
 const db = abrirBanco(':memory:');
+const CLI = clienteDeTeste(db);
 let servidor: Server;
 let base = '';
 let cookie = '';
@@ -23,7 +24,7 @@ async function req(metodo: string, url: string, corpo?: unknown, c = cookie) {
 }
 
 async function novoPedido(): Promise<string> {
-  const o = await req('POST', '/api/orcamentos', { itens: [item], subtotal: 200, frete: 0, total: 200 });
+  const o = await req('POST', '/api/orcamentos', { cliente_id: CLI, itens: [item], subtotal: 200, frete: 0, total: 200 });
   return (await req('POST', '/api/pedidos', { orcamento_id: o.json.id })).json.codigo;
 }
 

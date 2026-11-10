@@ -1,5 +1,7 @@
 import {
   codigoCliente,
+  faturamentoDoCliente,
+  faturamentoPreenchido,
   codigoPedido,
   FLUXO_PEDIDO,
   statusAnterior,
@@ -28,6 +30,7 @@ import { colunasResponsavel, extrairResponsavel } from './repositorio-usuarios';
 import { isoLocal } from '../lib/datas';
 import { faturamentoDoBanco } from '../lib/faturamento';
 import { carteiraParaPedido } from './repositorio-comissoes';
+import { obterClienteCadastro, registrarHistorico, vincularOrcamentoECliente } from './repositorio-cadastro-clientes';
 import type { Banco } from './conexao';
 import { checklistDoPedido, copiarChecklistParaPedido } from './repositorio-checklist';
 
@@ -262,6 +265,9 @@ export function criarPedido(
       .prepare('SELECT status, entrega_prevista, faturamento_json, cliente_id FROM orcamentos WHERE id = ?')
       .get(orcamentoId) as { status: string; entrega_prevista: string | null; faturamento_json: string | null; cliente_id: number | null } | undefined;
     if (!existe) throw new ErroHttp(404, `Orçamento ${numeroOrcamento(orcamentoId)} não encontrado`);
+    if (!existe.cliente_id) {
+      throw new ErroHttp(409, `O ${numeroOrcamento(orcamentoId)} não tem cliente: vincule o cliente no orçamento (edite e escolha o cliente) antes de gerar o pedido.`);
+    }
     const ativo = pedidoAtivoDoOrcamento(db, orcamentoId);
     if (ativo) {
       throw new ErroHttp(409, `O orçamento ${numeroOrcamento(orcamentoId)} já está no pedido ${ativo.codigo}`);
@@ -459,5 +465,73 @@ export function cancelarPedido(db: Banco, codigo: string, motivo: string | null,
       )
       .get(p.id) as { id: number; status: 'ABERTO' | 'ENVIADO'; codigo: string };
     registrarMovimentoOrcamento(db, o.id, 'PEDIDO_GERADO', o.status, usuarioId, `Pedido ${o.codigo} cancelado`, agora);
+  })();
+}
+
+/**
+ * Vincula um cliente ao pedido que foi criado sem cliente (e ao seu orçamento).
+ * A carteira passa para a do cliente se o mês da comissão do pedido não estiver fechado.
+ * Com `usarFaturamento`, um pedido sem dados de faturamento recebe os do cadastro.
+ */
+export function vincularClienteAoPedido(
+  db: Banco,
+  codigo: string,
+  clienteId: unknown,
+  usarFaturamento: boolean,
+  usuario: { id: number; nome: string },
+): void {
+  db.transaction(() => {
+    const p = db
+      .prepare('SELECT id, status, orcamento_id, cliente_id, carteira_id, faturamento_json FROM pedidos WHERE codigo = ? COLLATE NOCASE')
+      .get(codigo) as
+      | { id: number; status: StatusPedido; orcamento_id: number; cliente_id: number | null; carteira_id: number | null; faturamento_json: string | null }
+      | undefined;
+    if (!p) throw new ErroHttp(404, 'Pedido não encontrado');
+    if (p.status === 'CANCELADO') throw new ErroHttp(409, 'Pedido cancelado não recebe cliente');
+    if (p.cliente_id) throw new ErroHttp(409, 'O pedido já tem cliente. Para juntar cadastros, use Mesclar na tela Clientes.');
+    const cid = Number(clienteId);
+    const c = Number.isInteger(cid)
+      ? (db.prepare('SELECT id, nome, ativo, carteira_id FROM clientes WHERE id = ?').get(cid) as
+          | { id: number; nome: string; ativo: number; carteira_id: number | null }
+          | undefined)
+      : undefined;
+    if (!c || !c.ativo) throw new ErroHttp(400, 'Cliente não encontrado no cadastro (ou inativo)');
+    const agora = isoLocal();
+    const autor = { usuarioId: usuario.id, nome: usuario.nome, origem: 'PEDIDO' as const };
+    vincularOrcamentoECliente(db, p.orcamento_id, c.id);
+    const codCli = codigoCliente(c.id);
+    const linhas = [`Cliente ${codCli} ${c.nome} vinculado ao pedido`];
+    // Carteira: a do cliente, salvo mês da comissão já fechado
+    const nova = carteiraParaPedido(db, c.id);
+    const conclusao = (
+      db.prepare("SELECT MIN(data_hora) AS d FROM pedidos_movimentos WHERE pedido_id = ? AND status_novo = 'EM_PRODUCAO'").get(p.id) as { d: string | null }
+    ).d;
+    const fechado = !!conclusao && !!db.prepare('SELECT 1 FROM comissao_fechamentos WHERE competencia = ?').get(conclusao.slice(0, 7));
+    if (nova !== p.carteira_id) {
+      const nomeCart = (id: number | null) => (id ? ((db.prepare('SELECT nome FROM carteiras WHERE id = ?').get(id) as { nome: string } | undefined)?.nome ?? '—') : '—');
+      if (fechado) {
+        linhas.push(`Carteira mantida (${nomeCart(p.carteira_id)}): comissões de ${conclusao!.slice(5, 7)}/${conclusao!.slice(0, 4)} já fechadas`);
+      } else {
+        db.prepare('UPDATE pedidos SET carteira_id = ? WHERE id = ?').run(nova, p.id);
+        db.prepare('INSERT INTO pedidos_carteira_movimentos (pedido_id, carteira_anterior, carteira_nova, data_hora, usuario_id) VALUES (?, ?, ?, ?, ?)').run(
+          p.id,
+          p.carteira_id,
+          nova,
+          agora,
+          usuario.id,
+        );
+        linhas.push(`Carteira: ${nomeCart(p.carteira_id)} → ${nomeCart(nova)}`);
+      }
+    }
+    // Faturamento do cadastro, se o pedido não tem
+    if (usarFaturamento && !p.faturamento_json) {
+      const cli = obterClienteCadastro(db, c.id);
+      if (cli && faturamentoPreenchido(faturamentoDoCliente(cli))) {
+        db.prepare('UPDATE pedidos SET faturamento_json = ? WHERE id = ?').run(JSON.stringify(faturamentoDoCliente(cli)), p.id);
+        linhas.push('Dados de faturamento copiados do cadastro do cliente');
+      }
+    }
+    inserirObservacao(db, p.id, linhas.join('\n'), agora, usuario.id);
+    registrarHistorico(db, c.id, autor, `Vinculado ao pedido ${codigo.toUpperCase()}`);
   })();
 }

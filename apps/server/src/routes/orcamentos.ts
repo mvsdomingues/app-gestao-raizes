@@ -285,6 +285,8 @@ export function rotasOrcamentos(db: Banco, opcoes: OpcoesOrcamentos = {}): Route
   r.post('/api/orcamentos', (req, res) => {
     const eu = exigirUsuario(res);
     const { itens, subtotal, frete, total, observacao, clienteId, entrega, faturamento } = lerCorpo(req);
+    // Cliente obrigatório para gerar o orçamento (pré-cadastro pelo carrinho: nome + telefone ou e-mail)
+    if (!clienteId) throw new ErroHttp(400, 'Escolha ou inclua o cliente do orçamento');
     const [cid, cnome, ctel, cemail, ckommo] = dadosDoCliente(clienteId);
     const dataHora = isoLocal();
     const info = db
@@ -327,6 +329,8 @@ export function rotasOrcamentos(db: Banco, opcoes: OpcoesOrcamentos = {}): Route
       clienteId === undefined
         ? [atual.cliente_id, atual.cliente_nome, atual.cliente_telefone, atual.cliente_email, atual.cliente_kommo_id]
         : dadosDoCliente(clienteId, atual.cliente_id);
+    // Orçamento alterado precisa ter cliente (os antigos sem cliente recebem um ao serem alterados)
+    if (!cid) throw new ErroHttp(400, 'Escolha ou inclua o cliente do orçamento');
     const dataHora = isoLocal();
     const info = db
       .prepare(

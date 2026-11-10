@@ -6,9 +6,10 @@ import { criarApp } from '../src/app';
 import { abrirBanco } from '../src/db/conexao';
 import { garantirAcessoInicial } from '../src/db/repositorio-usuarios';
 import { GerenciadorAtualizacao } from '../src/services/gerenciador-atualizacao';
-import { entrar } from './sessao-teste';
+import { clienteDeTeste, entrar } from './sessao-teste';
 
 const db = abrirBanco(':memory:');
+const CLI = clienteDeTeste(db);
 let servidor: Server;
 let base = '';
 let admin = '';
@@ -210,7 +211,7 @@ describe('usuário responsável', () => {
   const item = { nome: 'Caneca', codigo: 'C1', fornecedor: 'XBZ', imagem_url: '', qty: 10, preco: 20, composicao: 'c' };
 
   it('grava quem criou e quem alterou o orçamento', async () => {
-    const criado = await req('POST', '/api/orcamentos', { itens: [item], subtotal: 200, frete: 0, total: 200 });
+    const criado = await req('POST', '/api/orcamentos', { cliente_id: CLI, itens: [item], subtotal: 200, frete: 0, total: 200 });
     const id = criado.json.id;
     const o = (await req('GET', `/api/orcamentos/${id}`)).json;
     expect(o.responsavel).toMatchObject({ login: 'admin', nome: 'Administrador' });

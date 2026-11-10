@@ -1,5 +1,16 @@
 import { useEffect, useState } from 'react';
-import { ETAPA_ALTERA_ENTREGA, formatarDataBr, formatBRL, FLUXO_PEDIDO, podeAlterarFaturamento, podeCancelar, proximoStatus, ROTULOS_STATUS_PEDIDO, type Pedido, type StatusPedido } from '@raizes/shared';
+import {
+  ETAPA_ALTERA_ENTREGA,
+  formatarDataBr,
+  formatBRL,
+  FLUXO_PEDIDO,
+  podeAlterarFaturamento,
+  podeCancelar,
+  proximoStatus,
+  ROTULOS_STATUS_PEDIDO,
+  type Pedido,
+  type StatusPedido,
+} from '@raizes/shared';
 import { useApp } from '../../app/contexto';
 import { NomeUsuario } from '../../components/NomeUsuario';
 import { useSessao } from '../../app/sessao';
@@ -8,6 +19,7 @@ import { avisar, confirmar, erroDe } from '../../lib/dialogo';
 import { FolhaOrcamento } from '../orcamentos/FolhaOrcamento';
 import { useParametrosImpressao } from '../orcamentos/impressao';
 import { ClienteVinculado } from '../clientes/ClienteVinculado';
+import { SeletorCliente } from '../clientes/SeletorCliente';
 import { ResumoFaturamento } from '../clientes/FormularioFaturamento';
 import { ModalFaturamento } from '../clientes/ModalFaturamento';
 import { ChecklistPedido } from './ChecklistPedido';
@@ -49,7 +61,9 @@ export function DetalhePedido() {
   const entrada = new Map(p.movimentos.filter((m) => m.status_novo !== 'CANCELADO').map((m) => [m.status_novo, m.data_hora]));
   // Cancelado: as etapas cumpridas até o cancelamento e, no fim, "Cancelado" como etapa atual
   const ultimaAntes = FLUXO_PEDIDO.indexOf((cancelamento?.status_anterior ?? 'CRIADO') as (typeof FLUXO_PEDIDO)[number]);
-  const etapas: StatusPedido[] = cancelado ? [...FLUXO_PEDIDO.slice(0, Math.max(0, ultimaAntes) + 1), 'CANCELADO'] : [...FLUXO_PEDIDO];
+  const etapas: StatusPedido[] = cancelado
+    ? [...FLUXO_PEDIDO.slice(0, Math.max(0, ultimaAntes) + 1), 'CANCELADO']
+    : [...FLUXO_PEDIDO];
   if (cancelamento) entrada.set('CANCELADO', cancelamento.data_hora);
   const indiceAtual = cancelado
     ? etapas.length - 1
@@ -115,8 +129,8 @@ export function DetalhePedido() {
           <div>
             <div className="pedido-codigo">{p.codigo}</div>
             <div className="pedido-sub">
-              Criado em {formatarDataHora(p.criado)} por <NomeUsuario usuario={p.responsavel} /> · orçamento <b>{p.orcamento_numero}</b> · {p.qtd_itens}{' '}
-              {p.qtd_itens === 1 ? 'item' : 'itens'}
+              Criado em {formatarDataHora(p.criado)} por <NomeUsuario usuario={p.responsavel} /> · orçamento{' '}
+              <b>{p.orcamento_numero}</b> · {p.qtd_itens} {p.qtd_itens === 1 ? 'item' : 'itens'}
             </div>
           </div>
           <div className="pedido-card-dir">
@@ -134,11 +148,12 @@ export function DetalhePedido() {
             </span>
           )}
         </div>
+        {!p.cliente && !cancelado && <VincularCliente pedido={p} aoSalvar={atualizarPedidoAberto} />}
         {cancelamento && (
           <div className="pedido-cancelado">
             Pedido cancelado em {formatarDataHora(cancelamento.data_hora)}
-            {cancelamento.observacao ? ` — motivo: ${cancelamento.observacao}` : ''}. O orçamento {p.orcamento_numero}{' '}
-            ficou livre para alteração ou para um novo pedido.
+            {cancelamento.observacao ? ` — motivo: ${cancelamento.observacao}` : ''}. O orçamento {p.orcamento_numero} ficou livre
+            para alteração ou para um novo pedido.
           </div>
         )}
 
@@ -277,7 +292,12 @@ function ObservacoesPedido({ pedido, aoSalvar }: { pedido: Pedido; aoSalvar: (p:
             }
           }}
         />
-        <button className="btn-novo" id="btn-incluir-obs-pedido" onClick={() => void adicionar()} disabled={salvando || !texto.trim()}>
+        <button
+          className="btn-novo"
+          id="btn-incluir-obs-pedido"
+          onClick={() => void adicionar()}
+          disabled={salvando || !texto.trim()}
+        >
           {salvando ? 'Incluindo…' : '+ Incluir observação'}
         </button>
       </div>
@@ -405,7 +425,13 @@ function FaturamentoPedido({ pedido, aoSalvar }: { pedido: Pedido; aoSalvar: (p:
               title="O cadastro do cliente não muda sozinho quando o faturamento do pedido é alterado"
               onClick={async () => {
                 const quem = pedido.cliente ? `${pedido.cliente.codigo ?? ''} ${pedido.cliente.nome}`.trim() : 'um novo cliente';
-                if (!(await confirmar(`Gravar estes dados de faturamento no cadastro de ${quem}? A alteração fica no histórico do cliente.`, { ok: 'Atualizar o cadastro' }))) return;
+                if (
+                  !(await confirmar(
+                    `Gravar estes dados de faturamento no cadastro de ${quem}? A alteração fica no histórico do cliente.`,
+                    { ok: 'Atualizar o cadastro' },
+                  ))
+                )
+                  return;
                 try {
                   aoSalvar(await api.alterarFaturamentoPedido(pedido.codigo, pedido.faturamento!, true));
                   void avisar('Cadastro do cliente atualizado.', { tipo: 'sucesso' });
@@ -421,7 +447,11 @@ function FaturamentoPedido({ pedido, aoSalvar }: { pedido: Pedido; aoSalvar: (p:
       ) : (
         <p className="pedido-fat-vazio">Dados de faturamento não informados{pode ? ' — use "Informar dados".' : '.'}</p>
       )}
-      {!pode && pedido.faturamento && <p className="pedido-fat-dica">Pedido {pedido.status === 'CANCELADO' ? 'cancelado' : 'encerrado'}: os dados não podem mais ser alterados.</p>}
+      {!pode && pedido.faturamento && (
+        <p className="pedido-fat-dica">
+          Pedido {pedido.status === 'CANCELADO' ? 'cancelado' : 'encerrado'}: os dados não podem mais ser alterados.
+        </p>
+      )}
       <ModalFaturamento
         aberto={editando}
         titulo={`Faturamento e entrega · ${pedido.codigo}`}
@@ -436,5 +466,49 @@ function FaturamentoPedido({ pedido, aoSalvar }: { pedido: Pedido; aoSalvar: (p:
         }}
       />
     </section>
+  );
+}
+
+/** Pedido antigo sem cliente: escolhe (ou inclui) o cliente e o liga ao pedido e ao orçamento. */
+function VincularCliente({ pedido: p, aoSalvar }: { pedido: Pedido; aoSalvar: (p: Pedido) => void }) {
+  const [salvando, setSalvando] = useState(false);
+  const escolher = async (c: import('@raizes/shared').ClienteVinculado | null) => {
+    if (!c || salvando) return;
+    const ok = await confirmar(
+      `Vincular ${c.nome} (${c.codigo}) ao pedido ${p.codigo} e ao orçamento ${p.orcamento_numero}?\n\n` +
+        'A carteira do pedido passa a ser a do cliente (salvo se o mês da comissão já estiver fechado). ' +
+        'Depois de vinculado, o cliente não é trocado por aqui — para corrigir, use Mesclar na tela Clientes.',
+      { titulo: 'Vincular cliente', ok: 'Vincular' },
+    );
+    if (!ok) return;
+    let usarFaturamento = false;
+    if (!p.faturamento) {
+      usarFaturamento = await confirmar(
+        'O pedido não tem dados de faturamento. Usar os dados do cadastro do cliente (se houver)?',
+        {
+          titulo: 'Dados de faturamento',
+          ok: 'Usar do cadastro',
+          cancelar: 'Não agora',
+        },
+      );
+    }
+    setSalvando(true);
+    try {
+      aoSalvar(await api.vincularClientePedido(p.codigo, c.id, usarFaturamento));
+      void avisar(`Cliente ${c.nome} vinculado ao pedido ${p.codigo}.`, { tipo: 'sucesso' });
+    } catch (e) {
+      void erroDe('Não foi possível vincular o cliente.', e);
+    } finally {
+      setSalvando(false);
+    }
+  };
+  return (
+    <div className="pedido-vincular-cliente" id="pedido-vincular-cliente">
+      <div className="pedido-vincular-titulo">Vincular cliente</div>
+      <p className="pedido-vincular-dica">
+        Este pedido foi gerado sem cliente. Busque ou inclua o cliente para ligar o pedido e o orçamento ao cadastro.
+      </p>
+      <SeletorCliente id="campo-cliente-pedido" valor={null} aoMudar={(c) => void escolher(c)} />
+    </div>
   );
 }

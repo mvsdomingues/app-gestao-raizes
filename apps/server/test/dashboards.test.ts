@@ -5,9 +5,10 @@ import type { DashboardGeral } from '@raizes/shared';
 import { criarApp } from '../src/app';
 import { abrirBanco } from '../src/db/conexao';
 import { GerenciadorAtualizacao } from '../src/services/gerenciador-atualizacao';
-import { entrar } from './sessao-teste';
+import { clienteDeTeste, entrar } from './sessao-teste';
 
 const db = abrirBanco(':memory:');
+const CLI = clienteDeTeste(db);
 let servidor: Server;
 let base = '';
 let cookie = '';
@@ -31,7 +32,7 @@ const item = (codigo: string, fornecedor: string, preco: number, qty: number) =>
 
 async function orcamento(itens: ReturnType<typeof item>[]) {
   const total = itens.reduce((s, i) => s + i.preco * i.qty, 0);
-  const r = await req('POST', '/api/orcamentos', { itens, subtotal: total, frete: 0, total });
+  const r = await req('POST', '/api/orcamentos', { cliente_id: CLI, itens, subtotal: total, frete: 0, total });
   return r.json.id as number;
 }
 

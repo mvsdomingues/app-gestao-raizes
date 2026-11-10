@@ -4,9 +4,10 @@ import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 import { criarApp } from '../src/app';
 import { abrirBanco } from '../src/db/conexao';
 import { GerenciadorAtualizacao } from '../src/services/gerenciador-atualizacao';
-import { entrar } from './sessao-teste';
+import { clienteDeTeste, entrar } from './sessao-teste';
 
 const db = abrirBanco(':memory:');
+const CLI = clienteDeTeste(db);
 let servidor: Server;
 let base = '';
 let cookie = '';
@@ -71,9 +72,9 @@ describe('API', () => {
   it('salva e consulta orçamentos', async () => {
     expect((await post('/api/orcamentos', {})).json).toEqual({ erro: 'itens vazio' });
     expect((await post('/api/orcamentos', 'não é json')).status).toBe(400);
-    expect((await post('/api/orcamentos', { itens: [{}], total: 'x' })).json).toEqual({ erro: 'valores inválidos' });
+    expect((await post('/api/orcamentos', { cliente_id: CLI, itens: [{}], total: 'x' })).json).toEqual({ erro: 'valores inválidos' });
     const item = { nome: 'A', codigo: 'B', fornecedor: 'ASIA', imagem_url: '', qty: 2, preco: 10, composicao: 'c' };
-    const criado = await post('/api/orcamentos', { itens: [item], subtotal: 20, frete: '5', total: 25 });
+    const criado = await post('/api/orcamentos', { cliente_id: CLI, itens: [item], subtotal: 20, frete: '5', total: 25 });
     expect(criado.json.numero).toBe('ORC-0001');
     expect(criado.json.data_hora).toMatch(/^\d{4}-\d\d-\d\dT\d\d:\d\d:\d\d$/);
     const lista = await get('/api/orcamentos');

@@ -1,5 +1,13 @@
 import { useEffect, useState } from 'react';
-import { calcComParametros, diferencasFaturamento, faturamentoPreenchido, faturamentoVazio, formatBRL, montarItemOrcamento, type ClienteVinculado } from '@raizes/shared';
+import {
+  calcComParametros,
+  diferencasFaturamento,
+  faturamentoPreenchido,
+  faturamentoVazio,
+  formatBRL,
+  montarItemOrcamento,
+  type ClienteVinculado,
+} from '@raizes/shared';
 import { ResumoFaturamento } from '../clientes/FormularioFaturamento';
 import { ModalFaturamento } from '../clientes/ModalFaturamento';
 import { useApp } from '../../app/contexto';
@@ -13,8 +21,16 @@ import { SeletorCliente } from '../clientes/SeletorCliente';
 export function Carrinho() {
   const { tela, visitas, irPara, mostrarOrcamento, parametros, tecnicas, carregarParametros } = useApp();
   const { pode, usuario } = useSessao();
-  const { estado, limpar, redesenhar, definirFrete, definirObservacao, definirCliente, definirEntregaPrevista, definirFaturamento } =
-    useCarrinho();
+  const {
+    estado,
+    limpar,
+    redesenhar,
+    definirFrete,
+    definirObservacao,
+    definirCliente,
+    definirEntregaPrevista,
+    definirFaturamento,
+  } = useCarrinho();
   const { frete, edicao, observacao, cliente, entregaPrevista, faturamento } = estado;
   const [editandoFaturamento, setEditandoFaturamento] = useState(false);
   const temFaturamento = faturamentoPreenchido(faturamento);
@@ -71,6 +87,12 @@ export function Carrinho() {
   const gerarOrcamento = async () => {
     if (!itens.length) {
       void avisar('Adicione produtos ao carrinho antes de gerar o orçamento.', { tipo: 'aviso', titulo: 'Carrinho vazio' });
+      return;
+    }
+    // Cliente obrigatório: todo orçamento nasce ligado a um cliente do cadastro (carteira e comissões)
+    if (!cliente) {
+      await avisar('Escolha ou inclua o cliente do orçamento.', { tipo: 'aviso', titulo: 'Cliente obrigatório' });
+      document.querySelector<HTMLInputElement>('#campo-cliente')?.focus();
       return;
     }
     // Custo de personalização pelas tabelas: cadastro incompleto ou arte sem medidas impedem gerar
@@ -163,9 +185,7 @@ export function Carrinho() {
             <h2 className="carrinho-page-title">Carrinho de Orçamento</h2>
             <p className="carrinho-page-sub">
               <span id="cart-items-label">
-                {count === 0
-                  ? 'Nenhum item adicionado'
-                  : `${count} item${count > 1 ? 's' : ''} · ${unidades} unid.`}
+                {count === 0 ? 'Nenhum item adicionado' : `${count} item${count > 1 ? 's' : ''} · ${unidades} unid.`}
               </span>
             </p>
           </div>
@@ -219,8 +239,10 @@ export function Carrinho() {
 
               <div className="cart-cliente" id="cart-cliente">
                 <label className="cart-field-label" htmlFor="campo-cliente">
-                  Cliente
-                  <span className="cart-cliente-dica">{cliente ? cliente.codigo : 'opcional para gerar; obrigatório para enviar'}</span>
+                  <span>
+                    Cliente <span className="obrigatorio">*</span>
+                  </span>
+                  <span className="cart-cliente-dica">{cliente ? cliente.codigo : 'obrigatório'}</span>
                 </label>
                 <SeletorCliente id="campo-cliente" valor={cliente} aoMudar={(c) => void escolherCliente(c)} />
               </div>
@@ -261,14 +283,21 @@ export function Carrinho() {
                 <div className="cart-faturamento" id="cart-faturamento">
                   <div className="cart-faturamento-topo">
                     <span className="cart-field-label">Faturamento e entrega</span>
-                    <button type="button" className="link-botao" id="btn-faturamento-carrinho" onClick={() => setEditandoFaturamento(true)}>
+                    <button
+                      type="button"
+                      className="link-botao"
+                      id="btn-faturamento-carrinho"
+                      onClick={() => setEditandoFaturamento(true)}
+                    >
                       {temFaturamento ? 'Alterar' : '+ Informar'}
                     </button>
                   </div>
                   {temFaturamento ? (
                     <ResumoFaturamento dados={faturamento} />
                   ) : (
-                    <span className="cart-faturamento-vazio">Opcional — o cliente confirma ou preenche ao aprovar o orçamento.</span>
+                    <span className="cart-faturamento-vazio">
+                      Opcional — o cliente confirma ou preenche ao aprovar o orçamento.
+                    </span>
                   )}
                 </div>
                 <div className="cart-observacao">
@@ -309,7 +338,12 @@ export function Carrinho() {
                 </span>
               </div>
 
-              <button className="btn-primary" id="btn-gerar" onClick={() => void gerarOrcamento()} disabled={count === 0 || gerando}>
+              <button
+                className="btn-primary"
+                id="btn-gerar"
+                onClick={() => void gerarOrcamento()}
+                disabled={count === 0 || gerando}
+              >
                 {edicao ? `Salvar ${edicao.numero}` : 'Gerar Orçamento'}
               </button>
               <button className="btn-secondary" onClick={() => void limparTudo()}>

@@ -148,9 +148,7 @@ export const api = {
   produto: (id: number) => getJson<ProdutoDetalhado>(`/api/produto/${id}`),
 
   cores: (fornecedor: string) =>
-    getJson<{ nome: string; total: number }[]>(
-      `/api/cores${fornecedor ? `?fornecedor=${encodeURIComponent(fornecedor)}` : ''}`,
-    ),
+    getJson<{ nome: string; total: number }[]>(`/api/cores${fornecedor ? `?fornecedor=${encodeURIComponent(fornecedor)}` : ''}`),
 
   categorias: (fornecedor: string) =>
     getJson<{ nome: string; total: number }[]>(
@@ -168,8 +166,7 @@ export const api = {
   },
 
   /** Altera um orçamento salvo (mantém o número, atualiza a data). */
-  atualizarOrcamento: (id: number, dados: NovoOrcamento) =>
-    enviar<OrcamentoCriado>('PUT', `/api/orcamentos/${id}`, dados),
+  atualizarOrcamento: (id: number, dados: NovoOrcamento) => enviar<OrcamentoCriado>('PUT', `/api/orcamentos/${id}`, dados),
 
   /** Lista paginada de orçamentos com filtros. */
   orcamentos: (filtros: FiltrosOrcamentos, limit: number, offset: number) => {
@@ -212,10 +209,8 @@ export const api = {
   statusAtualizacao: () => getJson<StatusAtualizacao>('/api/atualizar/status'),
 
   // ── Produtos próprios ──
-  produtosProprios: (q = '') =>
-    enviar<ProdutoProprio[]>('GET', `/api/produtos-proprios?q=${encodeURIComponent(q)}`),
-  criarProdutoProprio: (dados: DadosProdutoProprio) =>
-    enviar<ProdutoProprio>('POST', '/api/produtos-proprios', dados),
+  produtosProprios: (q = '') => enviar<ProdutoProprio[]>('GET', `/api/produtos-proprios?q=${encodeURIComponent(q)}`),
+  criarProdutoProprio: (dados: DadosProdutoProprio) => enviar<ProdutoProprio>('POST', '/api/produtos-proprios', dados),
   alterarProdutoProprio: (codigo: string, dados: DadosProdutoProprio) =>
     enviar<ProdutoProprio>('PATCH', `/api/produtos-proprios/${encodeURIComponent(codigo)}`, dados),
   excluirProdutoProprio: (codigo: string) =>
@@ -233,6 +228,12 @@ export const api = {
   quadroPedidos: (limite = 20, meus = false) =>
     enviar<RespostaQuadroPedidos>('GET', `/api/pedidos/quadro?limite=${limite}${meus ? '&meus=1' : ''}`),
   pedido: (codigo: string) => enviar<Pedido>('GET', `/api/pedidos/${encodeURIComponent(codigo)}`),
+  /** Pedido sem cliente: vincula o cliente ao pedido e ao orçamento (carteira e, se pedido, faturamento do cadastro) */
+  vincularClientePedido: (codigo: string, clienteId: number, usarFaturamento: boolean) =>
+    enviar<Pedido>('POST', `/api/pedidos/${encodeURIComponent(codigo)}/cliente`, {
+      cliente_id: clienteId,
+      usar_faturamento: usarFaturamento,
+    }),
   criarPedido: (orcamentoId: number, observacao: string) =>
     enviar<Pedido>('POST', '/api/pedidos', { orcamento_id: orcamentoId, observacao }),
   avancarPedido: (codigo: string, statusAtual: string) =>
@@ -241,7 +242,10 @@ export const api = {
     enviar<Pedido>('POST', `/api/pedidos/${encodeURIComponent(codigo)}/retroceder`, { status_atual: statusAtual }),
   /** Dados de faturamento do pedido em andamento (cada mudança vira uma observação) */
   alterarFaturamentoPedido: (codigo: string, faturamento: DadosFaturamento, atualizarCadastro = false) =>
-    enviar<Pedido>('PUT', `/api/pedidos/${encodeURIComponent(codigo)}/faturamento`, { faturamento, atualizar_cadastro: atualizarCadastro }),
+    enviar<Pedido>('PUT', `/api/pedidos/${encodeURIComponent(codigo)}/faturamento`, {
+      faturamento,
+      atualizar_cadastro: atualizarCadastro,
+    }),
 
   /** Data prevista de entrega do pedido (só na etapa Criado; a mudança vira uma observação) */
   alterarEntregaPedido: (codigo: string, data: string | null) =>
@@ -261,8 +265,7 @@ export const api = {
   usuarios: (q = '', inativos = false) =>
     enviar<Usuario[]>('GET', `/api/usuarios?q=${encodeURIComponent(q)}${inativos ? '&inativos=1' : ''}`),
   criarUsuario: (dados: { nome: string; login: string; senha: string }) => enviar<Usuario>('POST', '/api/usuarios', dados),
-  alterarUsuario: (id: number, dados: { nome?: string; senha?: string }) =>
-    enviar<Usuario>('PUT', `/api/usuarios/${id}`, dados),
+  alterarUsuario: (id: number, dados: { nome?: string; senha?: string }) => enviar<Usuario>('PUT', `/api/usuarios/${id}`, dados),
   inativarUsuario: (id: number) => enviar<Usuario>('POST', `/api/usuarios/${id}/inativar`, {}),
   reativarUsuario: (id: number) => enviar<Usuario>('POST', `/api/usuarios/${id}/reativar`, {}),
   acessos: () => enviar<AcessoUsuario[]>('GET', '/api/acessos'),
@@ -277,7 +280,15 @@ export const api = {
   /** Busca rápida (carrinho e filtros): só ativos */
   buscarClientes: (busca: string, limite = 10) =>
     enviar<{ clientes: ResumoCliente[] }>('GET', `/api/clientes?busca=${encodeURIComponent(busca)}&limite=${limite}`),
-  listarClientes: (f: { busca?: string; situacao?: string; ativos?: string; pendencias?: boolean; carteira?: string; limit?: number; offset?: number }) => {
+  listarClientes: (f: {
+    busca?: string;
+    situacao?: string;
+    ativos?: string;
+    pendencias?: boolean;
+    carteira?: string;
+    limit?: number;
+    offset?: number;
+  }) => {
     const p = new URLSearchParams();
     if (f.busca) p.set('busca', f.busca);
     if (f.situacao) p.set('situacao', f.situacao);
@@ -292,7 +303,10 @@ export const api = {
   fichaCliente: (id: number) => enviar<FichaCliente>('GET', `/api/clientes/${id}`),
   cliente: (id: number) => enviar<{ cliente: Cliente }>('GET', `/api/clientes/${id}`),
   faturamentoCliente: (id: number) =>
-    enviar<{ faturamento: DadosFaturamento; telefone: string; situacao: SituacaoCliente }>('GET', `/api/clientes/${id}/faturamento`),
+    enviar<{ faturamento: DadosFaturamento; telefone: string; situacao: SituacaoCliente }>(
+      'GET',
+      `/api/clientes/${id}/faturamento`,
+    ),
   criarCliente: (dados: Record<string, unknown>) => enviar<RespostaCliente>('POST', '/api/clientes', dados),
   alterarCliente: (id: number, dados: Record<string, unknown>) => enviar<RespostaCliente>('PUT', `/api/clientes/${id}`, dados),
   ativoCliente: (id: number, ativo: boolean) => enviar<Cliente>('POST', `/api/clientes/${id}/ativo`, { ativo }),
@@ -323,7 +337,10 @@ export const api = {
       : enviar<TecnicaPersonalizacao>('POST', '/api/parametros/tecnicas', dados),
   excluirTecnica: (id: number) => enviar<{ ok: boolean }>('DELETE', `/api/parametros/tecnicas/${id}`),
   parametrosMaterial: () => enviar<ParametroMaterial[]>('GET', '/api/parametros/material'),
-  salvarMaterial: (dados: { tecnica_id: number; preco_m2: string; fracao_minima: string; folga_percentual: string }, id?: number) =>
+  salvarMaterial: (
+    dados: { tecnica_id: number; preco_m2: string; fracao_minima: string; folga_percentual: string },
+    id?: number,
+  ) =>
     id
       ? enviar<ParametroMaterial>('PUT', `/api/parametros/material/${id}`, dados)
       : enviar<ParametroMaterial>('POST', '/api/parametros/material', dados),
@@ -369,7 +386,11 @@ export const api = {
     return enviar<{ total: number; clientes: ClienteCarteira[] }>('GET', `/api/comissoes/clientes?${q}`);
   },
   moverClientesCarteira: (clientes: number[], carteira_id: number, levar_pedidos: boolean) =>
-    enviar<{ clientes: number; pedidos: number }>('PUT', '/api/comissoes/clientes/carteira', { clientes, carteira_id, levar_pedidos }),
+    enviar<{ clientes: number; pedidos: number }>('PUT', '/api/comissoes/clientes/carteira', {
+      clientes,
+      carteira_id,
+      levar_pedidos,
+    }),
   carteiraDoCliente: (id: number, carteira_id: number, levar_pedidos: boolean) =>
     enviar<FichaCliente>('PUT', `/api/clientes/${id}/carteira`, { carteira_id, levar_pedidos }),
   pedidosCarteira: (f: { mes?: string; busca?: string; carteira?: string; limit: number; offset: number }) => {
@@ -381,8 +402,10 @@ export const api = {
   competenciasComissao: () => enviar<{ competencia: string; fechado: boolean }[]>('GET', '/api/comissoes/apuracao'),
   apuracao: (c: string) => enviar<RespostaApuracao>('GET', `/api/comissoes/apuracao/${c}`),
   fecharApuracao: (c: string) => enviar<RespostaApuracao>('POST', `/api/comissoes/apuracao/${c}/fechar`),
-  reabrirApuracao: (c: string, motivo: string) => enviar<RespostaApuracao>('POST', `/api/comissoes/apuracao/${c}/reabrir`, { motivo }),
-  pagamentoApuracao: (c: string, pago_em: string | null) => enviar<RespostaApuracao>('PUT', `/api/comissoes/apuracao/${c}/pagamento`, { pago_em }),
+  reabrirApuracao: (c: string, motivo: string) =>
+    enviar<RespostaApuracao>('POST', `/api/comissoes/apuracao/${c}/reabrir`, { motivo }),
+  pagamentoApuracao: (c: string, pago_em: string | null) =>
+    enviar<RespostaApuracao>('PUT', `/api/comissoes/apuracao/${c}/pagamento`, { pago_em }),
 };
 
 /** URL usada para carregar imagens externas no canvas sem bloqueio de CORS. */

@@ -81,9 +81,9 @@ export function ManualOperacao() {
         <p>
           O menu fica na barra lateral, em grupos que abrem e fecham como uma sanfona: <b>Dashboards</b>, <b>Vendas</b>,{' '}
           <b>Comissões</b>, <b>Cadastros</b>, <b>Sistema</b> e <b>Ajuda</b>. Clique no nome do grupo para ver as telas dele; só um
-          grupo fica aberto por vez, e o grupo da tela em uso abre sozinho. Cada usuário vê só as telas liberadas para ele. O botão <Bt>Recolher menu</Bt>, no rodapé da barra, deixa
-          só os ícones (a escolha fica guardada no navegador). O número ao lado de <b>Carrinho</b> mostra quantos produtos estão
-          nele.
+          grupo fica aberto por vez, e o grupo da tela em uso abre sozinho. Cada usuário vê só as telas liberadas para ele. O
+          botão <Bt>Recolher menu</Bt>, no rodapé da barra, deixa só os ícones (a escolha fica guardada no navegador). O número ao
+          lado de <b>Carrinho</b> mostra quantos produtos estão nele.
         </p>
         <Dica>
           Todas as mensagens e confirmações do sistema aparecem em janelas próprias. Leia antes de confirmar: ações como cancelar
@@ -193,8 +193,8 @@ export function ManualOperacao() {
         <h4>No resumo (lado direito)</h4>
         <ul>
           <li>
-            <b>Cliente</b>, <b>Faturamento e entrega</b>, <b>Previsão de entrega</b>, <b>Frete</b> e{' '}
-            <b>Observações</b> gerais do orçamento.
+            <b>Cliente</b>, <b>Faturamento e entrega</b>, <b>Previsão de entrega</b>, <b>Frete</b> e <b>Observações</b> gerais do
+            orçamento.
           </li>
           <li>Subtotal (soma dos itens), frete e total.</li>
           <li>
@@ -287,8 +287,8 @@ export function ManualOperacao() {
         <p>
           O campo <b>Cliente</b> busca no cadastro de clientes do próprio sistema: nome ou razão social (sem acento, por partes),
           telefone (qualquer formato, com ou sem +55 e com ou sem o 9), e-mail, CPF/CNPJ ou o código <b>CLI-000001</b>. Use as
-          setas e Enter para escolher. A lista mostra telefone, e-mail, código, cidade, quantos orçamentos o cliente tem e os avisos{' '}
-          <i>pré-cadastro</i> e <i>possível duplicidade</i>.
+          setas e Enter para escolher. A lista mostra telefone, e-mail, código, cidade, quantos orçamentos o cliente tem e os
+          avisos <i>pré-cadastro</i> e <i>possível duplicidade</i>.
         </p>
         <Passos
           itens={[
@@ -308,10 +308,14 @@ export function ManualOperacao() {
             Cliente escolhido: <Bt>Ver cadastro</Bt> (quem tem a tela Clientes), <Bt>Trocar</Bt> e <Bt>Remover</Bt>.
           </li>
           <li>
-            Ao escolher o cliente, os dados de faturamento do cadastro preenchem o carrinho (se o carrinho já tiver outros, o sistema
-            pergunta qual manter).
+            Ao escolher o cliente, os dados de faturamento do cadastro preenchem o carrinho (se o carrinho já tiver outros, o
+            sistema pergunta qual manter).
           </li>
-          <li>O cliente é opcional para gerar o orçamento e obrigatório para enviá-lo.</li>
+          <li>
+            O cliente é <b>obrigatório</b> para gerar ou salvar o orçamento: sem ele, <Bt>Gerar Orçamento</Bt> avisa “Escolha ou
+            inclua o cliente” e leva ao campo. Orçamentos antigos sem cliente continuam abertos para consulta; para alterá-los ou
+            gerar pedido, escolha o cliente.
+          </li>
           <li>O orçamento guarda uma cópia do nome, telefone e e-mail do momento; o vínculo com o cadastro continua.</li>
         </ul>
         <h4>Faturamento e entrega</h4>
@@ -329,9 +333,10 @@ export function ManualOperacao() {
         />
         <p>
           No orçamento esses dados são <b>opcionais</b> (só o que foi digitado é conferido: CPF/CNPJ com dígito verificador,
-          e-mail e CEP). O CNPJ aceita o <b>formato alfanumérico</b> da Receita (emitido desde julho de 2026, ex.: 12.ABC.345/01DE-35):
-          as 12 primeiras posições podem ter letras, os 2 dígitos finais são sempre números; letras minúsculas viram maiúsculas. No aceite pelo link eles passam a ser <b>obrigatórios</b> para o cliente e, confirmados, atualizam o
-          cadastro do cliente (que passa a <b>Completo</b>). Aparecem no início da folha impressa.
+          e-mail e CEP). O CNPJ aceita o <b>formato alfanumérico</b> da Receita (emitido desde julho de 2026, ex.:
+          12.ABC.345/01DE-35): as 12 primeiras posições podem ter letras, os 2 dígitos finais são sempre números; letras
+          minúsculas viram maiúsculas. No aceite pelo link eles passam a ser <b>obrigatórios</b> para o cliente e, confirmados,
+          atualizam o cadastro do cliente (que passa a <b>Completo</b>). Aparecem no início da folha impressa.
         </p>
         <h4>Previsão de entrega e frete</h4>
         <p>
@@ -426,7 +431,7 @@ export function ManualOperacao() {
       <Secao id="man-link" titulo="Enviar o orçamento ao cliente (link)" numero={10}>
         <Passos
           itens={[
-            'Confira o orçamento e o cliente vinculado (obrigatório para enviar).',
+            'Confira o orçamento e o cliente vinculado.',
             <>
               Clique em <Bt>✉ Enviar para o Cliente</Bt>. O orçamento passa para <b>Enviado</b> e abre a janela do link.
             </>,
@@ -443,7 +448,10 @@ export function ManualOperacao() {
             ['Novo link', 'Gerar novo link invalida o anterior na hora.'],
             ['Em revisão', 'Se o orçamento voltar para Aberto, o link mostra “em revisão”. Ao reenviar, a validade recomeça.'],
             ['Uma resposta', 'O cliente aceita ou rejeita uma única vez; data, hora, IP e navegador ficam gravados.'],
-            ['Cadastro', 'Os dados confirmados no aceite atualizam o cadastro do cliente deste orçamento, com registro no histórico.'],
+            [
+              'Cadastro',
+              'Os dados confirmados no aceite atualizam o cadastro do cliente deste orçamento, com registro no histórico.',
+            ],
           ]}
         />
       </Secao>
@@ -540,6 +548,7 @@ export function ManualOperacao() {
             'Confirme. O orçamento passa para Pedido gerado e os dados de faturamento são copiados para o pedido.',
           ]}
         />
+        <Dica tipo="regra">Orçamento sem cliente não gera pedido: edite o orçamento no carrinho e escolha o cliente antes.</Dica>
         <Tabela
           colunas={['Aba', 'Para que serve']}
           linhas={[
@@ -622,6 +631,16 @@ export function ManualOperacao() {
                 Alterável com o pedido em andamento (<Bt>Alterar dados</Bt>); cada mudança vira observação com o antes → depois.
               </span>,
             ],
+            [
+              'Vincular cliente',
+              <span key="v">
+                Só em pedido antigo sem cliente (e não cancelado): busque ou inclua o cliente, como no carrinho, e confirme. O
+                cliente fica ligado ao pedido e ao orçamento; a carteira do pedido passa a ser a do cliente (se o mês da comissão
+                já estiver fechado, a carteira é mantida); se o pedido não tiver faturamento, o sistema oferece usar o do
+                cadastro. Tudo fica nas observações do pedido, no histórico do cliente e no histórico de carteira. Depois de
+                vinculado não se troca por aqui — para corrigir, use <Bt>Mesclar</Bt> na tela Clientes.
+              </span>,
+            ],
             ['Checklist', 'Itens de fechamento (marcáveis em Em Fechamento).'],
             [
               'Observações',
@@ -661,41 +680,61 @@ export function ManualOperacao() {
       {/* ─────────────────────────────── clientes */}
       <Secao id="man-clientes" titulo="Clientes (cadastro)" numero={19}>
         <p>
-          Cadastro único dos clientes, com código <b>CLI-000001</b>. Nasce como <b>pré-cadastro</b> no carrinho (nome + telefone ou
-          e-mail) e fica <b>Completo</b> quando os dados de faturamento são confirmados no aceite pelo link.{' '}
+          Cadastro único dos clientes, com código <b>CLI-000001</b>. Nasce como <b>pré-cadastro</b> no carrinho (nome + telefone
+          ou e-mail) e fica <b>Completo</b> quando os dados de faturamento são confirmados no aceite pelo link.{' '}
           <Ir tela="clientes">Abrir Clientes</Ir>
         </p>
         <h4>Lista</h4>
         <ul>
-          <li>Busca por nome, telefone, e-mail, CPF/CNPJ (inteiro ou o começo, inclusive com letras) ou código; filtros de situação, ativos/inativos e “Com pendência”.</li>
+          <li>
+            Busca por nome, telefone, e-mail, CPF/CNPJ (inteiro ou o começo, inclusive com letras) ou código; filtros de situação,
+            ativos/inativos e “Com pendência”.
+          </li>
           <li>Clique na linha para abrir a ficha.</li>
           <li>
-            <Bt>+ Novo cliente</Bt> abre o formulário completo. CPF/CNPJ já cadastrado <b>bloqueia</b>; telefone ou e-mail repetido
-            avisa e permite criar mesmo assim (marcando a possível duplicidade).
+            <Bt>+ Novo cliente</Bt> abre o formulário completo. CPF/CNPJ já cadastrado <b>bloqueia</b>; telefone ou e-mail
+            repetido avisa e permite criar mesmo assim (marcando a possível duplicidade).
           </li>
         </ul>
         <h4>Ficha do cliente</h4>
         <ul>
-          <li>Dados (os mesmos do faturamento, mais telefone principal e observações internas) e <Bt>Salvar alterações</Bt>.</li>
+          <li>
+            Dados (os mesmos do faturamento, mais telefone principal e observações internas) e <Bt>Salvar alterações</Bt>.
+          </li>
           <li>
             <b>Carteira</b> (comissões): mostrada no topo da ficha; <Bt>Mudar carteira</Bt> vale para os próximos pedidos e pode
             levar os que ainda não entraram em produção.
           </li>
-          <li>Telefones e e-mails adicionais, com descrição (ex.: financeiro). Também são usados na busca e na conferência de duplicidade.</li>
-          <li>Totais, pedidos e orçamentos do cliente, e o <b>histórico</b>: quem alterou o quê, quando e por onde (cadastro, carrinho, aceite pelo link, pedido, mesclagem).</li>
           <li>
-            <Bt>Inativar</Bt> / <Bt>Reativar</Bt>: clientes nunca são excluídos; o inativo some das buscas, mas continua nos orçamentos e
-            pedidos.
+            Telefones e e-mails adicionais, com descrição (ex.: financeiro). Também são usados na busca e na conferência de
+            duplicidade.
+          </li>
+          <li>
+            Totais, pedidos e orçamentos do cliente, e o <b>histórico</b>: quem alterou o quê, quando e por onde (cadastro,
+            carrinho, aceite pelo link, pedido, mesclagem).
+          </li>
+          <li>
+            <Bt>Inativar</Bt> / <Bt>Reativar</Bt>: clientes nunca são excluídos; o inativo some das buscas, mas continua nos
+            orçamentos e pedidos.
           </li>
         </ul>
         <h4>Atualização x duplicidade</h4>
         <Tabela
           colunas={['Situação', 'O que o sistema faz']}
           linhas={[
-            ['Dados chegam por um orçamento (aceite, pedido)', 'Atualizam sempre o cliente ligado a esse orçamento — nunca outro.'],
+            [
+              'Dados chegam por um orçamento (aceite, pedido)',
+              'Atualizam sempre o cliente ligado a esse orçamento — nunca outro.',
+            ],
             ['Aceite com CPF/CNPJ novo ou igual', 'Atualiza o cadastro (fica Completo) e registra o que mudou no histórico.'],
-            ['Aceite com CPF/CNPJ diferente do que o cliente tinha', 'Atualiza e deixa a pendência “documento alterado”: confira e clique em Conferido.'],
-            ['Aceite com CPF/CNPJ que já é de outro cliente', 'Não bloqueia o cliente: grava no cliente do orçamento e marca os dois como possível duplicidade.'],
+            [
+              'Aceite com CPF/CNPJ diferente do que o cliente tinha',
+              'Atualiza e deixa a pendência “documento alterado”: confira e clique em Conferido.',
+            ],
+            [
+              'Aceite com CPF/CNPJ que já é de outro cliente',
+              'Não bloqueia o cliente: grava no cliente do orçamento e marca os dois como possível duplicidade.',
+            ],
             ['Cadastro manual com CPF/CNPJ de outro cliente', 'Bloqueia (o documento é único entre os ativos).'],
             ['Telefone ou e-mail iguais', 'Avisa e permite seguir; o par fica marcado como possível duplicidade.'],
             ['Nome parecido', 'Só aparece como sugestão na busca.'],
@@ -706,12 +745,12 @@ export function ManualOperacao() {
           itens={[
             'Filtre por “Com pendência” e abra o cliente.',
             <>
-              No quadro <i>Possível duplicidade</i>, compare com o outro cadastro. Se forem diferentes, <Bt>Não são o mesmo cliente</Bt>{' '}
-              (a suspeita não volta).
+              No quadro <i>Possível duplicidade</i>, compare com o outro cadastro. Se forem diferentes,{' '}
+              <Bt>Não são o mesmo cliente</Bt> (a suspeita não volta).
             </>,
             <>
-              Se forem o mesmo, <Bt>Mesclar</Bt>: escolha qual cadastro fica e, campo a campo, qual valor vale. Orçamentos, pedidos e
-              contatos passam para o que fica; o outro é inativado com a referência. Tudo vai para o histórico dos dois.
+              Se forem o mesmo, <Bt>Mesclar</Bt>: escolha qual cadastro fica e, campo a campo, qual valor vale. Orçamentos,
+              pedidos e contatos passam para o que fica; o outro é inativado com a referência. Tudo vai para o histórico dos dois.
             </>,
           ]}
         />
@@ -721,7 +760,8 @@ export function ManualOperacao() {
           <Bt>Atualizar o cadastro do cliente com estes dados</Bt> nos detalhes do pedido.
         </p>
         <Dica>
-          CPF, endereço e histórico só aparecem para quem tem a tela Clientes. Vendedores (carrinho) só buscam e fazem o pré-cadastro.
+          CPF, endereço e histórico só aparecem para quem tem a tela Clientes. Vendedores (carrinho) só buscam e fazem o
+          pré-cadastro.
         </Dica>
       </Secao>
 
@@ -908,8 +948,8 @@ export function ManualOperacao() {
       {/* ─────────────────────────────── 24 */}
       <Secao id="man-kommo" titulo="Integração com o Kommo" numero={26}>
         <Dica tipo="atencao">
-          A integração está <b>desligada</b>: os clientes ficam no cadastro do próprio sistema (<Menu>Cadastros › Clientes</Menu>).
-          Os clientes criados a partir dos orçamentos antigos guardam o código do contato no Kommo só como referência.
+          A integração está <b>desligada</b>: os clientes ficam no cadastro do próprio sistema (<Menu>Cadastros › Clientes</Menu>
+          ). Os clientes criados a partir dos orçamentos antigos guardam o código do contato no Kommo só como referência.
         </Dica>
         <p>Se a integração for religada no servidor (variável KOMMO_ATIVO=1, com subdomínio e token):</p>
         <ul>

@@ -157,13 +157,18 @@ describe('cadastro de clientes (API)', () => {
     expect((await req('GET', `/api/clientes/${thais}`, undefined, vendedor)).json.historico).toBeUndefined();
     expect((await req('GET', `/api/clientes/${thais}/faturamento`, undefined, vendedor)).status).toBe(200);
     const f = await req('GET', `/api/clientes/${thais}`);
-    expect(f.json.historico.at(-1)).toMatchObject({ origem: 'Carrinho', autor: 'Vendedora', texto: 'Cliente incluído na carteira Geral' });
+    expect(f.json.historico.at(-1)).toMatchObject({
+      origem: 'Carrinho',
+      autor: 'Vendedora',
+      texto: 'Cliente incluído na carteira Geral',
+    });
     expect(f.json.cliente).toMatchObject({ carteira: 'Geral' });
   });
 
-  it('orçamento leva a cópia do cliente; sem cliente não é enviado', async () => {
+  it('orçamento leva a cópia do cliente; sem cliente não é gerado', async () => {
     const sem = await req('POST', '/api/orcamentos', { itens: [item], subtotal: 1, frete: 0, total: 1 });
-    expect((await req('POST', `/api/orcamentos/${sem.json.id}/status`, { status: 'ENVIADO' })).status).toBe(409);
+    expect(sem.status).toBe(400);
+    expect(sem.json.erro).toMatch(/cliente/);
     const com = await req('POST', '/api/orcamentos', { cliente_id: thais, itens: [item], subtotal: 1, frete: 0, total: 1 });
     expect((await req('GET', `/api/orcamentos/${com.json.id}`)).json.cliente).toEqual({
       id: thais,
@@ -274,12 +279,27 @@ describe('cadastro de clientes (API)', () => {
   });
 
   it('CNPJ alfanumérico: grava em maiúsculas, bloqueia repetido, busca inteiro ou pelo começo', async () => {
-    const r = await req('POST', '/api/clientes', { ...FAT, nome: 'Nova Empresa Alfa', documento: '12.abc.345/01de-35', telefone: '11922223333', email: 'alfa@x.com' });
+    const r = await req('POST', '/api/clientes', {
+      ...FAT,
+      nome: 'Nova Empresa Alfa',
+      documento: '12.abc.345/01de-35',
+      telefone: '11922223333',
+      email: 'alfa@x.com',
+    });
     expect(r.status).toBe(201);
     expect(r.json.cliente).toMatchObject({ documento: '12ABC34501DE35', situacao: 'COMPLETO' });
-    const repetido = await req('POST', '/api/clientes', { ...FAT, nome: 'Outra', documento: '12ABC34501DE35', telefone: '11933334444', email: 'b@x.com' });
+    const repetido = await req('POST', '/api/clientes', {
+      ...FAT,
+      nome: 'Outra',
+      documento: '12ABC34501DE35',
+      telefone: '11933334444',
+      email: 'b@x.com',
+    });
     expect(repetido.status).toBe(409);
-    expect((await req('POST', '/api/clientes', { ...FAT, nome: 'Errado', documento: '12ABC34501DE36', telefone: '11944445555' })).json.erro).toMatch(/CNPJ/);
+    expect(
+      (await req('POST', '/api/clientes', { ...FAT, nome: 'Errado', documento: '12ABC34501DE36', telefone: '11944445555' })).json
+        .erro,
+    ).toMatch(/CNPJ/);
     const busca = async (t: string) =>
       (await req('GET', `/api/clientes?limite=10&busca=${encodeURIComponent(t)}`)).json.clientes.map((c: { id: number }) => c.id);
     expect(await busca('12.ABC.345/01DE-35')).toEqual([r.json.cliente.id]);

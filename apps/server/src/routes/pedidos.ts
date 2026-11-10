@@ -16,6 +16,7 @@ import {
   buscarPedido,
   cancelarPedido,
   alterarFaturamentoPedido,
+  vincularClienteAoPedido,
   criarPedido,
   listarPedidos,
   quadroPedidos,
@@ -148,6 +149,14 @@ export function rotasPedidos(db: Banco, kommo: ServicoKommo | null = null): Rout
       // "Atualizar também o cadastro do cliente" (o cadastro não muda sozinho a partir do pedido)
       if (corpo.atualizar_cadastro === true) atualizarCadastroPeloPedido(db, String(req.params.codigo), dados, { usuarioId: eu.id, nome: eu.nome, origem: 'PEDIDO' });
     })();
+    res.json(detalhe(String(req.params.codigo)));
+  });
+
+  /** Vincula o cliente ao pedido criado sem cliente: { cliente_id, usar_faturamento? } */
+  r.post('/api/pedidos/:codigo/cliente', (req, res) => {
+    const corpo = corpoJson(req);
+    const eu = exigirUsuario(res);
+    vincularClienteAoPedido(db, String(req.params.codigo), corpo.cliente_id, corpo.usar_faturamento === true, { id: eu.id, nome: eu.nome });
     res.json(detalhe(String(req.params.codigo)));
   });
 
