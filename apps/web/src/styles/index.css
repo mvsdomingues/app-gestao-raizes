@@ -24,6 +24,7 @@
 @import './99h-faturamento.css';
 @import './99i-ajuda.css';
 @import './99j-comissoes.css';
+@import './99k-visualizador.css';
 
 /* O React monta a aplicação dentro de #root; "display: contents" mantém
    header, telas e rodapé como filhos diretos do layout flex do <body>. */

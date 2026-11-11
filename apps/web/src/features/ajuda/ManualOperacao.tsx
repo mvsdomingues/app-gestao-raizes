@@ -465,6 +465,12 @@ export function ManualOperacao() {
           <li>
             <b>Nunca</b>: custo, composição do preço, fornecedor, usuários ou dados internos.
           </li>
+          <li>
+            <b>Fotos ampliadas:</b> tocando ou clicando na foto do produto ou no mockup (ícone ⤢), a imagem abre grande numa
+            janela sobre a página. Um toque/clique dá zoom no ponto escolhido (arraste para ver o resto); as setas, as teclas ← →
+            ou o deslizar do dedo passam para as outras fotos; fecha no ✕, com Esc, tocando fora da imagem ou com o “voltar” do
+            celular (sem sair do orçamento).
+          </li>
           <li>Cada personalização do produto — técnica, local e medidas da arte — sem valores nem material.</li>
           <li>As instruções especiais de Parâmetros › Impressão, logo após os valores e mockups.</li>
           <li>Botão de imprimir/salvar PDF.</li>

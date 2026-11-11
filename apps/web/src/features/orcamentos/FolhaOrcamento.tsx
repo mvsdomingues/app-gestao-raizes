@@ -1,3 +1,4 @@
+import { useState, type ReactNode } from 'react';
 import { Logo } from '../../components/Logo';
 import {
   formatarCep,
@@ -17,13 +18,15 @@ import {
 } from '@raizes/shared';
 import type { FolhaOrcamento as DadosFolha } from '../../app/contexto';
 import { ImagemProduto } from '../../components/ImagemProduto';
+import { VisualizadorImagens, type ImagemAmpliavel } from '../../components/VisualizadorImagens';
 import { classeFornecedor } from '../../lib/fornecedor';
 
 /** Linha interna (fora da impressão e do cliente): material usado e ajustes. */
 function materialInterno(r: ResultadoPersonalizacao): string {
   const m2 = (v: number) => v.toLocaleString('pt-BR', { maximumFractionDigits: 4 });
   const partes = [`Interno: ${r.tecnica}${r.local ? ` (${r.local})` : ''} · material ${m2(r.material_m2)} m²`];
-  if (r.grupo && r.grupo.itens > 1) partes.push(`rateado entre ${r.grupo.itens} aplicações (${m2(r.grupo.material_m2)} m² no total)`);
+  if (r.grupo && r.grupo.itens > 1)
+    partes.push(`rateado entre ${r.grupo.itens} aplicações (${m2(r.grupo.material_m2)} m² no total)`);
   if (r.material_ajustado) partes.push('material ajustado');
   if (r.mao_obra_ajustada) partes.push('mão de obra ajustada');
   return partes.join(' · ');
@@ -32,7 +35,10 @@ function materialInterno(r: ResultadoPersonalizacao): string {
 const cinza = { fontSize: '.82rem', color: '#7A7167' } as const;
 
 /** Dados da folha: os do orçamento interno ou os da página do cliente (sem custos nem fornecedor). */
-export type DadosFolhaOrcamento = Pick<DadosFolha, 'id' | 'numero' | 'dataHora' | 'subtotal' | 'frete' | 'total' | 'observacao' | 'cliente' | 'entregaPrevista'> & {
+export type DadosFolhaOrcamento = Pick<
+  DadosFolha,
+  'id' | 'numero' | 'dataHora' | 'subtotal' | 'frete' | 'total' | 'observacao' | 'cliente' | 'entregaPrevista'
+> & {
   itens: (Pick<ItemOrcamento, 'nome' | 'codigo' | 'qty' | 'preco' | 'imagem_url'> &
     Partial<Pick<ItemOrcamento, 'fornecedor' | 'origem' | 'personalizacao' | 'personalizacoes'>> & {
       observacao?: string | null;
@@ -59,9 +65,12 @@ export function FolhaOrcamento({
   publico = false,
   validoAte,
   impressao,
+  ampliarImagens = false,
 }: {
   folha: DadosFolhaOrcamento;
   publico?: boolean;
+  /** Clique na imagem do produto ou do mockup abre a imagem grande (link do cliente) */
+  ampliarImagens?: boolean;
   /** Instruções especiais (só na impressão) e rodapé, da tela Parâmetros › Impressão */
   impressao?: ParametrosImpressao | null;
   /** Data/hora até quando vale (link do cliente); sem ela, "Válido por 7 dias" */
@@ -77,8 +86,53 @@ export function FolhaOrcamento({
   if (!publico) for (const i of itens) porForn.set(i.fornecedor ?? '', (porForn.get(i.fornecedor ?? '') || 0) + i.preco * i.qty);
   const validade = validoAte ? new Date(validoAte).toLocaleDateString('pt-BR') : null;
 
+  // Imagens que abrem grandes: as dos produtos (que carregaram) e depois as dos mockups
+  const [falhas, setFalhas] = useState<ReadonlySet<number>>(new Set());
+  const [aberta, setAberta] = useState<number | null>(null);
+  const mockups = (folha.mockups ?? []).filter((m) => itens[m.item]);
+  const ampliaveis: ImagemAmpliavel[] = [];
+  const posProduto = new Map<number, number>();
+  const posMockup = new Map<number, number>();
+  if (ampliarImagens) {
+    itens.forEach((i, idx) => {
+      if (!i.imagem_url || falhas.has(idx)) return;
+      posProduto.set(idx, ampliaveis.length);
+      ampliaveis.push({ url: i.imagem_url, titulo: `${idx + 1}. ${i.nome}`, detalhe: i.codigo ? `Cód: ${i.codigo}` : undefined });
+    });
+    mockups.forEach((m) => {
+      const i = itens[m.item]!;
+      posMockup.set(m.item, ampliaveis.length);
+      ampliaveis.push({
+        url: m.url,
+        titulo: `Mockup ${m.item + 1}. ${i.nome}`,
+        detalhe: i.codigo ? `Cód: ${i.codigo}` : undefined,
+      });
+    });
+  }
+  /** Miniatura clicável (botão, para funcionar no teclado e no toque) */
+  const ampliavel = (pos: number | undefined, rotulo: string, conteudo: ReactNode) =>
+    pos === undefined ? (
+      conteudo
+    ) : (
+      <button
+        type="button"
+        className="img-ampliavel"
+        onClick={() => setAberta(pos)}
+        aria-label={`Ampliar imagem: ${rotulo}`}
+        title="Ampliar imagem"
+      >
+        {conteudo}
+        <span className="img-ampliavel-icone" aria-hidden="true">
+          ⤢
+        </span>
+      </button>
+    );
+
   return (
     <>
+      {ampliarImagens && (
+        <VisualizadorImagens imagens={ampliaveis} indice={aberta} mudar={setAberta} fechar={() => setAberta(null)} />
+      )}
       <div className="orc-letterhead">
         <div className="orc-brand">
           <Logo className="orc-brand-logo" />
@@ -156,7 +210,17 @@ export function FolhaOrcamento({
               <td>{idx + 1}</td>
               <td>
                 <div className="orc-prod-cell">
-                  <ImagemProduto url={item.imagem_url} className="orc-prod-img" alt={item.nome} classeVazia="orc-prod-no-img" />
+                  {ampliavel(
+                    posProduto.get(idx),
+                    item.nome,
+                    <ImagemProduto
+                      url={item.imagem_url}
+                      className="orc-prod-img"
+                      alt={item.nome}
+                      classeVazia="orc-prod-no-img"
+                      aoFalhar={() => setFalhas((f) => new Set(f).add(idx))}
+                    />,
+                  )}
                   <div>
                     <div>
                       {item.nome}
@@ -244,11 +308,15 @@ export function FolhaOrcamento({
         <section className="orc-mockups" id="orc-mockups">
           <div className="orc-mockups-titulo">Mockups dos produtos</div>
           <div className="orc-mockups-grade">
-            {folha.mockups!
-              .filter((m) => itens[m.item])
+            {folha
+              .mockups!.filter((m) => itens[m.item])
               .map((m) => (
                 <figure key={m.item} className="orc-mockup">
-                  <img src={m.url} alt={`Mockup: ${itens[m.item]!.nome}`} loading="lazy" />
+                  {ampliavel(
+                    posMockup.get(m.item),
+                    `mockup de ${itens[m.item]!.nome}`,
+                    <img src={m.url} alt={`Mockup: ${itens[m.item]!.nome}`} loading="lazy" />,
+                  )}
                   <figcaption>
                     <span className="orc-mockup-num">{m.item + 1}</span> {itens[m.item]!.nome}
                     {itens[m.item]!.codigo && <span className="orc-mockup-cod"> · Cód: {itens[m.item]!.codigo}</span>}

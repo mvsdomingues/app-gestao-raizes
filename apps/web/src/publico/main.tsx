@@ -9,6 +9,7 @@ import '../styles/99d-link-publico.css';
 import '../styles/99e-detalhe-produto.css';
 import '../styles/99f-estudio-mockup.css';
 import '../styles/99h-faturamento.css';
+import '../styles/99k-visualizador.css';
 
 createRoot(document.getElementById('root')!).render(
   <StrictMode>

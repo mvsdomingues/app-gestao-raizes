@@ -14,10 +14,12 @@ interface Props {
   loading?: 'lazy' | 'eager';
   onClick?: MouseEventHandler<HTMLImageElement>;
   title?: string;
+  /** Avisado quando a imagem não carrega (vira placeholder) */
+  aoFalhar?: () => void;
 }
 
 /** Imagem de produto que vira placeholder quando não existe ou não carrega. */
-export function ImagemProduto({ url, classeVazia, vaziaDiv, icone = '✦', ...img }: Props) {
+export function ImagemProduto({ url, classeVazia, vaziaDiv, icone = '✦', aoFalhar, ...img }: Props) {
   const [falhou, setFalhou] = useState(false);
   useEffect(() => setFalhou(false), [url]);
 
@@ -25,5 +27,16 @@ export function ImagemProduto({ url, classeVazia, vaziaDiv, icone = '✦', ...im
     return vaziaDiv ? <div className={classeVazia}>{icone}</div> : <span className={classeVazia}>{icone}</span>;
   }
   // no-referrer: fornecedores com bloqueio de "hotlink" costumam liberar pedidos sem Referer
-  return <img src={url} referrerPolicy="no-referrer" {...img} alt={img.alt ?? ''} onError={() => setFalhou(true)} />;
+  return (
+    <img
+      src={url}
+      referrerPolicy="no-referrer"
+      {...img}
+      alt={img.alt ?? ''}
+      onError={() => {
+        setFalhou(true);
+        aoFalhar?.();
+      }}
+    />
+  );
 }

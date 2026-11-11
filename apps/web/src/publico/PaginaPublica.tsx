@@ -114,7 +114,10 @@ export function PaginaPublica() {
     } catch (e) {
       // Situação mudou (respondido em outra aba, em revisão…): recarrega e mostra o motivo
       setAviso(e instanceof Error ? e.message : String(e));
-      pedir(API).then((x) => setEstado({ tipo: 'ok', o: x }), () => {});
+      pedir(API).then(
+        (x) => setEstado({ tipo: 'ok', o: x }),
+        () => {},
+      );
     } finally {
       setEnviando(false);
     }
@@ -127,6 +130,7 @@ export function PaginaPublica() {
       <div className="pub-folha orcamento-sheet-full" id="pub-folha">
         <FolhaOrcamento
           publico
+          ampliarImagens
           validoAte={o.valido_ate}
           folha={{
             numero: o.numero,
@@ -137,7 +141,11 @@ export function PaginaPublica() {
             observacao: o.observacao,
             entregaPrevista: o.entrega_prevista,
             cliente: o.cliente ? { id: 0, nome: o.cliente.nome, telefone: o.cliente.telefone } : null,
-            itens: o.itens.map(({ personalizacoes, ...i }) => ({ ...i, artes: personalizacoes ?? [], imagem_url: i.imagem ?? '' })),
+            itens: o.itens.map(({ personalizacoes, ...i }) => ({
+              ...i,
+              artes: personalizacoes ?? [],
+              imagem_url: i.imagem ?? '',
+            })),
             mockups: (o.mockups ?? []).map((m) => ({ item: m.item, url: m.imagem })),
             faturamento: o.faturamento,
           }}
