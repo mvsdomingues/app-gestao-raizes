@@ -683,6 +683,15 @@ export function ManualOperacao() {
               </span>,
             ],
             [
+              'Frete',
+              <span key="fr">
+                Abaixo do total. De <b>Criado até Produzido</b>, <Bt>✎ alterar</Bt> muda o frete do pedido, com motivo
+                obrigatório; a mudança vira observação (“Frete alterado: antes → depois. Motivo: …”). O total do pedido, a lista,
+                o quadro, a folha do pedido e os dashboards passam a usar o novo valor; o orçamento e o link do cliente continuam
+                com o frete aceito (aparece “orçamento: R$ …” ao lado). A comissão não muda, porque não inclui o frete.
+              </span>,
+            ],
+            [
               'Vincular cliente',
               <span key="v">
                 Só em pedido antigo sem cliente (e não cancelado): busque ou inclua o cliente, como no carrinho, e confirme. O

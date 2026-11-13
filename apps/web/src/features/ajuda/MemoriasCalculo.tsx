@@ -707,7 +707,9 @@ export function MemoriasCalculo() {
         <p>
           O frete é digitado no resumo do carrinho e é somado sem margem nem imposto. O valor gravado no orçamento é o que vale
           para o pedido e para o cliente: mudanças posteriores em Parâmetros ou nas tabelas não alteram orçamentos já gerados — só
-          quando o orçamento é editado e salvo de novo.
+          quando o orçamento é editado e salvo de novo. A exceção é o <b>frete do pedido</b>: de Criado até Produzido ele pode ser
+          alterado nos detalhes do pedido (com motivo); aí o total do pedido = subtotal do orçamento + frete do pedido, e o
+          orçamento continua com o frete aceito.
         </p>
       </Secao>
 

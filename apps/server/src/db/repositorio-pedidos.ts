@@ -22,6 +22,11 @@ import {
   formatarDataBr,
   diferencasFaturamento,
   podeAlterarFaturamento,
+  podeAlterarFrete,
+  valorFreteValido,
+  formatBRL,
+  LIMITE_MOTIVO_FRETE,
+  ROTULOS_STATUS_PEDIDO,
   type DadosFaturamento,
 } from '@raizes/shared';
 import { ErroHttp } from '../lib/http';
@@ -42,15 +47,20 @@ interface LinhaPedido {
   orcamento_id: number;
   observacao: string | null;
   total: number;
+  frete: number;
+  frete_orcamento: number;
   qtd_itens: number;
   criado: string;
   atualizado: string;
   entrega_prevista: string | null;
 }
 
+/** Total do pedido (alias p = pedidos, o = orçamentos): o do orçamento trocando o frete pelo do pedido, se alterado */
+export const SQL_TOTAL_PEDIDO = '(o.total + COALESCE(p.frete - o.frete, 0))';
+
 const SELECT_PEDIDO = `
   SELECT p.id, p.codigo, p.status, p.orcamento_id, p.observacao, p.criado, p.atualizado, p.entrega_prevista,
-         o.total, o.qtd_itens, p.cliente_id, o.cliente_nome, cl.nome AS cliente_nome_atual, o.cliente_telefone, o.cliente_email,
+         ${SQL_TOTAL_PEDIDO} AS total, COALESCE(p.frete, o.frete) AS frete, o.frete AS frete_orcamento, o.qtd_itens, p.cliente_id, o.cliente_nome, cl.nome AS cliente_nome_atual, o.cliente_telefone, o.cliente_email,
          p.contato_id, cp.nome AS contato_nome, cp.telefone AS contato_telefone, cp.email AS contato_email,
          cl.telefone AS cli_telefone, cl.email AS cli_email,
          (SELECT ca.nome FROM carteiras ca WHERE ca.id = p.carteira_id) AS carteira,
@@ -212,8 +222,8 @@ export function quadroPedidos(db: Banco, limite: number, somenteDoUsuario?: numb
       .prepare(
         `SELECT * FROM (
            ${SELECT_PEDIDO.replace(
-             'o.total, o.qtd_itens',
-             `o.total, o.qtd_itens,
+             'AS frete_orcamento, o.qtd_itens',
+             `AS frete_orcamento, o.qtd_itens,
               COALESCE((SELECT MAX(m.data_hora) FROM pedidos_movimentos m
                          WHERE m.pedido_id = p.id AND m.status_novo = p.status), p.atualizado) AS entrada`,
            )}
@@ -488,6 +498,58 @@ export function alterarFaturamentoPedido(
     if (!mudancas.length) return false;
     db.prepare('UPDATE pedidos SET faturamento_json = ? WHERE id = ?').run(JSON.stringify(dados), p.id);
     inserirObservacao(db, p.id, `${titulo}:\n${mudancas.map((m) => `• ${m}`).join('\n')}`, isoLocal(), usuarioId, origem);
+    return true;
+  })();
+}
+
+/**
+ * Altera o frete do pedido (o orçamento aceito fica como está). Só de Criado até Produzido;
+ * o motivo é obrigatório e a mudança vira observação. Voltar ao frete do orçamento limpa o valor próprio.
+ */
+export function alterarFretePedido(
+  db: Banco,
+  codigo: string,
+  valor: unknown,
+  motivo: unknown,
+  usuarioId: number | null,
+): boolean {
+  const frete = valorFreteValido(valor);
+  if (frete === null) throw new ErroHttp(400, 'Informe um valor de frete válido (zero ou maior).');
+  const porque = typeof motivo === 'string' ? motivo.trim() : '';
+  if (!porque) throw new ErroHttp(400, 'Informe o motivo da alteração do frete.');
+  if (porque.length > LIMITE_MOTIVO_FRETE)
+    throw new ErroHttp(400, `O motivo pode ter no máximo ${LIMITE_MOTIVO_FRETE} caracteres.`);
+  return db.transaction(() => {
+    const p = db
+      .prepare(
+        `SELECT p.id, p.status, p.frete, o.frete AS frete_orcamento
+           FROM pedidos p JOIN orcamentos o ON o.id = p.orcamento_id WHERE p.codigo = ? COLLATE NOCASE`,
+      )
+      .get(codigo) as { id: number; status: StatusPedido; frete: number | null; frete_orcamento: number } | undefined;
+    if (!p) throw new ErroHttp(404, 'Pedido não encontrado');
+    if (!podeAlterarFrete(p.status)) {
+      throw new ErroHttp(
+        409,
+        `O frete só pode ser alterado até a etapa Produzido (o pedido está ${ROTULOS_STATUS_PEDIDO[p.status]}).`,
+      );
+    }
+    const atual = p.frete ?? p.frete_orcamento;
+    if (Math.abs(atual - frete) < 0.005) return false;
+    const igualAoOrcamento = Math.abs(frete - p.frete_orcamento) < 0.005;
+    db.prepare('UPDATE pedidos SET frete = ?, atualizado = ? WHERE id = ?').run(
+      igualAoOrcamento ? null : frete,
+      isoLocal(),
+      p.id,
+    );
+    const volta = igualAoOrcamento ? ' (o mesmo do orçamento)' : '';
+    inserirObservacao(
+      db,
+      p.id,
+      `Frete alterado: ${formatBRL(atual)} → ${formatBRL(frete)}${volta}.\nMotivo: ${porque}`,
+      isoLocal(),
+      usuarioId,
+      'USUARIO',
+    );
     return true;
   })();
 }

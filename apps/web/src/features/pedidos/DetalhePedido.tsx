@@ -6,6 +6,10 @@ import {
   formatarTelefone,
   FLUXO_PEDIDO,
   podeAlterarFaturamento,
+  podeAlterarFrete,
+  ETAPA_LIMITE_FRETE,
+  LIMITE_MOTIVO_FRETE,
+  valorFreteValido,
   podeCancelar,
   proximoStatus,
   ROTULOS_STATUS_PEDIDO,
@@ -138,6 +142,7 @@ export function DetalhePedido() {
           <div className="pedido-card-dir">
             <TagStatusPedido status={p.status} />
             <div className="pedido-total">{formatBRL(p.total)}</div>
+            <FretePedido pedido={p} aoSalvar={atualizarPedidoAberto} />
           </div>
         </div>
         <EntregaPedido pedido={p} aoSalvar={atualizarPedidoAberto} />
@@ -230,8 +235,9 @@ export function DetalhePedido() {
             dataHora: p.orcamento.data_hora,
             itens: p.orcamento.itens,
             subtotal: p.orcamento.subtotal,
-            frete: p.orcamento.frete,
-            total: p.orcamento.total,
+            // Frete e total do pedido (com o frete alterado no pedido, se houver)
+            frete: p.frete,
+            total: p.total,
             observacao: p.orcamento.observacao ?? null,
             cliente: p.cliente,
             entregaPrevista: p.entrega_prevista,
@@ -242,6 +248,129 @@ export function DetalhePedido() {
         />
       </div>
     </>
+  );
+}
+
+/**
+ * Frete do pedido: alterável de Criado até Produzido, com motivo (vira observação).
+ * O orçamento e o link do cliente continuam com o frete aceito.
+ */
+function FretePedido({ pedido: p, aoSalvar }: { pedido: Pedido; aoSalvar: (p: Pedido) => void }) {
+  const [aberto, setAberto] = useState(false);
+  const alterado = Math.abs(p.frete - p.frete_orcamento) >= 0.005;
+  return (
+    <div className="pedido-frete" id="pedido-frete">
+      Frete <b id="pedido-frete-valor">{formatBRL(p.frete)}</b>
+      {alterado && (
+        <span className="pedido-frete-orc" title="Frete do orçamento aceito pelo cliente">
+          {' '}
+          (orçamento: {formatBRL(p.frete_orcamento)})
+        </span>
+      )}
+      {podeAlterarFrete(p.status) && (
+        <button type="button" className="link-botao" id="btn-alterar-frete" onClick={() => setAberto(true)}>
+          ✎ alterar
+        </button>
+      )}
+      {aberto && (
+        <ModalFrete
+          pedido={p}
+          fechar={() => setAberto(false)}
+          salvo={(novo) => {
+            setAberto(false);
+            aoSalvar(novo);
+          }}
+        />
+      )}
+    </div>
+  );
+}
+
+function ModalFrete({ pedido: p, fechar, salvo }: { pedido: Pedido; fechar: () => void; salvo: (p: Pedido) => void }) {
+  const [valor, setValor] = useState(p.frete.toFixed(2).replace('.', ','));
+  const [motivo, setMotivo] = useState('');
+  const [erro, setErro] = useState('');
+  const [salvando, setSalvando] = useState(false);
+  const novo = valorFreteValido(valor);
+
+  const salvar = async () => {
+    if (novo === null) return setErro('Informe um valor de frete válido (zero ou maior).');
+    if (Math.abs(novo - p.frete) < 0.005) return setErro('O frete já é esse valor.');
+    if (!motivo.trim()) return setErro('Informe o motivo da alteração.');
+    setSalvando(true);
+    setErro('');
+    try {
+      salvo(await api.alterarFretePedido(p.codigo, novo, motivo.trim()));
+    } catch (e) {
+      setErro(e instanceof Error ? e.message : String(e));
+    } finally {
+      setSalvando(false);
+    }
+  };
+
+  return (
+    <div className="custom-modal-backdrop open" id="modal-frete" onClick={(e) => e.target === e.currentTarget && fechar()}>
+      <form
+        className="custom-modal-card novo-cliente-modal"
+        role="dialog"
+        aria-label="Alterar frete do pedido"
+        onSubmit={(e) => {
+          e.preventDefault();
+          void salvar();
+        }}
+      >
+        <div className="custom-modal-header">
+          <h3 className="custom-modal-title">Alterar frete · {p.codigo}</h3>
+          <button type="button" className="custom-modal-close" onClick={fechar} aria-label="Fechar">
+            ✕
+          </button>
+        </div>
+        <p className="custom-modal-sub">
+          Frete do orçamento aceito: <b>{formatBRL(p.frete_orcamento)}</b>. O orçamento e o link do cliente continuam com esse
+          valor; o pedido, a folha impressa do pedido e os dashboards passam a usar o novo. Pode ser alterado até a etapa{' '}
+          {ROTULOS_STATUS_PEDIDO[ETAPA_LIMITE_FRETE]}.
+        </p>
+        <div className="novo-cliente-campos">
+          <label>
+            Novo frete (R$)
+            <input
+              className="custom-input"
+              id="frete-valor"
+              inputMode="decimal"
+              autoFocus
+              value={valor}
+              onChange={(e) => setValor(e.target.value)}
+            />
+          </label>
+          {novo !== null && (
+            <p className="fat-dica" id="frete-novo-total">
+              Total do pedido: {formatBRL(p.total)} → <b>{formatBRL(p.total - p.frete + novo)}</b>
+            </p>
+          )}
+          <label>
+            Motivo
+            <textarea
+              className="custom-input"
+              id="frete-motivo"
+              rows={2}
+              maxLength={LIMITE_MOTIVO_FRETE}
+              placeholder="Ex.: transportadora reajustou o valor"
+              value={motivo}
+              onChange={(e) => setMotivo(e.target.value)}
+            />
+          </label>
+        </div>
+        {erro && <div className="form-mensagem erro">{erro}</div>}
+        <div className="custom-modal-actions">
+          <button type="button" className="btn-secondary" onClick={fechar}>
+            Cancelar
+          </button>
+          <button type="submit" className="btn-primary" id="btn-salvar-frete" disabled={salvando}>
+            {salvando ? 'Salvando…' : 'Salvar frete'}
+          </button>
+        </div>
+      </form>
+    </div>
   );
 }
 

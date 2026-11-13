@@ -16,6 +16,7 @@ import {
   buscarPedido,
   cancelarPedido,
   alterarFaturamentoPedido,
+  alterarFretePedido,
   trocarContatoDoPedido,
   vincularClienteAoPedido,
   criarPedido,
@@ -147,6 +148,13 @@ export function rotasPedidos(db: Banco, kommo: ServicoKommo | null = null): Rout
     const data = v === null || v === '' ? null : dataValida(v) ? v : undefined;
     if (data === undefined) throw new ErroHttp(400, 'Data prevista de entrega inválida (use AAAA-MM-DD)');
     alterarEntregaPedido(db, String(req.params.codigo), data, exigirUsuario(res).id);
+    res.json(detalhe(String(req.params.codigo)));
+  });
+
+  /** Frete do pedido (de Criado até Produzido): { frete, motivo } — a mudança vira observação */
+  r.put('/api/pedidos/:codigo/frete', (req, res) => {
+    const corpo = corpoJson(req);
+    alterarFretePedido(db, String(req.params.codigo), corpo.frete, corpo.motivo, exigirUsuario(res).id);
     res.json(detalhe(String(req.params.codigo)));
   });
 

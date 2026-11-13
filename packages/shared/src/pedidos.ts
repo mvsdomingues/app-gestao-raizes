@@ -68,8 +68,12 @@ export interface ResumoPedido {
   status: StatusPedido;
   orcamento_id: number;
   orcamento_numero: string;
-  /** Total e quantidade de itens do orçamento de referência */
+  /** Total do pedido: o do orçamento com o frete do pedido (quando alterado) */
   total: number;
+  /** Frete do pedido: o do orçamento, ou o alterado no pedido (alterarFretePedido) */
+  frete: number;
+  /** Frete do orçamento aceito (diferente de `frete` quando foi alterado no pedido) */
+  frete_orcamento: number;
   qtd_itens: number;
   criado: string;
   atualizado: string;
@@ -186,6 +190,32 @@ export interface FiltrosPedidos {
   meus?: string;
   /** Código do contato do Kommo */
   cliente?: string;
+}
+
+/** Última etapa em que o frete do pedido ainda pode ser alterado (inclusive). */
+export const ETAPA_LIMITE_FRETE: EtapaPedido = 'PRODUZIDO';
+/** Tamanho máximo do motivo da alteração do frete */
+export const LIMITE_MOTIVO_FRETE = 300;
+
+/** O frete do pedido pode ser alterado de Criado até Produzido (não depois de faturado nem cancelado). */
+export function podeAlterarFrete(status: StatusPedido): boolean {
+  const i = FLUXO_PEDIDO.indexOf(status as EtapaPedido);
+  return i >= 0 && i <= FLUXO_PEDIDO.indexOf(ETAPA_LIMITE_FRETE);
+}
+
+/** Valor de frete válido: número ≥ 0, arredondado a centavos; null se inválido. */
+export function valorFreteValido(v: unknown): number | null {
+  const n = typeof v === 'string' ? Number(v.trim().replace(',', '.')) : Number(v);
+  if (
+    v === null ||
+    (typeof v === 'string' && !v.trim()) ||
+    typeof v === 'boolean' ||
+    !Number.isFinite(n) ||
+    n < 0 ||
+    n > 10_000_000
+  )
+    return null;
+  return Math.round(n * 100) / 100;
 }
 
 /** O pedido em andamento (não encerrado nem cancelado) aceita alterar os dados de faturamento. */

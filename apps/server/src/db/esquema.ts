@@ -517,6 +517,8 @@ function migrarColunas(db: Database.Database): void {
   // Data prevista de entrega: no orçamento e copiada para o pedido (alterável na etapa Criado)
   if (!colunas(db, 'orcamentos').includes('entrega_prevista')) db.exec('ALTER TABLE orcamentos ADD COLUMN entrega_prevista TEXT');
   if (!colunas(db, 'pedidos').includes('entrega_prevista')) db.exec('ALTER TABLE pedidos ADD COLUMN entrega_prevista TEXT');
+  // Frete do pedido (NULL = o do orçamento); alterável de Criado até Produzido, com o motivo nas observações
+  if (!colunas(db, 'pedidos').includes('frete')) db.exec('ALTER TABLE pedidos ADD COLUMN frete REAL');
   // Folga de material por técnica (fração)
   if (!colunas(db, 'parametros_material').includes('folga')) {
     db.exec('ALTER TABLE parametros_material ADD COLUMN folga REAL NOT NULL DEFAULT 0');

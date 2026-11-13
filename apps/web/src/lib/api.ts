@@ -262,6 +262,9 @@ export const api = {
       atualizar_cadastro: atualizarCadastro,
     }),
 
+  /** Frete do pedido (de Criado até Produzido; motivo obrigatório; a mudança vira uma observação) */
+  alterarFretePedido: (codigo: string, frete: number, motivo: string) =>
+    enviar<Pedido>('PUT', `/api/pedidos/${encodeURIComponent(codigo)}/frete`, { frete, motivo }),
   /** Data prevista de entrega do pedido (só na etapa Criado; a mudança vira uma observação) */
   alterarEntregaPedido: (codigo: string, data: string | null) =>
     enviar<Pedido>('PUT', `/api/pedidos/${encodeURIComponent(codigo)}/entrega`, { entrega_prevista: data }),

@@ -80,6 +80,10 @@
 .pedido-sub { margin-top: 4px; font-size: .82rem; color: var(--muted); }
 .pedido-card-dir { display: flex; flex-direction: column; align-items: flex-end; gap: 8px; }
 .pedido-total { font-family: var(--font-display); font-size: 1.5rem; font-weight: 700; color: var(--uva); }
+.pedido-frete { font-size: .8rem; color: var(--muted); text-align: right; }
+.pedido-frete b { color: var(--text, inherit); font-weight: 600; }
+.pedido-frete .link-botao { margin-left: 8px; font-size: .76rem; }
+.pedido-frete-orc { font-style: italic; }
 .pedido-obs { margin-top: 12px; font-size: .85rem; }
 .pedido-obs span { font-weight: 600; color: var(--muted); }
 .pedido-cancelado {

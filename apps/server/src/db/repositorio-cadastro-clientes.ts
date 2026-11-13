@@ -938,7 +938,7 @@ export function fichaCliente(db: Banco, id: number): FichaCliente {
   ).map((o) => ({ ...o, numero: numeroOrcamento(o.id) }));
   const pedidos = db
     .prepare(
-      `SELECT p.codigo, p.criado, p.status, o.total FROM pedidos p JOIN orcamentos o ON o.id = p.orcamento_id WHERE p.cliente_id = ? ORDER BY p.id DESC LIMIT 100`,
+      `SELECT p.codigo, p.criado, p.status, (o.total + COALESCE(p.frete - o.frete, 0)) AS total FROM pedidos p JOIN orcamentos o ON o.id = p.orcamento_id WHERE p.cliente_id = ? ORDER BY p.id DESC LIMIT 100`,
     )
     .all(id) as { codigo: string; criado: string; status: string; total: number }[];
   const ativos = pedidos.filter((p) => p.status !== 'CANCELADO');

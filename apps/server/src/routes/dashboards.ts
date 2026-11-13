@@ -81,7 +81,7 @@ export function rotasDashboards(db: Banco): Router {
   const pedidosDoPeriodo = (de: string, ate: string, usuario: number | null): LinhaPed[] =>
     db
       .prepare(
-        `SELECT p.id, p.status, p.criado, orcamentos.total, orcamentos.itens_json, orcamentos.usuario_id,
+        `SELECT p.id, p.status, p.criado, (orcamentos.total + COALESCE(p.frete - orcamentos.frete, 0)) AS total, orcamentos.itens_json, orcamentos.usuario_id,
                 ${SQL_CRIACAO_ORC} AS orc_criado
            FROM pedidos p JOIN orcamentos ON orcamentos.id = p.orcamento_id
           WHERE substr(p.criado, 1, 10) BETWEEN ? AND ? AND (? IS NULL OR orcamentos.usuario_id = ?)`,
@@ -130,7 +130,14 @@ export function rotasDashboards(db: Banco): Router {
     for (let d = de; d <= ate; d = somarDias(d, 1)) {
       const ini = inicioDoIntervalo(d, agrupamento);
       if (!pontos.has(ini)) {
-        pontos.set(ini, { inicio: ini, rotulo: rotuloDoIntervalo(ini, agrupamento), orcamentos: 0, valor_orcamentos: 0, pedidos: 0, valor_pedidos: 0 });
+        pontos.set(ini, {
+          inicio: ini,
+          rotulo: rotuloDoIntervalo(ini, agrupamento),
+          orcamentos: 0,
+          valor_orcamentos: 0,
+          pedidos: 0,
+          valor_pedidos: 0,
+        });
       }
     }
     for (const o of orcs) {
@@ -204,7 +211,9 @@ export function rotasDashboards(db: Banco): Router {
       [...m.values()].sort((a, b) => b.valor - a.valor || b.quantidade - a.quantidade).slice(0, n);
 
     // Tempo médio entre o orçamento e o pedido
-    const prazos = ativos.map((p) => (new Date(p.criado.replace(' ', 'T')).getTime() - new Date(p.orc_criado.replace(' ', 'T')).getTime()) / DIA);
+    const prazos = ativos.map(
+      (p) => (new Date(p.criado.replace(' ', 'T')).getTime() - new Date(p.orc_criado.replace(' ', 'T')).getTime()) / DIA,
+    );
     const validos = prazos.filter((x) => Number.isFinite(x) && x >= 0);
 
     // Situação de hoje (independe do período)
@@ -222,7 +231,11 @@ export function rotasDashboards(db: Banco): Router {
     const corpo: DashboardGeral = {
       de,
       ate,
-      anterior: { de: antDe, ate: antAte, totais: totaisDe(orcamentosDoPeriodo(antDe, antAte, usuario), pedidosDoPeriodo(antDe, antAte, usuario)) },
+      anterior: {
+        de: antDe,
+        ate: antAte,
+        totais: totaisDe(orcamentosDoPeriodo(antDe, antAte, usuario), pedidosDoPeriodo(antDe, antAte, usuario)),
+      },
       totais: totaisDe(orcs, peds),
       agrupamento,
       serie: [...pontos.values()],
