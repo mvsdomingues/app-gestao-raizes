@@ -9,6 +9,9 @@ import {
   formatarTelefone,
   LIMITE_OBSERVACOES_CLIENTE,
   normalizarEmail,
+  entregaPreenchida,
+  normalizarEntrega,
+  rotuloErroFaturamento,
   normalizarFaturamento,
   normalizarTelefone,
   numeroOrcamento,
@@ -21,6 +24,8 @@ import {
   type ClienteVinculado,
   type ContatoCliente,
   type DadosFaturamento,
+  type EnderecoEntrega,
+  type ErrosFaturamento,
   type FichaCliente,
   type HistoricoCliente,
   type MotivoDuplicidade,
@@ -71,6 +76,7 @@ interface LinhaCliente {
   bairro: string;
   cidade: string;
   uf: string;
+  entrega_json: string | null;
   situacao: 'PRE_CADASTRO' | 'COMPLETO';
   ativo: number;
   observacoes: string;
@@ -99,6 +105,15 @@ function contatosDe(db: Banco, id: number): ContatoCliente[] {
     .all(id) as ContatoCliente[];
 }
 
+function entregaDoBanco(json: string | null): EnderecoEntrega | null {
+  if (!json) return null;
+  try {
+    return normalizarEntrega(JSON.parse(json));
+  } catch {
+    return null;
+  }
+}
+
 function paraCliente(db: Banco, l: LinhaCliente): Cliente {
   return {
     id: l.id,
@@ -116,6 +131,7 @@ function paraCliente(db: Banco, l: LinhaCliente): Cliente {
     bairro: l.bairro,
     cidade: l.cidade,
     uf: l.uf,
+    entrega: entregaDoBanco(l.entrega_json),
     situacao: l.situacao,
     ativo: !!l.ativo,
     observacoes: l.observacoes,
@@ -209,6 +225,7 @@ function lerDados(corpo: Record<string, unknown>, basico: boolean): DadosCliente
     bairro: '',
     cidade: '',
     uf: '',
+    entrega: normalizarEntrega(corpo.entrega),
   };
   const d: DadosCliente = {
     ...fat,
@@ -220,6 +237,7 @@ function lerDados(corpo: Record<string, unknown>, basico: boolean): DadosCliente
         ? corpo.observacoes.replace(/\r\n?/g, '\n').trim().slice(0, LIMITE_OBSERVACOES_CLIENTE)
         : '',
   };
+  d.entrega = entregaPreenchida(d.entrega) ? d.entrega : null;
   if (basico) {
     // Vendedor no carrinho: só o básico (e o CNPJ/CPF, se souber); o resto vem do aceite ou da tela Clientes
     return {
@@ -233,6 +251,7 @@ function lerDados(corpo: Record<string, unknown>, basico: boolean): DadosCliente
       cidade: '',
       uf: '',
       observacoes: '',
+      entrega: null,
     };
   }
   return d;
@@ -244,10 +263,7 @@ function validar(d: DadosCliente): void {
   const erros = validarFaturamento(d, false);
   const primeiro = Object.entries(erros)[0];
   if (primeiro)
-    throw new ErroHttp(
-      400,
-      `${primeiro[0] === 'documento' ? (d.tipo_pessoa === 'PJ' ? 'CNPJ' : 'CPF') : primeiro[0]}: ${primeiro[1]}`,
-    );
+    throw new ErroHttp(400, `${rotuloErroFaturamento(primeiro[0] as keyof ErrosFaturamento, d.tipo_pessoa)}: ${primeiro[1]}`);
 }
 
 // ── Duplicidade ────────────────────────────────────────────
@@ -382,14 +398,15 @@ function gravarLinha(db: Banco, id: number | null, d: DadosCliente, usuarioId: n
     d.uf,
     situacao,
     d.observacoes,
+    d.entrega ? JSON.stringify(d.entrega) : null,
   ];
   if (id === null) {
     return Number(
       db
         .prepare(
           `INSERT INTO clientes (tipo_pessoa, nome, nome_chave, contato, telefone, telefone_chave, email, documento, cep, logradouro, numero,
-                                 complemento, bairro, cidade, uf, situacao, observacoes, criado, atualizado, criado_por, alterado_por, carteira_id)
-           VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, (SELECT id FROM carteiras WHERE geral = 1))`,
+                                 complemento, bairro, cidade, uf, situacao, observacoes, entrega_json, criado, atualizado, criado_por, alterado_por, carteira_id)
+           VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, (SELECT id FROM carteiras WHERE geral = 1))`,
         )
         .run(...valores, agora, agora, usuarioId, usuarioId).lastInsertRowid,
     );
@@ -397,7 +414,7 @@ function gravarLinha(db: Banco, id: number | null, d: DadosCliente, usuarioId: n
   db.prepare(
     `UPDATE clientes SET tipo_pessoa = ?, nome = ?, nome_chave = ?, contato = ?, telefone = ?, telefone_chave = ?, email = ?, documento = ?,
             cep = ?, logradouro = ?, numero = ?, complemento = ?, bairro = ?, cidade = ?, uf = ?, situacao = ?, observacoes = ?,
-            atualizado = ?, alterado_por = ? WHERE id = ?`,
+            entrega_json = ?, atualizado = ?, alterado_por = ? WHERE id = ?`,
   ).run(...valores, agora, usuarioId, id);
   return id;
 }

@@ -4,6 +4,7 @@ import {
   normalizarFaturamento,
   validarFaturamento,
   type CampoFaturamento,
+  type ErrosFaturamento,
   type DadosFaturamento,
 } from '@raizes/shared';
 import { FormularioFaturamento } from './FormularioFaturamento';
@@ -22,9 +23,18 @@ interface Props {
 }
 
 /** Modal com o formulário de faturamento e entrega (carrinho e pedido). */
-export function ModalFaturamento({ aberto, titulo, subtitulo, inicial, completo, textoSalvar = 'Salvar', fechar, salvar }: Props) {
+export function ModalFaturamento({
+  aberto,
+  titulo,
+  subtitulo,
+  inicial,
+  completo,
+  textoSalvar = 'Salvar',
+  fechar,
+  salvar,
+}: Props) {
   const [dados, setDados] = useState<DadosFaturamento>(inicial ?? faturamentoVazio());
-  const [erros, setErros] = useState<Partial<Record<CampoFaturamento, string>>>({});
+  const [erros, setErros] = useState<ErrosFaturamento>({});
   const [falha, setFalha] = useState('');
   const [salvando, setSalvando] = useState(false);
 
@@ -78,7 +88,13 @@ export function ModalFaturamento({ aberto, titulo, subtitulo, inicial, completo,
           <button className="btn-secondary" type="button" onClick={fechar}>
             Cancelar
           </button>
-          <button className="btn-primary" type="button" id="btn-salvar-faturamento" disabled={salvando} onClick={() => void confirmar()}>
+          <button
+            className="btn-primary"
+            type="button"
+            id="btn-salvar-faturamento"
+            disabled={salvando}
+            onClick={() => void confirmar()}
+          >
             {salvando ? 'Salvando…' : textoSalvar}
           </button>
         </div>

@@ -23,13 +23,160 @@ export interface DadosFaturamento {
   bairro: string;
   cidade: string;
   uf: string;
+  /**
+   * Endereço de entrega quando é outro lugar; null/ausente = "no mesmo endereço do faturamento".
+   * (O endereço acima é o de faturamento.)
+   */
+  entrega?: EnderecoEntrega | null;
 }
 
-export type CampoFaturamento = keyof DadosFaturamento;
+/** Endereço de entrega diferente do faturamento, com quem recebe e a observação (opcionais). */
+export interface EnderecoEntrega {
+  cep: string;
+  logradouro: string;
+  numero: string;
+  complemento: string;
+  bairro: string;
+  cidade: string;
+  uf: string;
+  /** Quem recebe (opcional) */
+  recebedor: string;
+  /** Telefone de quem recebe, só números (opcional) */
+  telefone: string;
+  /** Horário, portaria, ponto de referência… (opcional) */
+  observacao: string;
+}
+
+export type CampoEntrega = keyof EnderecoEntrega;
+export type CampoFaturamento = Exclude<keyof DadosFaturamento, 'entrega'>;
+/** Erros por campo: os do faturamento e os da entrega (prefixo "entrega_"). */
+export type ErrosFaturamento = Partial<Record<CampoFaturamento | `entrega_${CampoEntrega}`, string>>;
+
+export const CAMPOS_ENTREGA: CampoEntrega[] = [
+  'cep',
+  'logradouro',
+  'numero',
+  'complemento',
+  'bairro',
+  'cidade',
+  'uf',
+  'recebedor',
+  'telefone',
+  'observacao',
+];
+const OPCIONAIS_ENTREGA: CampoEntrega[] = ['complemento', 'recebedor', 'telefone', 'observacao'];
+const LIMITES_ENTREGA: Record<CampoEntrega, number> = {
+  cep: 8,
+  logradouro: 150,
+  numero: 20,
+  complemento: 80,
+  bairro: 80,
+  cidade: 80,
+  uf: 2,
+  recebedor: 100,
+  telefone: 11,
+  observacao: 200,
+};
+
+export function rotuloEntrega(campo: CampoEntrega): string {
+  const r: Record<CampoEntrega, string> = {
+    cep: 'CEP',
+    logradouro: 'Endereço (rua, avenida…)',
+    numero: 'Número',
+    complemento: 'Complemento',
+    bairro: 'Bairro',
+    cidade: 'Cidade',
+    uf: 'Estado (UF)',
+    recebedor: 'Quem recebe',
+    telefone: 'Telefone de quem recebe',
+    observacao: 'Observação da entrega',
+  };
+  return r[campo];
+}
+
+export function entregaVazia(): EnderecoEntrega {
+  return {
+    cep: '',
+    logradouro: '',
+    numero: '',
+    complemento: '',
+    bairro: '',
+    cidade: '',
+    uf: '',
+    recebedor: '',
+    telefone: '',
+    observacao: '',
+  };
+}
+
+/**
+ * Endereço de entrega normalizado; null = não informado (entrega no endereço do faturamento).
+ * Um objeto vazio é mantido (formulário com "outro endereço" ainda em branco: no aceite, os campos
+ * obrigatórios são cobrados); para gravar, use `semEntregaVazia`.
+ */
+export function normalizarEntrega(v: unknown): EnderecoEntrega | null {
+  if (!v || typeof v !== 'object') return null;
+  const o = v as Record<string, unknown>;
+  const txt = (k: CampoEntrega) =>
+    typeof o[k] === 'string'
+      ? (o[k] as string)
+          .replace(/\s+/g, ' ')
+          .trim()
+          .slice(0, LIMITES_ENTREGA[k] + 20)
+      : '';
+  const e: EnderecoEntrega = {
+    cep: soDigitos(txt('cep')),
+    logradouro: txt('logradouro'),
+    numero: txt('numero'),
+    complemento: txt('complemento'),
+    bairro: txt('bairro'),
+    cidade: txt('cidade'),
+    uf: txt('uf').toUpperCase(),
+    recebedor: txt('recebedor'),
+    telefone: soDigitos(txt('telefone')).replace(/^55(?=\d{10,11}$)/, ''),
+    observacao: txt('observacao'),
+  };
+  return e;
+}
+
+/** Algum campo da entrega preenchido? */
+export function entregaPreenchida(e: EnderecoEntrega | null | undefined): e is EnderecoEntrega {
+  return !!e && CAMPOS_ENTREGA.some((c) => e[c]);
+}
+
+/** Entrega em branco = no mesmo endereço do faturamento (para gravar e comparar). */
+export function semEntregaVazia<T extends DadosFaturamento>(d: T): T {
+  return { ...d, entrega: entregaPreenchida(d.entrega) ? d.entrega : null };
+}
 
 export const UFS = [
-  'AC', 'AL', 'AP', 'AM', 'BA', 'CE', 'DF', 'ES', 'GO', 'MA', 'MT', 'MS', 'MG', 'PA',
-  'PB', 'PR', 'PE', 'PI', 'RJ', 'RN', 'RS', 'RO', 'RR', 'SC', 'SP', 'SE', 'TO',
+  'AC',
+  'AL',
+  'AP',
+  'AM',
+  'BA',
+  'CE',
+  'DF',
+  'ES',
+  'GO',
+  'MA',
+  'MT',
+  'MS',
+  'MG',
+  'PA',
+  'PB',
+  'PR',
+  'PE',
+  'PI',
+  'RJ',
+  'RN',
+  'RS',
+  'RO',
+  'RR',
+  'SC',
+  'SP',
+  'SE',
+  'TO',
 ] as const;
 
 /** Rótulos (dependem do tipo de pessoa para nome e documento). */
@@ -53,21 +200,52 @@ export function rotuloFaturamento(campo: CampoFaturamento, tipo: TipoPessoa = 'P
 
 /** Ordem dos campos (para formulários e para o registro de alterações). */
 export const CAMPOS_FATURAMENTO: CampoFaturamento[] = [
-  'tipo_pessoa', 'nome', 'contato', 'email', 'documento', 'cep', 'logradouro', 'numero', 'complemento', 'bairro', 'cidade', 'uf',
+  'tipo_pessoa',
+  'nome',
+  'contato',
+  'email',
+  'documento',
+  'cep',
+  'logradouro',
+  'numero',
+  'complemento',
+  'bairro',
+  'cidade',
+  'uf',
 ];
 
 /** Campos que podem ficar vazios mesmo no aceite. */
 const OPCIONAIS: CampoFaturamento[] = ['contato', 'complemento'];
 
 const LIMITES: Record<CampoFaturamento, number> = {
-  tipo_pessoa: 2, nome: 150, contato: 100, email: 150, documento: 14, cep: 8,
-  logradouro: 150, numero: 20, complemento: 80, bairro: 80, cidade: 80, uf: 2,
+  tipo_pessoa: 2,
+  nome: 150,
+  contato: 100,
+  email: 150,
+  documento: 14,
+  cep: 8,
+  logradouro: 150,
+  numero: 20,
+  complemento: 80,
+  bairro: 80,
+  cidade: 80,
+  uf: 2,
 };
 
 export function faturamentoVazio(tipo: TipoPessoa = 'PJ'): DadosFaturamento {
   return {
-    tipo_pessoa: tipo, nome: '', contato: '', email: '', documento: '', cep: '',
-    logradouro: '', numero: '', complemento: '', bairro: '', cidade: '', uf: '',
+    tipo_pessoa: tipo,
+    nome: '',
+    contato: '',
+    email: '',
+    documento: '',
+    cep: '',
+    logradouro: '',
+    numero: '',
+    complemento: '',
+    bairro: '',
+    cidade: '',
+    uf: '',
   };
 }
 
@@ -90,7 +268,12 @@ export function normalizarFaturamento(v: unknown): DadosFaturamento | null {
   if (!v || typeof v !== 'object') return null;
   const o = v as Record<string, unknown>;
   const txt = (k: CampoFaturamento) =>
-    typeof o[k] === 'string' ? (o[k] as string).replace(/\s+/g, ' ').trim().slice(0, LIMITES[k] + 20) : '';
+    typeof o[k] === 'string'
+      ? (o[k] as string)
+          .replace(/\s+/g, ' ')
+          .trim()
+          .slice(0, LIMITES[k] + 20)
+      : '';
   const d: DadosFaturamento = {
     tipo_pessoa: o.tipo_pessoa === 'PF' ? 'PF' : 'PJ',
     nome: txt('nome'),
@@ -104,6 +287,7 @@ export function normalizarFaturamento(v: unknown): DadosFaturamento | null {
     bairro: txt('bairro'),
     cidade: txt('cidade'),
     uf: txt('uf').toUpperCase(),
+    entrega: normalizarEntrega(o.entrega),
   };
   return faturamentoPreenchido(d) ? d : null;
 }
@@ -148,11 +332,8 @@ export const emailValido = (e: string) => /^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/.test(e
  * Erros por campo. `completo` = todos os obrigatórios precisam estar preenchidos
  * (aceite pelo cliente / pedido); sem ele só o que foi digitado é conferido.
  */
-export function validarFaturamento(
-  d: DadosFaturamento,
-  completo: boolean,
-): Partial<Record<CampoFaturamento, string>> {
-  const erros: Partial<Record<CampoFaturamento, string>> = {};
+export function validarFaturamento(d: DadosFaturamento, completo: boolean): ErrosFaturamento {
+  const erros: ErrosFaturamento = {};
   for (const c of CAMPOS_FATURAMENTO) {
     if (c === 'tipo_pessoa') continue;
     if (completo && !OPCIONAIS.includes(c) && !d[c]) erros[c] = 'Campo obrigatório';
@@ -165,7 +346,27 @@ export function validarFaturamento(
   }
   if (d.cep && !erros.cep && d.cep.length !== 8) erros.cep = 'CEP deve ter 8 dígitos';
   if (d.uf && !erros.uf && !(UFS as readonly string[]).includes(d.uf)) erros.uf = 'UF inválida';
+  // Entrega em outro endereço: completa no aceite/pedido (quem recebe, telefone e observação são opcionais)
+  const e = d.entrega;
+  if (e && (completo || entregaPreenchida(e))) {
+    for (const c of CAMPOS_ENTREGA) {
+      const k = `entrega_${c}` as const;
+      if (completo && !OPCIONAIS_ENTREGA.includes(c) && !e[c]) erros[k] = 'Campo obrigatório';
+      else if (e[c].length > LIMITES_ENTREGA[c]) erros[k] = `Máximo de ${LIMITES_ENTREGA[c]} caracteres`;
+    }
+    if (e.cep && !erros.entrega_cep && e.cep.length !== 8) erros.entrega_cep = 'CEP deve ter 8 dígitos';
+    if (e.uf && !erros.entrega_uf && !(UFS as readonly string[]).includes(e.uf)) erros.entrega_uf = 'UF inválida';
+    if (e.telefone && !erros.entrega_telefone && (e.telefone.length < 10 || e.telefone.length > 11))
+      erros.entrega_telefone = 'Informe DDD + número';
+  }
   return erros;
+}
+
+/** Rótulo de uma chave de erro (faturamento ou "entrega_…"), para as mensagens do servidor. */
+export function rotuloErroFaturamento(k: keyof ErrosFaturamento, tipo: TipoPessoa): string {
+  return k.startsWith('entrega_')
+    ? `Entrega › ${rotuloEntrega(k.slice(8) as CampoEntrega)}`
+    : rotuloFaturamento(k as CampoFaturamento, tipo);
 }
 
 /** 000.000.000-00 (CPF) ou 12.ABC.345/01DE-35 (CNPJ, numérico ou alfanumérico). */
@@ -182,12 +383,12 @@ export function formatarCep(cep: string): string {
 }
 
 /** Endereço numa linha: "Rua X, 100 – apto 2 – Centro – São Paulo/SP – CEP 01000-000". */
-export function enderecoEmLinha(d: DadosFaturamento): string {
+export function enderecoEmLinha(
+  d: Pick<DadosFaturamento, 'cep' | 'logradouro' | 'numero' | 'complemento' | 'bairro' | 'cidade' | 'uf'>,
+): string {
   const rua = [d.logradouro, d.numero].filter(Boolean).join(', ');
   const cidade = [d.cidade, d.uf].filter(Boolean).join('/');
-  return [rua, d.complemento, d.bairro, cidade, d.cep ? `CEP ${formatarCep(d.cep)}` : '']
-    .filter(Boolean)
-    .join(' – ');
+  return [rua, d.complemento, d.bairro, cidade, d.cep ? `CEP ${formatarCep(d.cep)}` : ''].filter(Boolean).join(' – ');
 }
 
 /** Valor de exibição de um campo (para o registro de alterações). */
@@ -199,7 +400,15 @@ function exibir(d: DadosFaturamento | null, c: CampoFaturamento): string {
   return d[c];
 }
 
-/** Linhas "Campo: antes → depois" com o que mudou (vazio = nada mudou). */
+function exibirEntrega(e: EnderecoEntrega | null | undefined, c: CampoEntrega): string {
+  if (!e) return '';
+  if (c === 'cep') return e.cep ? formatarCep(e.cep) : '';
+  return e[c];
+}
+
+const MESMO_ENDERECO = 'no mesmo endereço do faturamento';
+
+/** Linhas "Campo: antes → depois" com o que mudou (vazio = nada mudou); a entrega com o prefixo "Entrega ›". */
 export function diferencasFaturamento(antes: DadosFaturamento | null, depois: DadosFaturamento | null): string[] {
   const tipo = depois?.tipo_pessoa ?? antes?.tipo_pessoa ?? 'PJ';
   const linhas: string[] = [];
@@ -209,12 +418,32 @@ export function diferencasFaturamento(antes: DadosFaturamento | null, depois: Da
     if (a === b) continue;
     linhas.push(`${rotuloFaturamento(c, tipo)}: ${a || '(vazio)'} → ${b || '(vazio)'}`);
   }
+  const ea = entregaPreenchida(antes?.entrega) ? antes!.entrega! : null;
+  const eb = entregaPreenchida(depois?.entrega) ? depois!.entrega! : null;
+  // Só compara a entrega quando há dados dos dois lados (ou de um deles)
+  if (ea || eb) {
+    if (!ea !== !eb && antes && depois)
+      linhas.push(`Entrega: ${ea ? 'outro endereço' : MESMO_ENDERECO} → ${eb ? 'outro endereço' : MESMO_ENDERECO}`);
+    for (const c of CAMPOS_ENTREGA) {
+      const a = exibirEntrega(ea, c);
+      const b = exibirEntrega(eb, c);
+      if (a === b) continue;
+      linhas.push(`Entrega › ${rotuloEntrega(c)}: ${a || '(vazio)'} → ${b || '(vazio)'}`);
+    }
+  }
   return linhas;
 }
 
 /** Linhas "Campo: valor" dos campos preenchidos (registro dos dados informados). */
 export function linhasFaturamento(d: DadosFaturamento): string[] {
-  return CAMPOS_FATURAMENTO.map((c) => [rotuloFaturamento(c, d.tipo_pessoa), exibir(d, c)] as const)
+  const linhas = CAMPOS_FATURAMENTO.map((c) => [rotuloFaturamento(c, d.tipo_pessoa), exibir(d, c)] as const)
     .filter(([, v]) => v)
     .map(([r, v]) => `${r}: ${v}`);
+  if (!entregaPreenchida(d.entrega)) return [...linhas, `Entrega: ${MESMO_ENDERECO}`];
+  return [
+    ...linhas,
+    ...CAMPOS_ENTREGA.map((c) => [rotuloEntrega(c), exibirEntrega(d.entrega, c)] as const)
+      .filter(([, v]) => v)
+      .map(([r, v]) => `Entrega › ${r}: ${v}`),
+  ];
 }

@@ -223,6 +223,8 @@ export function faturamentoDoCliente(c: Pick<Cliente, keyof DadosFaturamento>): 
     bairro: c.bairro,
     cidade: c.cidade,
     uf: c.uf,
+    // Endereço de entrega padrão do cadastro (null = no mesmo endereço do faturamento)
+    entrega: c.entrega ?? null,
   };
 }
 

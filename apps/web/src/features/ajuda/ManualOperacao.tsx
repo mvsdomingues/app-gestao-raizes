@@ -349,18 +349,30 @@ export function ManualOperacao() {
               Em <b>Faturamento e entrega</b>, clique em <Bt>+ Informar</Bt>.
             </>,
             'Escolha Empresa (CNPJ) ou Pessoa física (CPF) e preencha nome/razão social, contato (opcional, só empresa), e-mail e documento.',
-            'Digite o CEP: o endereço é completado automaticamente; complete número e complemento.',
+            'Digite o CEP do endereço de faturamento: o endereço é completado automaticamente; complete número e complemento.',
+            <>
+              <b>Entrega</b>: “Entregar no mesmo endereço do faturamento” vem marcado. Para outro local, desmarque e informe o
+              endereço de entrega (também com o CEP) e, se quiser, quem recebe, o telefone de quem recebe e uma observação
+              (horário, portaria, ponto de referência).
+            </>,
             <>
               <Bt>Usar no orçamento</Bt>.
             </>,
           ]}
         />
+        <Dica tipo="regra">
+          São dois endereços: o de <b>faturamento</b> (nota e cobrança) e o de <b>entrega</b>. O cadastro do cliente guarda um
+          endereço de entrega padrão, que vem junto ao escolher o cliente no carrinho; cada orçamento e pedido guarda a sua
+          entrega, que pode ser diferente sem mexer no cadastro. A folha e o link mostram os dois blocos (“Faturamento” e
+          “Entrega”, ou “No mesmo endereço do faturamento”).
+        </Dica>
         <p>
           No orçamento esses dados são <b>opcionais</b> (só o que foi digitado é conferido: CPF/CNPJ com dígito verificador,
           e-mail e CEP). O CNPJ aceita o <b>formato alfanumérico</b> da Receita (emitido desde julho de 2026, ex.:
           12.ABC.345/01DE-35): as 12 primeiras posições podem ter letras, os 2 dígitos finais são sempre números; letras
-          minúsculas viram maiúsculas. No aceite pelo link eles passam a ser <b>obrigatórios</b> para o cliente e, confirmados,
-          atualizam o cadastro do cliente (que passa a <b>Completo</b>). Aparecem no início da folha impressa.
+          minúsculas viram maiúsculas. No aceite pelo link eles passam a ser <b>obrigatórios</b> para o cliente (a entrega em
+          outro endereço também precisa estar completa) e, confirmados, atualizam o cadastro do cliente (que passa a{' '}
+          <b>Completo</b>), inclusive o endereço de entrega padrão. Aparecem no início da folha impressa.
         </p>
         <h4>Previsão de entrega e frete</h4>
         <p>
@@ -665,7 +677,8 @@ export function ManualOperacao() {
             [
               'Faturamento e entrega',
               <span key="f">
-                Alterável com o pedido em andamento (<Bt>Alterar dados</Bt>); cada mudança vira observação com o antes → depois.
+                Os dois endereços (faturamento e entrega). Alteráveis com o pedido em andamento (<Bt>Alterar dados</Bt>); cada
+                mudança vira observação com o antes → depois (as da entrega com “Entrega ›”).
               </span>,
             ],
             [
@@ -736,7 +749,8 @@ export function ManualOperacao() {
         <h4>Ficha do cliente</h4>
         <ul>
           <li>
-            Dados (os mesmos do faturamento, mais telefone principal e observações internas) e <Bt>Salvar alterações</Bt>.
+            Dados (os mesmos do faturamento, mais telefone principal, <b>endereço de entrega padrão</b> — ou “mesmo do
+            faturamento” — e observações internas) e <Bt>Salvar alterações</Bt>.
           </li>
           <li>
             <b>Carteira</b> (comissões): mostrada no topo da ficha; <Bt>Mudar carteira</Bt> vale para os próximos pedidos e pode

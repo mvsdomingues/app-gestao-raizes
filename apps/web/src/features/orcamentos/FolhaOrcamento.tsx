@@ -1,6 +1,7 @@
 import { useState, type ReactNode } from 'react';
 import { Logo } from '../../components/Logo';
 import {
+  entregaPreenchida,
   formatarCep,
   formatarDataBr,
   formatarDocumento,
@@ -364,11 +365,27 @@ export function FolhaOrcamento({
   );
 }
 
-/** Dados de faturamento e entrega no início da folha. */
-function BlocoFaturamento({ d }: { d: DadosFaturamento }) {
+/** Endereço em até duas linhas (rua/complemento/bairro e cidade/CEP). */
+function Endereco({
+  d,
+}: {
+  d: Pick<DadosFaturamento, 'cep' | 'logradouro' | 'numero' | 'complemento' | 'bairro' | 'cidade' | 'uf'>;
+}) {
   const rua = [d.logradouro, d.numero].filter(Boolean).join(', ');
   const cidade = [d.cidade, d.uf].filter(Boolean).join('/');
   const endereco = [rua, d.complemento, d.bairro].filter(Boolean).join(' – ');
+  return (
+    <>
+      {endereco && <span>{endereco}</span>}
+      {(cidade || d.cep) && <span>{[cidade, d.cep ? `CEP ${formatarCep(d.cep)}` : ''].filter(Boolean).join(' · ')}</span>}
+    </>
+  );
+}
+
+/** Dados de faturamento (com o endereço de cobrança) e a entrega, no início da folha. */
+function BlocoFaturamento({ d }: { d: DadosFaturamento }) {
+  const temEndereco = !!(d.logradouro || d.cidade || d.cep);
+  const e = entregaPreenchida(d.entrega) ? d.entrega : null;
   return (
     <section className="orc-faturamento" id="orc-faturamento-folha">
       <div className="orc-faturamento-col">
@@ -380,14 +397,22 @@ function BlocoFaturamento({ d }: { d: DadosFaturamento }) {
           </span>
         )}
         {(d.contato || d.email) && <span>{[d.contato, d.email].filter(Boolean).join(' · ')}</span>}
+        {temEndereco && <Endereco d={d} />}
       </div>
-      {(endereco || cidade || d.cep) && (
-        <div className="orc-faturamento-col">
-          <span className="orc-cliente-rotulo">Endereço de entrega</span>
-          {endereco && <span>{endereco}</span>}
-          {(cidade || d.cep) && <span>{[cidade, d.cep ? `CEP ${formatarCep(d.cep)}` : ''].filter(Boolean).join(' · ')}</span>}
-        </div>
-      )}
+      <div className="orc-faturamento-col" id="orc-entrega-folha">
+        <span className="orc-cliente-rotulo">Entrega</span>
+        {e ? (
+          <>
+            <Endereco d={e} />
+            {(e.recebedor || e.telefone) && (
+              <span>Recebe: {[e.recebedor, e.telefone ? formatarTelefone(e.telefone) : ''].filter(Boolean).join(' · ')}</span>
+            )}
+            {e.observacao && <span className="orc-entrega-obs">{e.observacao}</span>}
+          </>
+        ) : (
+          <span>{temEndereco ? 'No mesmo endereço do faturamento' : 'Endereço a informar'}</span>
+        )}
+      </div>
     </section>
   );
 }

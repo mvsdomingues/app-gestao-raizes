@@ -6,6 +6,7 @@ import {
   normalizarFaturamento,
   validarFaturamento,
   type CampoFaturamento,
+  type ErrosFaturamento,
   type DadosFaturamento,
   type OrcamentoPublico,
 } from '@raizes/shared';
@@ -45,7 +46,7 @@ export function PaginaPublica() {
   const [enviando, setEnviando] = useState(false);
   const [aviso, setAviso] = useState('');
   const [fat, setFat] = useState<DadosFaturamento>(faturamentoVazio());
-  const [errosFat, setErrosFat] = useState<Partial<Record<CampoFaturamento, string>>>({});
+  const [errosFat, setErrosFat] = useState<ErrosFaturamento>({});
 
   useEffect(() => {
     pedir(API).then(

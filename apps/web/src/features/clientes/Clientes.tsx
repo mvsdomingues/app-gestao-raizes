@@ -17,6 +17,7 @@ import {
   validarClienteBasico,
   validarFaturamento,
   type CampoFaturamento,
+  type ErrosFaturamento,
   type CampoMesclagem,
   type CarteiraResumo,
   type Cliente,
@@ -291,7 +292,7 @@ function CamposCliente({
 }: {
   v: DadosForm;
   mudar: (v: DadosForm) => void;
-  erros: Partial<Record<CampoFaturamento, string>>;
+  erros: ErrosFaturamento;
   prefixo: string;
 }) {
   return (
@@ -308,7 +309,7 @@ function CamposCliente({
         />
         <span className="fat-dica">Nome/razão social e telefone ou e-mail são obrigatórios; o restante completa o cadastro.</span>
       </div>
-      <FormularioFaturamento valor={v.fat} mudar={(fat) => mudar({ ...v, fat })} erros={erros} prefixo={prefixo} />
+      <FormularioFaturamento valor={v.fat} mudar={(fat) => mudar({ ...v, fat })} erros={erros} prefixo={prefixo} entregaPadrao />
       <div className="clientes-observacoes">
         <label htmlFor={`${prefixo}-obs`}>Observações internas</label>
         <textarea
@@ -325,7 +326,7 @@ function CamposCliente({
 }
 
 /** Confere o formulário; devolve o corpo da API ou lança com a mensagem. */
-function corpoDoForm(v: DadosForm, setErros: (e: Partial<Record<CampoFaturamento, string>>) => void): Record<string, unknown> {
+function corpoDoForm(v: DadosForm, setErros: (e: ErrosFaturamento) => void): Record<string, unknown> {
   const fat = normalizarFaturamento(v.fat) ?? v.fat;
   const basico = validarClienteBasico({ nome: fat.nome.trim(), telefone: digitos(v.telefone), email: fat.email.trim() });
   const erros = validarFaturamento(fat, false);
@@ -350,7 +351,7 @@ function ModalCliente({ fechar, salvo }: { fechar: () => void; salvo: (c: Client
   const carteiras = useCarteiras(0).filter((c) => c.ativa);
   const [carteiraId, setCarteiraId] = useState('');
   const [v, setV] = useState<DadosForm>(formDe(null));
-  const [erros, setErros] = useState<Partial<Record<CampoFaturamento, string>>>({});
+  const [erros, setErros] = useState<ErrosFaturamento>({});
   const [falha, setFalha] = useState('');
   const [parecidos, setParecidos] = useState<RespostaCliente['coincidencias'] | null>(null);
   const [salvando, setSalvando] = useState(false);
@@ -477,7 +478,7 @@ function Ficha({ id, voltar, abrir }: { id: number; voltar: () => void; abrir: (
   const [novaCarteira, setNovaCarteira] = useState('');
   const [ficha, setFicha] = useState<FichaCliente | null>(null);
   const [v, setV] = useState<DadosForm>(formDe(null));
-  const [erros, setErros] = useState<Partial<Record<CampoFaturamento, string>>>({});
+  const [erros, setErros] = useState<ErrosFaturamento>({});
   const [falha, setFalha] = useState('');
   const [salvando, setSalvando] = useState(false);
   const [mesclar, setMesclar] = useState<SuspeitaDuplicidade | null>(null);

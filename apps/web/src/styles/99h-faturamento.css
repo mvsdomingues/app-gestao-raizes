@@ -95,3 +95,14 @@
 .param-numero span { font-size: .84rem; color: var(--muted); }
 .param-numero input { text-align: right; }
 .param-campo-dica { display: block; font-size: .72rem; color: var(--muted); margin-top: 4px; }
+
+/* Entrega: mesmo endereço do faturamento ou outro endereço */
+.fat-entrega { display: flex; flex-direction: column; gap: 10px; padding-top: 10px; border-top: 1px dashed #E5E0D8; }
+.fat-form .fat-entrega-mesmo {
+  display: inline-flex; align-items: center; gap: 8px; margin: 0; font-size: .86rem; font-weight: 500;
+  text-transform: none; letter-spacing: normal; color: var(--grafite, #1F2329); cursor: pointer;
+}
+.fat-entrega-mesmo input { accent-color: var(--uva, #5E3A73); width: 16px; height: 16px; margin: 0; }
+.fat-recebedor, .fat-telefone { grid-column: span 2; }
+.fat-resumo-mesmo { color: #8a8279; }
+.orc-entrega-obs { font-style: italic; color: #5b544c; }

@@ -1,10 +1,16 @@
 import {
+  CAMPOS_ENTREGA,
   CAMPOS_FATURAMENTO,
   normalizarFaturamento,
-  rotuloFaturamento,
+  rotuloErroFaturamento,
+  semEntregaVazia,
   validarFaturamento,
   type DadosFaturamento,
+  type ErrosFaturamento,
 } from '@raizes/shared';
+
+/** Ordem dos campos nas mensagens: faturamento e depois entrega. */
+const ORDEM: (keyof ErrosFaturamento)[] = [...CAMPOS_FATURAMENTO, ...CAMPOS_ENTREGA.map((c) => `entrega_${c}` as const)];
 import { ErroHttp } from './http';
 
 /**
@@ -19,19 +25,20 @@ export function lerFaturamento(v: unknown, completo: boolean): DadosFaturamento 
     return null;
   }
   const erros = validarFaturamento(d, completo);
-  const campos = CAMPOS_FATURAMENTO.filter((c) => erros[c]);
+  const campos = ORDEM.filter((c) => erros[c]);
   if (campos.length) {
-    const lista = campos.map((c) => `${rotuloFaturamento(c, d.tipo_pessoa)} (${erros[c]!.toLowerCase()})`).join(', ');
+    const lista = campos.map((c) => `${rotuloErroFaturamento(c, d.tipo_pessoa)} (${erros[c]!.toLowerCase()})`).join(', ');
     throw new ErroHttp(400, `Confira os dados de faturamento: ${lista}`);
   }
-  return d;
+  return semEntregaVazia(d);
 }
 
 /** JSON gravado no banco → dados (null se vazio ou inválido). */
 export function faturamentoDoBanco(json: unknown): DadosFaturamento | null {
   if (typeof json !== 'string' || !json) return null;
   try {
-    return normalizarFaturamento(JSON.parse(json));
+    const d = normalizarFaturamento(JSON.parse(json));
+    return d && semEntregaVazia(d);
   } catch {
     return null;
   }
