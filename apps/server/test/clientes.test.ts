@@ -97,13 +97,8 @@ describe('cadastro de clientes (API)', () => {
 
   let thais = 0;
 
-  it('pré-cadastro pelo carrinho: só nome, telefone e e-mail', async () => {
-    const r = await req(
-      'POST',
-      '/api/clientes',
-      { nome: 'Thaís Lima', telefone: '(11) 98473-5364', documento: '11222333000181', cidade: 'X' },
-      vendedor,
-    );
+  it('pré-cadastro pelo carrinho: só nome, telefone, e-mail (e o CPF/CNPJ, se informado)', async () => {
+    const r = await req('POST', '/api/clientes', { nome: 'Thaís Lima', telefone: '(11) 98473-5364', cidade: 'X' }, vendedor);
     expect(r.status).toBe(201);
     thais = r.json.cliente.id;
     expect(r.json.cliente).toMatchObject({
@@ -113,6 +108,8 @@ describe('cadastro de clientes (API)', () => {
       documento: '',
       cidade: '',
     });
+    // O próprio cadastro vira o contato principal
+    expect(r.json.cliente.pessoas).toMatchObject([{ nome: 'Thaís Lima', telefone: '11984735364', principal: true, ativo: true }]);
     expect((await req('POST', '/api/clientes', { nome: 'Sem contato' }, vendedor)).status).toBe(400);
   });
 
@@ -170,12 +167,14 @@ describe('cadastro de clientes (API)', () => {
     expect(sem.status).toBe(400);
     expect(sem.json.erro).toMatch(/cliente/);
     const com = await req('POST', '/api/orcamentos', { cliente_id: thais, itens: [item], subtotal: 1, frete: 0, total: 1 });
+    const principal = (await req('GET', `/api/clientes/${thais}`)).json.cliente.pessoas[0].id;
     expect((await req('GET', `/api/orcamentos/${com.json.id}`)).json.cliente).toEqual({
       id: thais,
       nome: 'Thaís Lima',
       telefone: '11984735364',
       email: null,
       codigo: codigoCliente(thais),
+      contato: { id: principal, nome: 'Thaís Lima', telefone: '11984735364', email: null },
     });
     expect((await req('GET', `/api/orcamentos?cliente=${thais}`)).json.total).toBe(1);
     expect(

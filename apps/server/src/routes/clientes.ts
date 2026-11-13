@@ -16,8 +16,17 @@ import {
   mesclarClientes,
   obterClienteCadastro,
   suspeitasDe,
+  transformarEmContato,
   type Autor,
 } from '../db/repositorio-cadastro-clientes';
+import {
+  alterarPessoa,
+  definirAtivoPessoa,
+  definirPrincipal,
+  excluirPessoa,
+  incluirPessoa,
+  lerPessoa,
+} from '../db/repositorio-pessoas-contato';
 import { exigirCarteiraAtiva, moverClientesCarteira } from '../db/repositorio-comissoes';
 import { notasKommoAtivas } from '../db/repositorio-parametros';
 import type { ServicoKommo } from '../kommo/servico';
@@ -104,7 +113,8 @@ export function rotasClientes(db: Banco, kommo: ServicoKommo | null): Router {
     const corpo = corpoJson(req);
     const completo = u.permissoes.includes('clientes') && corpo.origem !== 'carrinho';
     // Carteira escolhida só por quem cuida do cadastro ou das carteiras; no carrinho vai para a Carteira Geral
-    const podeCarteira = (u.permissoes.includes('clientes') || u.permissoes.includes('comissoes-carteiras')) && corpo.origem !== 'carrinho';
+    const podeCarteira =
+      (u.permissoes.includes('clientes') || u.permissoes.includes('comissoes-carteiras')) && corpo.origem !== 'carrinho';
     const carteiraId = podeCarteira && corpo.carteira_id ? exigirCarteiraAtiva(db, corpo.carteira_id) : null;
     try {
       const r2 = criarClienteCadastro(
@@ -179,8 +189,61 @@ export function rotasClientes(db: Banco, kommo: ServicoKommo | null): Router {
     const corpo = corpoJson(req);
     const u = exigirUsuario(res);
     const id = idDe(req.params.id);
-    moverClientesCarteira(db, [id], corpo.carteira_id, corpo.levar_pedidos === true, { usuarioId: u.id, nome: u.nome, origem: 'CADASTRO' });
+    moverClientesCarteira(db, [id], corpo.carteira_id, corpo.levar_pedidos === true, {
+      usuarioId: u.id,
+      nome: u.nome,
+      origem: 'CADASTRO',
+    });
     res.json(fichaCliente(db, id));
+  });
+
+  // ── Pessoas de contato (incluir também pelo carrinho; o resto só na tela Clientes) ──
+
+  /** { nome, cargo?, telefone?, email?, observacao?, principal? } → { pessoa, avisos, cliente } */
+  r.post('/api/clientes/:id/pessoas', (req, res) => {
+    const id = idDe(req.params.id);
+    const corpo = corpoJson(req);
+    const u = exigirUsuario(res);
+    const r2 = incluirPessoa(
+      db,
+      id,
+      lerPessoa(corpo),
+      autorDe(res, u.permissoes.includes('clientes') ? 'CADASTRO' : 'CARRINHO'),
+      {
+        principal: corpo.principal === true && u.permissoes.includes('clientes'),
+      },
+    );
+    res.status(201).json({ ...r2, cliente: obterClienteCadastro(db, id) });
+  });
+
+  r.put('/api/clientes/:id/pessoas/:pessoa', (req, res) => {
+    const id = idDe(req.params.id);
+    alterarPessoa(db, id, idDe(req.params.pessoa), lerPessoa(corpoJson(req)), autorDe(res, 'CADASTRO'));
+    res.json(fichaCliente(db, id));
+  });
+
+  r.post('/api/clientes/:id/pessoas/:pessoa/principal', (req, res) => {
+    const id = idDe(req.params.id);
+    definirPrincipal(db, id, idDe(req.params.pessoa), autorDe(res, 'CADASTRO'));
+    res.json(fichaCliente(db, id));
+  });
+
+  r.post('/api/clientes/:id/pessoas/:pessoa/ativo', (req, res) => {
+    const id = idDe(req.params.id);
+    definirAtivoPessoa(db, id, idDe(req.params.pessoa), corpoJson(req).ativo === true, autorDe(res, 'CADASTRO'));
+    res.json(fichaCliente(db, id));
+  });
+
+  r.delete('/api/clientes/:id/pessoas/:pessoa', (req, res) => {
+    const id = idDe(req.params.id);
+    excluirPessoa(db, id, idDe(req.params.pessoa), autorDe(res, 'CADASTRO'));
+    res.json(fichaCliente(db, id));
+  });
+
+  /** "Transformar em contato de…": { destino } — este cadastro vira contato da empresa destino */
+  r.post('/api/clientes/:id/transformar', (req, res) => {
+    const destino = transformarEmContato(db, idDe(req.params.id), Number(corpoJson(req).destino), autorDe(res, 'MESCLAGEM'));
+    res.json(fichaCliente(db, destino.id));
   });
 
   r.post('/api/clientes/:id/conferido', (req, res) => {

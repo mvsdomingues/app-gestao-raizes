@@ -3,12 +3,14 @@ import {
   ETAPA_ALTERA_ENTREGA,
   formatarDataBr,
   formatBRL,
+  formatarTelefone,
   FLUXO_PEDIDO,
   podeAlterarFaturamento,
   podeCancelar,
   proximoStatus,
   ROTULOS_STATUS_PEDIDO,
   type Pedido,
+  type PessoaContato,
   type StatusPedido,
 } from '@raizes/shared';
 import { useApp } from '../../app/contexto';
@@ -148,6 +150,7 @@ export function DetalhePedido() {
             </span>
           )}
         </div>
+        {p.cliente && <ContatoPedido pedido={p} aoSalvar={atualizarPedidoAberto} />}
         {!p.cliente && !cancelado && <VincularCliente pedido={p} aoSalvar={atualizarPedidoAberto} />}
         {cancelamento && (
           <div className="pedido-cancelado">
@@ -509,6 +512,72 @@ function VincularCliente({ pedido: p, aoSalvar }: { pedido: Pedido; aoSalvar: (p
         Este pedido foi gerado sem cliente. Busque ou inclua o cliente para ligar o pedido e o orçamento ao cadastro.
       </p>
       <SeletorCliente id="campo-cliente-pedido" valor={null} aoMudar={(c) => void escolher(c)} />
+    </div>
+  );
+}
+
+/** Pessoa de contato do pedido; em andamento, pode ser trocada por outro contato ativo do cliente (vira observação). */
+function ContatoPedido({ pedido: p, aoSalvar }: { pedido: Pedido; aoSalvar: (p: Pedido) => void }) {
+  const [pessoas, setPessoas] = useState<PessoaContato[] | null>(null);
+  const [trocando, setTrocando] = useState(false);
+  const emAndamento = p.status !== 'ENCERRADO' && p.status !== 'CANCELADO';
+  const contato = p.cliente?.contato;
+
+  const abrir = async () => {
+    try {
+      const r = await api.cliente(p.cliente!.id);
+      setPessoas(r.cliente.pessoas.filter((x) => x.ativo));
+      setTrocando(true);
+    } catch (e) {
+      void erroDe('Não foi possível carregar os contatos do cliente.', e);
+    }
+  };
+  const trocar = async (id: number) => {
+    if (!id || id === contato?.id) {
+      setTrocando(false);
+      return;
+    }
+    try {
+      aoSalvar(await api.trocarContatoPedido(p.codigo, id));
+      setTrocando(false);
+    } catch (e) {
+      void erroDe('Não foi possível trocar o contato.', e);
+    }
+  };
+
+  return (
+    <div className="pedido-contato" id="pedido-contato">
+      <span>Contato:</span>{' '}
+      {trocando && pessoas ? (
+        <select
+          className="custom-input pedido-contato-select"
+          id="pedido-contato-escolha"
+          autoFocus
+          defaultValue={contato?.id ?? ''}
+          onChange={(e) => void trocar(Number(e.target.value))}
+          onBlur={() => setTrocando(false)}
+        >
+          {!contato && <option value="">Escolha o contato</option>}
+          {pessoas.map((x) => (
+            <option key={x.id} value={x.id}>
+              {x.nome}
+              {x.cargo ? ` (${x.cargo})` : ''}
+              {x.principal ? ' · principal' : ''}
+            </option>
+          ))}
+        </select>
+      ) : (
+        <>
+          <b>{contato?.nome ?? '—'}</b>
+          {contato?.telefone && <span className="cliente-tel"> · {formatarTelefone(contato.telefone)}</span>}
+          {contato?.email && <span className="cliente-tel"> · {contato.email}</span>}
+          {emAndamento && (
+            <button type="button" className="link-botao" id="pedido-contato-trocar" onClick={() => void abrir()}>
+              Trocar
+            </button>
+          )}
+        </>
+      )}
     </div>
   );
 }

@@ -31,6 +31,7 @@ import { isoLocal } from '../lib/datas';
 import { faturamentoDoBanco } from '../lib/faturamento';
 import { carteiraParaPedido } from './repositorio-comissoes';
 import { obterClienteCadastro, registrarHistorico, vincularOrcamentoECliente } from './repositorio-cadastro-clientes';
+import { garantirPrincipal } from './repositorio-pessoas-contato';
 import type { Banco } from './conexao';
 import { checklistDoPedido, copiarChecklistParaPedido } from './repositorio-checklist';
 
@@ -50,31 +51,55 @@ interface LinhaPedido {
 const SELECT_PEDIDO = `
   SELECT p.id, p.codigo, p.status, p.orcamento_id, p.observacao, p.criado, p.atualizado, p.entrega_prevista,
          o.total, o.qtd_itens, p.cliente_id, o.cliente_nome, o.cliente_telefone, o.cliente_email,
+         p.contato_id, cp.nome AS contato_nome, cp.telefone AS contato_telefone, cp.email AS contato_email,
+         cl.telefone AS cli_telefone, cl.email AS cli_email,
          (SELECT ca.nome FROM carteiras ca WHERE ca.id = p.carteira_id) AS carteira,
          (SELECT COUNT(*) FROM pedidos_checklist c WHERE c.pedido_id = p.id) AS checklist_total,
          (SELECT COUNT(*) FROM pedidos_checklist c WHERE c.pedido_id = p.id AND c.feito = 1) AS checklist_feitos,
          ${colunasResponsavel('ur', 'resp')}
     FROM pedidos p
     JOIN orcamentos o ON o.id = p.orcamento_id
+    LEFT JOIN clientes_pessoas cp ON cp.id = p.contato_id
+    LEFT JOIN clientes cl ON cl.id = p.cliente_id
     LEFT JOIN usuarios ur ON ur.id = p.usuario_id`;
 
 function resumo(l: LinhaPedido): ResumoPedido & { observacao: string | null } {
   const linha = { ...l } as LinhaPedido & Record<string, unknown>;
   const responsavel = extrairResponsavel(linha, 'resp');
   const cid = linha.cliente_id as number | null;
+  // Contato do pedido (dados atuais da pessoa); sem telefone/e-mail nele, os do cadastro do cliente
+  const kid = linha.contato_id as number | null;
+  const contato = kid
+    ? {
+        id: kid,
+        nome: (linha.contato_nome as string) ?? '',
+        telefone: (linha.contato_telefone as string) || (linha.cli_telefone as string | null) || null,
+        email: (linha.contato_email as string) || (linha.cli_email as string | null) || null,
+      }
+    : null;
   const cliente = cid
     ? {
         id: cid,
         nome: (linha.cliente_nome as string) ?? '',
-        telefone: (linha.cliente_telefone as string | null) ?? null,
-        email: (linha.cliente_email as string | null) ?? null,
+        telefone: contato?.telefone ?? (linha.cliente_telefone as string | null) ?? null,
+        email: contato?.email ?? (linha.cliente_email as string | null) ?? null,
         codigo: codigoCliente(cid),
+        contato,
       }
     : null;
-  delete linha.cliente_id;
-  delete linha.cliente_nome;
-  delete linha.cliente_telefone;
-  delete linha.cliente_email;
+  for (const k of [
+    'cliente_id',
+    'cliente_nome',
+    'cliente_telefone',
+    'cliente_email',
+    'contato_id',
+    'contato_nome',
+    'contato_telefone',
+    'contato_email',
+    'cli_telefone',
+    'cli_email',
+  ])
+    delete linha[k];
   return { ...linha, orcamento_numero: numeroOrcamento(l.orcamento_id), responsavel, cliente };
 }
 
@@ -162,9 +187,7 @@ export function listarPedidos(
     params.push(filtros.ate);
   }
   const whereSql = wheres.length ? 'WHERE ' + wheres.join(' AND ') : '';
-  const { c: total } = db
-    .prepare(`SELECT COUNT(*) AS c FROM pedidos p ${whereSql}`)
-    .get(...params) as { c: number };
+  const { c: total } = db.prepare(`SELECT COUNT(*) AS c FROM pedidos p ${whereSql}`).get(...params) as { c: number };
   const linhas = db
     .prepare(`${SELECT_PEDIDO} ${whereSql} ORDER BY p.id DESC LIMIT ? OFFSET ?`)
     .all(...params, limit, offset) as LinhaPedido[];
@@ -262,11 +285,22 @@ export function criarPedido(
   const quemMovimenta = origem === 'CLIENTE' ? null : usuarioId;
   return db.transaction(() => {
     const existe = db
-      .prepare('SELECT status, entrega_prevista, faturamento_json, cliente_id FROM orcamentos WHERE id = ?')
-      .get(orcamentoId) as { status: string; entrega_prevista: string | null; faturamento_json: string | null; cliente_id: number | null } | undefined;
+      .prepare('SELECT status, entrega_prevista, faturamento_json, cliente_id, contato_id FROM orcamentos WHERE id = ?')
+      .get(orcamentoId) as
+      | {
+          status: string;
+          entrega_prevista: string | null;
+          faturamento_json: string | null;
+          cliente_id: number | null;
+          contato_id: number | null;
+        }
+      | undefined;
     if (!existe) throw new ErroHttp(404, `Orçamento ${numeroOrcamento(orcamentoId)} não encontrado`);
     if (!existe.cliente_id) {
-      throw new ErroHttp(409, `O ${numeroOrcamento(orcamentoId)} não tem cliente: vincule o cliente no orçamento (edite e escolha o cliente) antes de gerar o pedido.`);
+      throw new ErroHttp(
+        409,
+        `O ${numeroOrcamento(orcamentoId)} não tem cliente: vincule o cliente no orçamento (edite e escolha o cliente) antes de gerar o pedido.`,
+      );
     }
     const ativo = pedidoAtivoDoOrcamento(db, orcamentoId);
     if (ativo) {
@@ -275,25 +309,36 @@ export function criarPedido(
     if (existe.status === 'CANCELADO') {
       throw new ErroHttp(409, `O ${numeroOrcamento(orcamentoId)} está cancelado. Reabra o orçamento antes de gerar o pedido.`);
     }
-    const seq = db.prepare(`SELECT seq FROM sqlite_sequence WHERE name = 'pedidos'`).get() as
-      | { seq: number }
-      | undefined;
+    const seq = db.prepare(`SELECT seq FROM sqlite_sequence WHERE name = 'pedidos'`).get() as { seq: number } | undefined;
     const maxId = (db.prepare('SELECT MAX(id) AS m FROM pedidos').get() as { m: number | null }).m ?? 0;
     const id = Math.max(seq?.seq ?? 0, maxId) + 1;
     const codigo = codigoPedido(id);
     const agora = isoLocal();
     db.prepare(
-      `INSERT INTO pedidos (id, codigo, orcamento_id, status, observacao, criado, atualizado, usuario_id, entrega_prevista, faturamento_json, cliente_id, carteira_id)
-       VALUES (?, ?, ?, 'CRIADO', ?, ?, ?, ?, ?, ?, ?, ?)`,
-    ).run(id, codigo, orcamentoId, observacao, agora, agora, usuarioId, existe.entrega_prevista, existe.faturamento_json, existe.cliente_id,
+      `INSERT INTO pedidos (id, codigo, orcamento_id, status, observacao, criado, atualizado, usuario_id, entrega_prevista, faturamento_json, cliente_id, carteira_id, contato_id)
+       VALUES (?, ?, ?, 'CRIADO', ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+    ).run(
+      id,
+      codigo,
+      orcamentoId,
+      observacao,
+      agora,
+      agora,
+      usuarioId,
+      existe.entrega_prevista,
+      existe.faturamento_json,
+      existe.cliente_id,
       // Carteira do cliente no momento da criação (sem cliente: Carteira Geral)
       carteiraParaPedido(db, existe.cliente_id),
+      // Contato: o do orçamento (orçamento antigo sem contato: o principal do cliente)
+      existe.contato_id ?? garantirPrincipal(db, existe.cliente_id),
     );
     registrarMovimento(db, id, null, 'CRIADO', agora, opcoes.observacaoMovimento ?? observacao, quemMovimenta, origem);
     if (observacao) inserirObservacao(db, id, observacao, agora, quemMovimenta, origem);
     // Situação do orçamento passa a "Pedido gerado"
-    const anterior = (db.prepare('SELECT status FROM orcamentos WHERE id = ?').get(orcamentoId) as { status: 'ABERTO' | 'ENVIADO' })
-      .status;
+    const anterior = (
+      db.prepare('SELECT status FROM orcamentos WHERE id = ?').get(orcamentoId) as { status: 'ABERTO' | 'ENVIADO' }
+    ).status;
     registrarMovimentoOrcamento(
       db,
       orcamentoId,
@@ -316,8 +361,7 @@ export function criarPedido(
 export function avancarPedido(db: Banco, codigo: string, usuarioId: number, esperado?: string): void {
   db.transaction(() => {
     const p = db.prepare('SELECT id, status FROM pedidos WHERE codigo = ? COLLATE NOCASE').get(codigo) as
-      | { id: number; status: StatusPedido }
-      | undefined;
+      { id: number; status: StatusPedido } | undefined;
     if (!p) throw new ErroHttp(404, 'Pedido não encontrado');
     if (esperado && esperado !== p.status) {
       throw new ErroHttp(409, 'O pedido foi movimentado por outra pessoa. Atualize a tela.');
@@ -335,15 +379,17 @@ export function avancarPedido(db: Banco, codigo: string, usuarioId: number, espe
 export function retrocederPedido(db: Banco, codigo: string, usuarioId: number, esperado?: string): void {
   db.transaction(() => {
     const p = db.prepare('SELECT id, status FROM pedidos WHERE codigo = ? COLLATE NOCASE').get(codigo) as
-      | { id: number; status: StatusPedido }
-      | undefined;
+      { id: number; status: StatusPedido } | undefined;
     if (!p) throw new ErroHttp(404, 'Pedido não encontrado');
     if (esperado && esperado !== p.status) {
       throw new ErroHttp(409, 'O pedido foi movimentado por outra pessoa. Atualize a tela.');
     }
     const ant = statusAnterior(p.status);
     if (!ant) {
-      throw new ErroHttp(409, p.status === 'CANCELADO' ? 'Pedido cancelado não pode ser movimentado' : 'O pedido já está na primeira etapa');
+      throw new ErroHttp(
+        409,
+        p.status === 'CANCELADO' ? 'Pedido cancelado não pode ser movimentado' : 'O pedido já está na primeira etapa',
+      );
     }
     const agora = isoLocal();
     db.prepare('UPDATE pedidos SET status = ?, atualizado = ? WHERE id = ?').run(ant, agora, p.id);
@@ -391,8 +437,7 @@ export function observacoesDoPedido(db: Banco, pedidoId: number): ObservacaoPedi
 export function alterarEntregaPedido(db: Banco, codigo: string, data: string | null, usuarioId: number): boolean {
   return db.transaction(() => {
     const p = db.prepare('SELECT id, status, entrega_prevista FROM pedidos WHERE codigo = ? COLLATE NOCASE').get(codigo) as
-      | { id: number; status: StatusPedido; entrega_prevista: string | null }
-      | undefined;
+      { id: number; status: StatusPedido; entrega_prevista: string | null } | undefined;
     if (!p) throw new ErroHttp(404, 'Pedido não encontrado');
     if (p.status !== ETAPA_ALTERA_ENTREGA) {
       throw new ErroHttp(409, 'A data de entrega só pode ser alterada com o pedido na etapa "Criado".');
@@ -431,8 +476,7 @@ export function alterarFaturamentoPedido(
 ): boolean {
   return db.transaction(() => {
     const p = db.prepare('SELECT id, status, faturamento_json FROM pedidos WHERE codigo = ? COLLATE NOCASE').get(codigo) as
-      | { id: number; status: StatusPedido; faturamento_json: string | null }
-      | undefined;
+      { id: number; status: StatusPedido; faturamento_json: string | null } | undefined;
     if (!p) throw new ErroHttp(404, 'Pedido não encontrado');
     if (!podeAlterarFaturamento(p.status)) {
       throw new ErroHttp(409, 'Os dados de faturamento só podem ser alterados com o pedido em andamento.');
@@ -449,22 +493,57 @@ export function alterarFaturamentoPedido(
 export function cancelarPedido(db: Banco, codigo: string, motivo: string | null, usuarioId: number): void {
   db.transaction(() => {
     const p = db.prepare('SELECT id, status FROM pedidos WHERE codigo = ? COLLATE NOCASE').get(codigo) as
-      | { id: number; status: StatusPedido }
-      | undefined;
+      { id: number; status: StatusPedido } | undefined;
     if (!p) throw new ErroHttp(404, 'Pedido não encontrado');
     if (!podeCancelar(p.status)) {
-      throw new ErroHttp(409, p.status === 'CANCELADO' ? 'O pedido já está cancelado' : 'Pedido encerrado não pode ser cancelado');
+      throw new ErroHttp(
+        409,
+        p.status === 'CANCELADO' ? 'O pedido já está cancelado' : 'Pedido encerrado não pode ser cancelado',
+      );
     }
     const agora = isoLocal();
     db.prepare(`UPDATE pedidos SET status = 'CANCELADO', atualizado = ? WHERE id = ?`).run(agora, p.id);
     registrarMovimento(db, p.id, p.status, 'CANCELADO', agora, motivo, usuarioId);
     // O orçamento volta à situação que tinha antes do pedido (Aberto ou Enviado)
     const o = db
-      .prepare(
-        'SELECT o.id, o.status, p.codigo FROM orcamentos o JOIN pedidos p ON p.orcamento_id = o.id WHERE p.id = ?',
-      )
+      .prepare('SELECT o.id, o.status, p.codigo FROM orcamentos o JOIN pedidos p ON p.orcamento_id = o.id WHERE p.id = ?')
       .get(p.id) as { id: number; status: 'ABERTO' | 'ENVIADO'; codigo: string };
     registrarMovimentoOrcamento(db, o.id, 'PEDIDO_GERADO', o.status, usuarioId, `Pedido ${o.codigo} cancelado`, agora);
+  })();
+}
+
+/**
+ * Troca a pessoa de contato do pedido em andamento (não encerrado nem cancelado):
+ * precisa ser um contato ativo do cliente do pedido; a troca vira observação.
+ */
+export function trocarContatoDoPedido(
+  db: Banco,
+  codigo: string,
+  contatoId: unknown,
+  usuario: { id: number; nome: string },
+): void {
+  db.transaction(() => {
+    const p = db
+      .prepare(
+        'SELECT p.id, p.status, p.cliente_id, p.contato_id, cp.nome AS contato_nome FROM pedidos p LEFT JOIN clientes_pessoas cp ON cp.id = p.contato_id WHERE p.codigo = ? COLLATE NOCASE',
+      )
+      .get(codigo) as
+      | { id: number; status: StatusPedido; cliente_id: number | null; contato_id: number | null; contato_nome: string | null }
+      | undefined;
+    if (!p) throw new ErroHttp(404, 'Pedido não encontrado');
+    if (p.status === 'ENCERRADO' || p.status === 'CANCELADO')
+      throw new ErroHttp(409, 'O contato só é trocado com o pedido em andamento');
+    if (!p.cliente_id) throw new ErroHttp(409, 'Vincule o cliente ao pedido antes de escolher o contato');
+    const id = Number(contatoId);
+    const novo = Number.isInteger(id)
+      ? (db.prepare('SELECT id, nome, cliente_id, ativo FROM clientes_pessoas WHERE id = ?').get(id) as
+          { id: number; nome: string; cliente_id: number; ativo: number } | undefined)
+      : undefined;
+    if (!novo || novo.cliente_id !== p.cliente_id) throw new ErroHttp(400, 'Escolha um contato deste cliente');
+    if (!novo.ativo) throw new ErroHttp(400, `${novo.nome} está inativo: escolha outro contato`);
+    if (novo.id === p.contato_id) return;
+    db.prepare('UPDATE pedidos SET contato_id = ?, atualizado = ? WHERE id = ?').run(novo.id, isoLocal(), p.id);
+    inserirObservacao(db, p.id, `Contato: ${p.contato_nome ?? '(nenhum)'} → ${novo.nome}`, isoLocal(), usuario.id);
   })();
 }
 
@@ -482,9 +561,18 @@ export function vincularClienteAoPedido(
 ): void {
   db.transaction(() => {
     const p = db
-      .prepare('SELECT id, status, orcamento_id, cliente_id, carteira_id, faturamento_json FROM pedidos WHERE codigo = ? COLLATE NOCASE')
+      .prepare(
+        'SELECT id, status, orcamento_id, cliente_id, carteira_id, faturamento_json FROM pedidos WHERE codigo = ? COLLATE NOCASE',
+      )
       .get(codigo) as
-      | { id: number; status: StatusPedido; orcamento_id: number; cliente_id: number | null; carteira_id: number | null; faturamento_json: string | null }
+      | {
+          id: number;
+          status: StatusPedido;
+          orcamento_id: number;
+          cliente_id: number | null;
+          carteira_id: number | null;
+          faturamento_json: string | null;
+        }
       | undefined;
     if (!p) throw new ErroHttp(404, 'Pedido não encontrado');
     if (p.status === 'CANCELADO') throw new ErroHttp(409, 'Pedido cancelado não recebe cliente');
@@ -492,8 +580,7 @@ export function vincularClienteAoPedido(
     const cid = Number(clienteId);
     const c = Number.isInteger(cid)
       ? (db.prepare('SELECT id, nome, ativo, carteira_id FROM clientes WHERE id = ?').get(cid) as
-          | { id: number; nome: string; ativo: number; carteira_id: number | null }
-          | undefined)
+          { id: number; nome: string; ativo: number; carteira_id: number | null } | undefined)
       : undefined;
     if (!c || !c.ativo) throw new ErroHttp(400, 'Cliente não encontrado no cadastro (ou inativo)');
     const agora = isoLocal();
@@ -504,22 +591,24 @@ export function vincularClienteAoPedido(
     // Carteira: a do cliente, salvo mês da comissão já fechado
     const nova = carteiraParaPedido(db, c.id);
     const conclusao = (
-      db.prepare("SELECT MIN(data_hora) AS d FROM pedidos_movimentos WHERE pedido_id = ? AND status_novo = 'EM_PRODUCAO'").get(p.id) as { d: string | null }
+      db
+        .prepare("SELECT MIN(data_hora) AS d FROM pedidos_movimentos WHERE pedido_id = ? AND status_novo = 'EM_PRODUCAO'")
+        .get(p.id) as { d: string | null }
     ).d;
-    const fechado = !!conclusao && !!db.prepare('SELECT 1 FROM comissao_fechamentos WHERE competencia = ?').get(conclusao.slice(0, 7));
+    const fechado =
+      !!conclusao && !!db.prepare('SELECT 1 FROM comissao_fechamentos WHERE competencia = ?').get(conclusao.slice(0, 7));
     if (nova !== p.carteira_id) {
-      const nomeCart = (id: number | null) => (id ? ((db.prepare('SELECT nome FROM carteiras WHERE id = ?').get(id) as { nome: string } | undefined)?.nome ?? '—') : '—');
+      const nomeCart = (id: number | null) =>
+        id ? ((db.prepare('SELECT nome FROM carteiras WHERE id = ?').get(id) as { nome: string } | undefined)?.nome ?? '—') : '—';
       if (fechado) {
-        linhas.push(`Carteira mantida (${nomeCart(p.carteira_id)}): comissões de ${conclusao!.slice(5, 7)}/${conclusao!.slice(0, 4)} já fechadas`);
+        linhas.push(
+          `Carteira mantida (${nomeCart(p.carteira_id)}): comissões de ${conclusao!.slice(5, 7)}/${conclusao!.slice(0, 4)} já fechadas`,
+        );
       } else {
         db.prepare('UPDATE pedidos SET carteira_id = ? WHERE id = ?').run(nova, p.id);
-        db.prepare('INSERT INTO pedidos_carteira_movimentos (pedido_id, carteira_anterior, carteira_nova, data_hora, usuario_id) VALUES (?, ?, ?, ?, ?)').run(
-          p.id,
-          p.carteira_id,
-          nova,
-          agora,
-          usuario.id,
-        );
+        db.prepare(
+          'INSERT INTO pedidos_carteira_movimentos (pedido_id, carteira_anterior, carteira_nova, data_hora, usuario_id) VALUES (?, ?, ?, ?, ?)',
+        ).run(p.id, p.carteira_id, nova, agora, usuario.id);
         linhas.push(`Carteira: ${nomeCart(p.carteira_id)} → ${nomeCart(nova)}`);
       }
     }

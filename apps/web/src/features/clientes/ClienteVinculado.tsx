@@ -2,7 +2,7 @@ import { codigoCliente, formatarTelefone, type ClienteVinculado as Cliente } fro
 import { useApp } from '../../app/contexto';
 import { useSessao } from '../../app/sessao';
 
-/** "Nome · telefone" do cliente vinculado, com link para a ficha na tela Clientes (quem tem acesso). */
+/** "Nome · contato · telefone" do cliente vinculado, com link para a ficha na tela Clientes (quem tem acesso). */
 export function ClienteVinculado({
   cliente,
   link = true,
@@ -18,6 +18,12 @@ export function ClienteVinculado({
   return (
     <span className="cliente-vinculado">
       <span className="cliente-nome">{cliente.nome || cliente.codigo || codigoCliente(cliente.id)}</span>
+      {cliente.contato?.nome && cliente.contato.nome !== cliente.nome && (
+        <span className="cliente-contato-nome" title="Pessoa de contato">
+          {' '}
+          · {cliente.contato.nome}
+        </span>
+      )}
       {cliente.telefone && <span className="cliente-tel"> · {formatarTelefone(cliente.telefone)}</span>}
       {!cliente.telefone && cliente.email && <span className="cliente-tel"> · {cliente.email}</span>}
       {link && pode('clientes') && (

@@ -9,12 +9,7 @@ export function digitos(v: string): string {
 
 /** Texto para busca: minúsculas, sem acentos e com espaços simples. */
 export function semAcento(v: string): string {
-  return v
-    .normalize('NFD')
-    .replace(/[̀-ͯ]/g, '')
-    .toLowerCase()
-    .replace(/\s+/g, ' ')
-    .trim();
+  return v.normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase().replace(/\s+/g, ' ').trim();
 }
 
 export type TipoBuscaCliente = 'telefone' | 'nome' | 'email' | 'codigo';
@@ -87,11 +82,22 @@ export interface ClienteVinculado {
   /** Id do cliente no cadastro da plataforma */
   id: number;
   nome: string;
+  /** Telefone para falar sobre o orçamento: o do contato (ou o do cliente, se o contato não tiver) */
   telefone: string | null;
-  /** E-mail principal (cópia no orçamento) */
+  /** E-mail (cópia no orçamento): o do contato, ou o do cliente */
   email?: string | null;
   /** CLI-000001 */
   codigo?: string;
+  /** Pessoa de contato que pediu (orçamento e pedido) */
+  contato?: ContatoVinculado | null;
+}
+
+/** Pessoa de contato ligada a um orçamento ou pedido (ou encontrada na busca). */
+export interface ContatoVinculado {
+  id: number;
+  nome: string;
+  telefone?: string | null;
+  email?: string | null;
 }
 
 export interface RespostaBuscaClientes {

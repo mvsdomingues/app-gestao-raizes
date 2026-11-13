@@ -337,6 +337,25 @@ export function garantirEsquema(db: Database.Database): void {
     CREATE INDEX IF NOT EXISTS ix_clientes_telefone ON clientes(telefone_chave);
     CREATE INDEX IF NOT EXISTS ix_clientes_email ON clientes(email);
     CREATE INDEX IF NOT EXISTS ix_clientes_documento ON clientes(documento);
+    -- Pessoas de contato do cliente (quem compra pela empresa); uma é a principal
+    CREATE TABLE IF NOT EXISTS clientes_pessoas (
+      id             INTEGER PRIMARY KEY AUTOINCREMENT,
+      cliente_id     INTEGER NOT NULL REFERENCES clientes(id),
+      nome           TEXT NOT NULL,
+      nome_chave     TEXT NOT NULL DEFAULT '',
+      cargo          TEXT NOT NULL DEFAULT '',
+      telefone       TEXT NOT NULL DEFAULT '',
+      telefone_chave TEXT NOT NULL DEFAULT '',
+      email          TEXT NOT NULL DEFAULT '',
+      observacao     TEXT NOT NULL DEFAULT '',
+      principal      INTEGER NOT NULL DEFAULT 0,
+      ativo          INTEGER NOT NULL DEFAULT 1,
+      criado         TEXT NOT NULL,
+      atualizado     TEXT NOT NULL
+    );
+    CREATE INDEX IF NOT EXISTS ix_clientes_pessoas_cliente ON clientes_pessoas(cliente_id);
+    CREATE INDEX IF NOT EXISTS ix_clientes_pessoas_telefone ON clientes_pessoas(telefone_chave);
+    CREATE INDEX IF NOT EXISTS ix_clientes_pessoas_email ON clientes_pessoas(email);
     -- Telefones e e-mails adicionais
     CREATE TABLE IF NOT EXISTS clientes_contatos (
       id         INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -387,7 +406,16 @@ export function garantirEsquema(db: Database.Database): void {
   // Catálogo único: produtos dos fornecedores + produtos próprios.
   // Os próprios recebem id negativo para nunca colidir com os dos fornecedores.
   // (Criada depois da migração, porque usa as colunas de detalhes.)
-  const cols = ['fornecedor', 'codigo', 'nome', 'preco', 'qtd_estoque', 'atualizado', 'imagem_url', ...COLUNAS_DETALHE_PRODUTO.map(([c]) => c)].join(', ');
+  const cols = [
+    'fornecedor',
+    'codigo',
+    'nome',
+    'preco',
+    'qtd_estoque',
+    'atualizado',
+    'imagem_url',
+    ...COLUNAS_DETALHE_PRODUTO.map(([c]) => c),
+  ].join(', ');
   db.exec(`
     DROP VIEW IF EXISTS catalogo;
     CREATE VIEW catalogo AS
@@ -510,9 +538,11 @@ function migrarColunas(db: Database.Database): void {
     db.exec(`ALTER TABLE orcamentos ADD COLUMN observacao TEXT`);
   }
   // Vínculo com o cadastro de clientes da plataforma
-  if (!colunas(db, 'orcamentos').includes('cliente_id')) db.exec('ALTER TABLE orcamentos ADD COLUMN cliente_id INTEGER REFERENCES clientes(id)');
+  if (!colunas(db, 'orcamentos').includes('cliente_id'))
+    db.exec('ALTER TABLE orcamentos ADD COLUMN cliente_id INTEGER REFERENCES clientes(id)');
   if (!colunas(db, 'orcamentos').includes('cliente_email')) db.exec('ALTER TABLE orcamentos ADD COLUMN cliente_email TEXT');
-  if (!colunas(db, 'pedidos').includes('cliente_id')) db.exec('ALTER TABLE pedidos ADD COLUMN cliente_id INTEGER REFERENCES clientes(id)');
+  if (!colunas(db, 'pedidos').includes('cliente_id'))
+    db.exec('ALTER TABLE pedidos ADD COLUMN cliente_id INTEGER REFERENCES clientes(id)');
   db.exec('CREATE INDEX IF NOT EXISTS ix_orcamentos_cliente_id ON orcamentos(cliente_id)');
   db.exec('CREATE INDEX IF NOT EXISTS ix_pedidos_cliente_id ON pedidos(cliente_id)');
   // Carteira de clientes especiais do pedido (comissões)
@@ -522,7 +552,14 @@ function migrarColunas(db: Database.Database): void {
   // Carteiras de clientes: a Carteira Geral (exatamente uma) e a carteira de cada cliente
   if (!colunas(db, 'carteiras').includes('geral')) db.exec('ALTER TABLE carteiras ADD COLUMN geral INTEGER NOT NULL DEFAULT 0');
   db.exec('CREATE UNIQUE INDEX IF NOT EXISTS ux_carteiras_geral ON carteiras(geral) WHERE geral = 1');
-  if (!colunas(db, 'clientes').includes('carteira_id')) db.exec('ALTER TABLE clientes ADD COLUMN carteira_id INTEGER REFERENCES carteiras(id)');
+  if (!colunas(db, 'clientes').includes('carteira_id'))
+    db.exec('ALTER TABLE clientes ADD COLUMN carteira_id INTEGER REFERENCES carteiras(id)');
   db.exec('CREATE INDEX IF NOT EXISTS ix_clientes_carteira ON clientes(carteira_id)');
   db.exec('CREATE INDEX IF NOT EXISTS ix_pedidos_carteira ON pedidos(carteira_id)');
+  // Pessoa de contato do orçamento (com a cópia do nome) e do pedido
+  if (!colunas(db, 'orcamentos').includes('contato_id'))
+    db.exec('ALTER TABLE orcamentos ADD COLUMN contato_id INTEGER REFERENCES clientes_pessoas(id)');
+  if (!colunas(db, 'orcamentos').includes('contato_nome')) db.exec('ALTER TABLE orcamentos ADD COLUMN contato_nome TEXT');
+  if (!colunas(db, 'pedidos').includes('contato_id'))
+    db.exec('ALTER TABLE pedidos ADD COLUMN contato_id INTEGER REFERENCES clientes_pessoas(id)');
 }

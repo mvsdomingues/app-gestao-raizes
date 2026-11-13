@@ -110,7 +110,8 @@ export interface OrcamentoPublico {
   data_hora: string;
   valido_ate: string | null;
   situacao: SituacaoPublica;
-  cliente: { nome: string; telefone: string | null } | null;
+  /** Cliente (empresa) e, "aos cuidados de", só a pessoa de contato deste orçamento */
+  cliente: { nome: string; telefone: string | null; contato?: string | null } | null;
   itens: ItemPublico[];
   subtotal: number;
   frete: number;

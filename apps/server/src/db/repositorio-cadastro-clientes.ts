@@ -31,6 +31,14 @@ import {
 import { isoLocal } from '../lib/datas';
 import { ErroHttp } from '../lib/http';
 import type { Banco } from './conexao';
+import {
+  contatoVinculado,
+  garantirPrincipal,
+  incluirPessoa,
+  lerPessoa,
+  moverPessoas,
+  pessoasDe,
+} from './repositorio-pessoas-contato';
 
 /** Quem fez a alteração (usuário logado, cliente pelo link ou o próprio sistema). */
 export interface Autor {
@@ -120,6 +128,7 @@ function paraCliente(db: Banco, l: LinhaCliente): Cliente {
     criado_por: l.criado_por_nome,
     alterado_por: l.alterado_por_nome,
     contatos: contatosDe(db, l.id),
+    pessoas: pessoasDe(db, l.id),
   };
 }
 
@@ -210,11 +219,10 @@ function lerDados(corpo: Record<string, unknown>, basico: boolean): DadosCliente
         : '',
   };
   if (basico) {
-    // Vendedor no carrinho: só o básico; o resto vem do aceite ou da tela Clientes
+    // Vendedor no carrinho: só o básico (e o CNPJ/CPF, se souber); o resto vem do aceite ou da tela Clientes
     return {
       ...d,
       contato: '',
-      documento: '',
       cep: '',
       logradouro: '',
       numero: '',
@@ -247,6 +255,20 @@ export interface Coincidencia {
   motivos: MotivoDuplicidade[];
 }
 
+/** Contato (pessoa) do cliente com o telefone ou e-mail informado, para o carrinho já escolher a pessoa. */
+function pessoaComContato(db: Banco, clienteId: number, telefone?: string, email?: string) {
+  const k = chaveTelefone(telefone ?? '');
+  const e = normalizarEmail(email ?? '');
+  if (!k && !e) return null;
+  const r = db
+    .prepare(
+      `SELECT id FROM clientes_pessoas WHERE cliente_id = ? AND ativo = 1 AND ((? <> '' AND telefone_chave = ?) OR (? <> '' AND email = ?))
+        ORDER BY principal DESC, id LIMIT 1`,
+    )
+    .get(clienteId, k, k, e, e) as { id: number } | undefined;
+  return r ? contatoVinculado(db, r.id) : null;
+}
+
 /** Outros clientes ativos com o mesmo documento, telefone ou e-mail (principal ou adicional). */
 export function coincidencias(
   db: Banco,
@@ -273,9 +295,10 @@ export function coincidencias(
       db
         .prepare(
           `SELECT id FROM clientes WHERE ativo = 1 AND telefone_chave = ?
-           UNION SELECT c.id FROM clientes_contatos x JOIN clientes c ON c.id = x.cliente_id WHERE c.ativo = 1 AND x.tipo = 'TELEFONE' AND x.chave = ?`,
+           UNION SELECT c.id FROM clientes_contatos x JOIN clientes c ON c.id = x.cliente_id WHERE c.ativo = 1 AND x.tipo = 'TELEFONE' AND x.chave = ?
+           UNION SELECT c.id FROM clientes_pessoas x JOIN clientes c ON c.id = x.cliente_id WHERE c.ativo = 1 AND x.ativo = 1 AND x.telefone_chave = ?`,
         )
-        .all(k, k) as { id: number }[],
+        .all(k, k, k) as { id: number }[],
       'TELEFONE',
     );
   }
@@ -287,15 +310,19 @@ export function coincidencias(
       db
         .prepare(
           `SELECT id FROM clientes WHERE ativo = 1 AND email = ?
-           UNION SELECT c.id FROM clientes_contatos x JOIN clientes c ON c.id = x.cliente_id WHERE c.ativo = 1 AND x.tipo = 'EMAIL' AND x.chave = ?`,
+           UNION SELECT c.id FROM clientes_contatos x JOIN clientes c ON c.id = x.cliente_id WHERE c.ativo = 1 AND x.tipo = 'EMAIL' AND x.chave = ?
+           UNION SELECT c.id FROM clientes_pessoas x JOIN clientes c ON c.id = x.cliente_id WHERE c.ativo = 1 AND x.ativo = 1 AND x.email = ?`,
         )
-        .all(e, e) as { id: number }[],
+        .all(e, e, e) as { id: number }[],
       'EMAIL',
     );
   }
   if (!mapa.size) return [];
   const resumos = resumosPorIds(db, [...mapa.keys()]);
-  return resumos.map((c) => ({ cliente: c, motivos: [...mapa.get(c.id)!] }));
+  return resumos.map((c) => ({
+    cliente: { ...c, pessoa: pessoaComContato(db, c.id, d.telefone, d.email) },
+    motivos: [...mapa.get(c.id)!],
+  }));
 }
 
 /** Registra (ou atualiza) a suspeita entre dois clientes; um par descartado não volta. */
@@ -402,22 +429,41 @@ export function criarClienteCadastro(
   opcoes: { basico: boolean; criarMesmoAssim?: boolean; carteiraId?: number | null },
 ): { cliente: Cliente; coincidencias: Coincidencia[] } {
   const d = lerDados(corpo, opcoes.basico);
+  // Empresa: a pessoa que está comprando vira o contato principal (telefone/e-mail da empresa, se faltarem, são os dela)
+  const pessoa = d.tipo_pessoa === 'PJ' && corpo.pessoa ? lerPessoa(corpo.pessoa) : null;
+  if (pessoa) {
+    d.telefone ||= pessoa.telefone;
+    d.email ||= pessoa.email;
+    d.contato ||= pessoa.nome;
+  }
   validar(d);
   return db.transaction(() => {
     const iguais = coincidencias(db, d);
     const mesmoDoc = iguais.filter((c) => c.motivos.includes('DOCUMENTO'));
-    if (mesmoDoc.length)
-      throw new ErroHttp(409, `Este CPF/CNPJ já está no cadastro: ${mesmoDoc[0]!.cliente.codigo} ${mesmoDoc[0]!.cliente.nome}`);
+    if (mesmoDoc.length) {
+      const outro = mesmoDoc[0]!.cliente;
+      // O carrinho oferece incluir a pessoa como contato do cliente encontrado (não cria outra empresa)
+      throw new ErroHttp(409, `Este CPF/CNPJ já está no cadastro: ${outro.codigo} ${outro.nome}`, {
+        codigo: 'DOCUMENTO_CADASTRADO',
+        cliente: outro,
+      });
+    }
     if (iguais.length && !opcoes.criarMesmoAssim) throw new ErroDuplicidade(iguais);
     const id = gravarLinha(db, null, d, autor.usuarioId);
+    if (pessoa) incluirPessoa(db, id, pessoa, autor, { principal: true });
+    else garantirPrincipal(db, id);
     // Carteira escolhida na inclusão; sem escolha, fica a Carteira Geral (gravada pelo INSERT)
     if (opcoes.carteiraId) db.prepare('UPDATE clientes SET carteira_id = ? WHERE id = ?').run(opcoes.carteiraId, id);
-    const carteira = (db.prepare('SELECT ca.nome FROM clientes c JOIN carteiras ca ON ca.id = c.carteira_id WHERE c.id = ?').get(id) as { nome: string } | undefined)?.nome;
+    const carteira = (
+      db.prepare('SELECT ca.nome FROM clientes c JOIN carteiras ca ON ca.id = c.carteira_id WHERE c.id = ?').get(id) as
+        { nome: string } | undefined
+    )?.nome;
     registrarHistorico(
       db,
       id,
       autor,
-      (iguais.length ? 'Cliente incluído (marcado como possível duplicidade)' : 'Cliente incluído') + (carteira ? ` na carteira ${carteira}` : ''),
+      (iguais.length ? 'Cliente incluído (marcado como possível duplicidade)' : 'Cliente incluído') +
+        (carteira ? ` na carteira ${carteira}` : ''),
     );
     suspeitarDe(db, id, iguais);
     return { cliente: exigirCliente(db, id), coincidencias: iguais };
@@ -473,7 +519,15 @@ export function aplicarFaturamentoNoCliente(db: Banco, clienteId: number, fat: D
       clienteId,
     );
   }
-  suspeitarDe(db, clienteId, coincidencias(db, { documento: depois.documento, email: depois.email }, clienteId));
+  const iguais = coincidencias(db, { documento: depois.documento, email: depois.email }, clienteId);
+  suspeitarDe(db, clienteId, iguais);
+  // Pré-cadastro que recebe o CNPJ/CPF de outro cliente: provavelmente é uma pessoa dessa empresa
+  const dono = iguais.find((c) => c.motivos.includes('DOCUMENTO'));
+  if (dono && atual.situacao === 'PRE_CADASTRO') {
+    const aviso = `Mesmo CPF/CNPJ de ${dono.cliente.codigo} ${dono.cliente.nome}: este cadastro parece ser um contato dessa empresa. Use "Transformar em contato de…"`;
+    const alerta = (db.prepare('SELECT alerta FROM clientes WHERE id = ?').get(clienteId) as { alerta: string | null }).alerta;
+    db.prepare('UPDATE clientes SET alerta = ? WHERE id = ?').run(alerta ? `${alerta} · ${aviso}` : aviso, clienteId);
+  }
 }
 
 /** Cria o cliente a partir do faturamento (orçamento antigo sem cliente aceito pelo link). */
@@ -481,6 +535,7 @@ export function criarClienteDoFaturamento(db: Banco, fat: DadosFaturamento, tele
   const d: DadosCliente = { ...fat, telefone: normalizarTelefone(telefone), observacoes: '' };
   const id = gravarLinha(db, null, d, autor.usuarioId);
   registrarHistorico(db, id, autor, 'Cliente incluído pelos dados do aceite');
+  garantirPrincipal(db, id);
   suspeitarDe(db, id, coincidencias(db, d, id));
   return id;
 }
@@ -507,10 +562,21 @@ export function atualizarCadastroPeloPedido(db: Banco, codigoPedido: string, fat
 export function vincularOrcamentoECliente(db: Banco, orcamentoId: number, clienteId: number): void {
   const v = vinculoClienteCadastro(db, clienteId);
   if (!v) return;
+  // Contato: o principal do cliente (o telefone já gravado no orçamento continua, se houver)
+  const contato = contatoVinculado(db, garantirPrincipal(db, clienteId))!;
   db.prepare(
-    'UPDATE orcamentos SET cliente_id = ?, cliente_nome = ?, cliente_telefone = COALESCE(cliente_telefone, ?), cliente_email = ? WHERE id = ?',
-  ).run(clienteId, v.nome, v.telefone ?? null, v.email ?? null, orcamentoId);
-  db.prepare('UPDATE pedidos SET cliente_id = ? WHERE orcamento_id = ?').run(clienteId, orcamentoId);
+    `UPDATE orcamentos SET cliente_id = ?, cliente_nome = ?, cliente_telefone = COALESCE(cliente_telefone, ?), cliente_email = ?,
+            contato_id = ?, contato_nome = ? WHERE id = ?`,
+  ).run(
+    clienteId,
+    v.nome,
+    contato.telefone ?? v.telefone ?? null,
+    contato.email ?? v.email ?? null,
+    contato.id,
+    contato.nome,
+    orcamentoId,
+  );
+  db.prepare('UPDATE pedidos SET cliente_id = ?, contato_id = ? WHERE orcamento_id = ?').run(clienteId, contato.id, orcamentoId);
 }
 
 export function definirAtivo(db: Banco, id: number, ativo: boolean, autor: Autor): Cliente {
@@ -592,7 +658,8 @@ const SELECT_RESUMO = `
          c.carteira_id, (SELECT ca.nome FROM carteiras ca WHERE ca.id = c.carteira_id) AS carteira,
          (SELECT COUNT(*) FROM orcamentos o WHERE o.cliente_id = c.id) AS orcamentos,
          (SELECT COUNT(*) FROM pedidos p WHERE p.cliente_id = c.id AND p.status <> 'CANCELADO') AS pedidos,
-         (SELECT COUNT(*) FROM clientes_duplicidades d WHERE d.situacao = 'ABERTA' AND (d.cliente_a = c.id OR d.cliente_b = c.id)) AS duplicidades
+         (SELECT COUNT(*) FROM clientes_duplicidades d WHERE d.situacao = 'ABERTA' AND (d.cliente_a = c.id OR d.cliente_b = c.id)) AS duplicidades,
+         (SELECT COUNT(*) FROM clientes_pessoas x WHERE x.cliente_id = c.id AND x.ativo = 1) AS contatos
     FROM clientes c`;
 
 type LinhaResumo = Omit<ResumoCliente, 'codigo' | 'ativo'> & { ativo: number };
@@ -619,8 +686,9 @@ function condicaoBusca(termo: string): { sql: string; args: unknown[] } | null {
   if (t.includes('@')) {
     const e = `%${normalizarEmail(t)}%`;
     return {
-      sql: `(c.email LIKE ? OR c.id IN (SELECT cliente_id FROM clientes_contatos WHERE tipo = 'EMAIL' AND chave LIKE ?))`,
-      args: [e, e],
+      sql: `(c.email LIKE ? OR c.id IN (SELECT cliente_id FROM clientes_contatos WHERE tipo = 'EMAIL' AND chave LIKE ?)
+             OR c.id IN (SELECT cliente_id FROM clientes_pessoas WHERE ativo = 1 AND email LIKE ?))`,
+      args: [e, e, e],
     };
   }
   if (/^[\d\s()+.\-/]+$/.test(t)) {
@@ -630,20 +698,30 @@ function condicaoBusca(termo: string): { sql: string; args: unknown[] } | null {
       'c.documento LIKE ?',
       'c.telefone LIKE ?',
       "c.id IN (SELECT cliente_id FROM clientes_contatos WHERE tipo = 'TELEFONE' AND valor LIKE ?)",
+      'c.id IN (SELECT cliente_id FROM clientes_pessoas WHERE ativo = 1 AND telefone LIKE ?)',
     ];
-    const args: unknown[] = [`${d}%`, `%${normalizarTelefone(d)}%`, `%${normalizarTelefone(d)}%`];
+    const args: unknown[] = [`${d}%`, `%${normalizarTelefone(d)}%`, `%${normalizarTelefone(d)}%`, `%${normalizarTelefone(d)}%`];
     const k = chaveTelefone(d);
     if (k.length >= 8) {
-      conds.push('c.telefone_chave = ?', 'c.id IN (SELECT cliente_id FROM clientes_contatos WHERE chave = ?)');
-      args.push(k, k);
+      conds.push(
+        'c.telefone_chave = ?',
+        'c.id IN (SELECT cliente_id FROM clientes_contatos WHERE chave = ?)',
+        'c.id IN (SELECT cliente_id FROM clientes_pessoas WHERE ativo = 1 AND telefone_chave = ?)',
+      );
+      args.push(k, k, k);
     }
     return { sql: `(${conds.join(' OR ')})`, args };
   }
   const palavras = semAcento(t).split(' ').map(chaveNome).filter(Boolean);
   if (!palavras.length) return null;
   const porNome = {
-    sql: palavras.map(() => '(c.nome_chave LIKE ? OR c.contato LIKE ?)').join(' AND '),
-    args: palavras.flatMap((p) => [`%${p}%`, `%${p}%`]),
+    sql: palavras
+      .map(
+        () =>
+          '(c.nome_chave LIKE ? OR c.contato LIKE ? OR c.id IN (SELECT cliente_id FROM clientes_pessoas WHERE ativo = 1 AND nome_chave LIKE ?))',
+      )
+      .join(' AND '),
+    args: palavras.flatMap((p) => [`%${p}%`, `%${p}%`, `%${p}%`]),
   };
   // Letras e números juntos podem ser um CNPJ alfanumérico (inteiro ou o começo, com ou sem máscara)
   const doc = t.toUpperCase().replace(/[.\-/\s]/g, '');
@@ -653,15 +731,53 @@ function condicaoBusca(termo: string): { sql: string; args: unknown[] } | null {
   return porNome;
 }
 
-/** Busca para o carrinho e filtros (só ativos). */
+/** Contatos (pessoas ativas) do cliente que batem com a busca: nome, telefone ou e-mail. */
+function pessoasDaBusca(db: Banco, clienteId: number, termo: string): number[] {
+  const t = termo.trim();
+  let cond: { sql: string; args: unknown[] } | null = null;
+  if (/^cli-?\s*0*\d+$/i.test(t)) return [];
+  if (t.includes('@')) cond = { sql: 'email LIKE ?', args: [`%${normalizarEmail(t)}%`] };
+  else if (/^[\d\s()+.\-/]+$/.test(t)) {
+    const d = digitos(t);
+    if (d.length < 3) return [];
+    const k = chaveTelefone(d);
+    cond =
+      k.length >= 8
+        ? { sql: '(telefone LIKE ? OR telefone_chave = ?)', args: [`%${normalizarTelefone(d)}%`, k] }
+        : { sql: 'telefone LIKE ?', args: [`%${normalizarTelefone(d)}%`] };
+  } else {
+    const palavras = semAcento(t).split(' ').map(chaveNome).filter(Boolean);
+    if (!palavras.length) return [];
+    cond = { sql: palavras.map(() => 'nome_chave LIKE ?').join(' AND '), args: palavras.map((p) => `%${p}%`) };
+  }
+  return (
+    db
+      .prepare(
+        `SELECT id FROM clientes_pessoas WHERE cliente_id = ? AND ativo = 1 AND ${cond.sql} ORDER BY principal DESC, nome LIMIT 3`,
+      )
+      .all(clienteId, ...cond.args) as { id: number }[]
+  ).map((r) => r.id);
+}
+
+/**
+ * Busca para o carrinho e filtros (só ativos). Quando a busca bate com uma pessoa de contato,
+ * o resultado vem com ela (`pessoa`), uma linha por pessoa encontrada.
+ */
 export function buscarClientesCadastro(db: Banco, termo: string, limite = 10): ResumoCliente[] {
   const c = condicaoBusca(termo);
   if (!c) return [];
-  return (
+  const clientes = (
     db
       .prepare(`${SELECT_RESUMO} WHERE c.ativo = 1 AND ${c.sql} ORDER BY c.nome COLLATE NOCASE LIMIT ?`)
       .all(...c.args, limite) as LinhaResumo[]
   ).map(paraResumo);
+  const saida: ResumoCliente[] = [];
+  for (const cli of clientes) {
+    const pessoas = pessoasDaBusca(db, cli.id, termo);
+    if (!pessoas.length) saida.push({ ...cli, pessoa: null });
+    for (const id of pessoas) saida.push({ ...cli, pessoa: contatoVinculado(db, id) });
+  }
+  return saida.slice(0, limite);
 }
 
 export interface FiltroClientes {
@@ -851,6 +967,9 @@ export function mesclarClientes(
     }
     const orcs = db.prepare('UPDATE orcamentos SET cliente_id = ? WHERE cliente_id = ?').run(principalId, outroId).changes;
     const peds = db.prepare('UPDATE pedidos SET cliente_id = ? WHERE cliente_id = ?').run(principalId, outroId).changes;
+    // Pessoas de contato do outro passam para o principal (os orçamentos e pedidos continuam com o mesmo contato)
+    moverPessoas(db, outroId, principalId);
+    garantirPrincipal(db, principalId);
     if (!p.kommo_id && o.kommo_id) db.prepare('UPDATE clientes SET kommo_id = ? WHERE id = ?').run(o.kommo_id, principalId);
     if (o.observacoes && escolhas.observacoes !== 'outro' && !novo.observacoes.includes(o.observacoes)) {
       db.prepare('UPDATE clientes SET observacoes = ? WHERE id = ?').run(
@@ -881,6 +1000,61 @@ export function mesclarClientes(
     );
     registrarHistorico(db, outroId, autor, `Mesclado em ${p.codigo} (${p.nome}) e inativado`);
     return exigirCliente(db, principalId);
+  })();
+}
+
+/**
+ * "Transformar em contato de…": o cadastro avulso (normalmente um pré-cadastro da pessoa)
+ * passa a ser contato da empresa `destino`. As pessoas de contato dele (e os telefones e
+ * e-mails extras) vão para a empresa, os orçamentos e pedidos passam para ela com o mesmo
+ * contato, e o cadastro avulso fica inativo com a referência, como na mesclagem.
+ */
+export function transformarEmContato(db: Banco, origemId: number, destinoId: number, autor: Autor): Cliente {
+  if (origemId === destinoId) throw new ErroHttp(400, 'Escolha outra empresa');
+  const o = exigirCliente(db, origemId);
+  const d = exigirCliente(db, destinoId);
+  if (!o.ativo || !d.ativo) throw new ErroHttp(409, 'Os dois cadastros precisam estar ativos');
+  return db.transaction(() => {
+    garantirPrincipal(db, origemId);
+    const nomes = pessoasDe(db, origemId)
+      .map((p) => p.nome)
+      .join(', ');
+    moverPessoas(db, origemId, destinoId);
+    garantirPrincipal(db, destinoId);
+    db.prepare('UPDATE clientes_contatos SET cliente_id = ? WHERE cliente_id = ?').run(destinoId, origemId);
+    // Orçamentos e pedidos: a empresa (a cópia do nome passa a ser a da empresa; telefone e e-mail são os do contato)
+    const orcs = db
+      .prepare('UPDATE orcamentos SET cliente_id = ?, cliente_nome = ? WHERE cliente_id = ?')
+      .run(destinoId, d.nome, origemId).changes;
+    const peds = db.prepare('UPDATE pedidos SET cliente_id = ? WHERE cliente_id = ?').run(destinoId, origemId).changes;
+    db.prepare('UPDATE clientes SET ativo = 0, mesclado_em = ?, atualizado = ?, alterado_por = ? WHERE id = ?').run(
+      destinoId,
+      isoLocal(),
+      autor.usuarioId,
+      origemId,
+    );
+    // Suspeitas: a do par fica resolvida; as do cadastro avulso passam para a empresa
+    const [a, b] = origemId < destinoId ? [origemId, destinoId] : [destinoId, origemId];
+    db.prepare(
+      "UPDATE clientes_duplicidades SET situacao = 'MESCLADA', resolvido_em = ?, resolvido_por = ? WHERE cliente_a = ? AND cliente_b = ? AND situacao = 'ABERTA'",
+    ).run(isoLocal(), autor.usuarioId, a, b);
+    const pendentes = db
+      .prepare(
+        "SELECT id, cliente_a, cliente_b, motivos FROM clientes_duplicidades WHERE situacao = 'ABERTA' AND (cliente_a = ? OR cliente_b = ?)",
+      )
+      .all(origemId, origemId) as { id: number; cliente_a: number; cliente_b: number; motivos: string }[];
+    for (const s of pendentes) {
+      db.prepare("UPDATE clientes_duplicidades SET situacao = 'MESCLADA', resolvido_em = ? WHERE id = ?").run(isoLocal(), s.id);
+      registrarSuspeita(db, destinoId, s.cliente_a === origemId ? s.cliente_b : s.cliente_a, JSON.parse(s.motivos));
+    }
+    registrarHistorico(
+      db,
+      destinoId,
+      autor,
+      `${o.codigo} (${o.nome}) transformado em contato desta empresa: ${nomes || 'contato'}; ${orcs} orçamento(s) e ${peds} pedido(s) transferidos`,
+    );
+    registrarHistorico(db, origemId, autor, `Transformado em contato de ${d.codigo} (${d.nome}) e inativado`);
+    return exigirCliente(db, destinoId);
   })();
 }
 

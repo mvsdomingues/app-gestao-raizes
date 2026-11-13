@@ -149,6 +149,10 @@ export interface NovoOrcamento {
   observacao?: string;
   /** Código do contato do Kommo (null = sem cliente) */
   cliente_kommo_id?: number | null;
+  /** Cliente do cadastro (obrigatório) */
+  cliente_id?: number | null;
+  /** Pessoa de contato do cliente (sem informar: a principal) */
+  contato_id?: number | null;
   /** Data prevista de entrega (AAAA-MM-DD); null/vazio = sem data */
   entrega_prevista?: string | null;
   /** Dados de faturamento (opcionais no orçamento; undefined = mantém, null = limpa) */

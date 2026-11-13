@@ -56,7 +56,17 @@ import type {
   SuspeitaDuplicidade,
   TipoContatoCliente,
   StatusSincronizacaoClientes,
+  PessoaContato,
 } from '@raizes/shared';
+
+/** Dados de uma pessoa de contato (inclusão/alteração). */
+export interface DadosPessoaContato {
+  nome: string;
+  cargo?: string;
+  telefone?: string;
+  email?: string;
+  observacao?: string;
+}
 
 /** Avisado quando a sessão expira (o app volta para a tela de login). */
 export const EVENTO_SESSAO_EXPIRADA = 'raizes:sessao-expirada';
@@ -229,6 +239,8 @@ export const api = {
     enviar<RespostaQuadroPedidos>('GET', `/api/pedidos/quadro?limite=${limite}${meus ? '&meus=1' : ''}`),
   pedido: (codigo: string) => enviar<Pedido>('GET', `/api/pedidos/${encodeURIComponent(codigo)}`),
   /** Pedido sem cliente: vincula o cliente ao pedido e ao orçamento (carteira e, se pedido, faturamento do cadastro) */
+  trocarContatoPedido: (codigo: string, contatoId: number) =>
+    enviar<Pedido>('POST', `/api/pedidos/${encodeURIComponent(codigo)}/contato`, { contato_id: contatoId }),
   vincularClientePedido: (codigo: string, clienteId: number, usarFaturamento: boolean) =>
     enviar<Pedido>('POST', `/api/pedidos/${encodeURIComponent(codigo)}/cliente`, {
       cliente_id: clienteId,
@@ -314,6 +326,23 @@ export const api = {
   incluirContatoCliente: (id: number, dados: { tipo: TipoContatoCliente; valor: string; descricao: string }) =>
     enviar<RespostaCliente>('POST', `/api/clientes/${id}/contatos`, dados),
   excluirContatoCliente: (id: number, contato: number) => enviar<Cliente>('DELETE', `/api/clientes/${id}/contatos/${contato}`),
+  // Pessoas de contato (quem compra pela empresa)
+  incluirPessoa: (id: number, dados: DadosPessoaContato & { principal?: boolean }) =>
+    enviar<{ pessoa: PessoaContato; avisos: { codigo: string; nome: string }[]; cliente: Cliente }>(
+      'POST',
+      `/api/clientes/${id}/pessoas`,
+      dados,
+    ),
+  alterarPessoa: (id: number, pessoa: number, dados: DadosPessoaContato) =>
+    enviar<FichaCliente>('PUT', `/api/clientes/${id}/pessoas/${pessoa}`, dados),
+  principalPessoa: (id: number, pessoa: number) =>
+    enviar<FichaCliente>('POST', `/api/clientes/${id}/pessoas/${pessoa}/principal`),
+  ativoPessoa: (id: number, pessoa: number, ativo: boolean) =>
+    enviar<FichaCliente>('POST', `/api/clientes/${id}/pessoas/${pessoa}/ativo`, { ativo }),
+  excluirPessoa: (id: number, pessoa: number) => enviar<FichaCliente>('DELETE', `/api/clientes/${id}/pessoas/${pessoa}`),
+  /** "Transformar em contato de…": este cadastro vira contato da empresa destino (devolve a ficha do destino) */
+  transformarEmContato: (id: number, destino: number) =>
+    enviar<FichaCliente>('POST', `/api/clientes/${id}/transformar`, { destino }),
   duplicidadesClientes: () => enviar<SuspeitaDuplicidade[]>('GET', '/api/clientes/duplicidades'),
   descartarDuplicidade: (id: number) => enviar<{ ok: true }>('POST', `/api/clientes/duplicidades/${id}/descartar`),
   mesclarClientes: (principal: number, outro: number, escolhas: Partial<Record<CampoMesclagem, 'principal' | 'outro'>>) =>

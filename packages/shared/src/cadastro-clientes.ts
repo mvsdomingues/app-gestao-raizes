@@ -6,7 +6,7 @@
 // o que chega por um orçamento é sempre atualização do cliente desse orçamento.
 // ══════════════════════════════════════════════════════════
 
-import { digitos, semAcento } from './clientes';
+import { digitos, semAcento, type ContatoVinculado } from './clientes';
 import { emailValido, validarFaturamento, type DadosFaturamento, type TipoPessoa } from './faturamento';
 
 export type SituacaoCliente = 'PRE_CADASTRO' | 'COMPLETO';
@@ -19,6 +19,28 @@ export const LIMITE_OBSERVACOES_CLIENTE = 2000;
 
 export type TipoContatoCliente = 'TELEFONE' | 'EMAIL';
 
+/**
+ * Pessoa de contato do cliente (quem compra pela empresa). Um contato é o principal;
+ * contato usado em orçamento não é excluído, fica inativo.
+ */
+export interface PessoaContato {
+  id: number;
+  nome: string;
+  /** Cargo ou setor (opcional) */
+  cargo: string;
+  telefone: string;
+  email: string;
+  observacao: string;
+  principal: boolean;
+  ativo: boolean;
+  /** Orçamentos em que foi o contato (contato usado não é excluído) */
+  orcamentos: number;
+}
+
+export const LIMITE_CARGO_CONTATO = 80;
+export const LIMITE_OBSERVACAO_CONTATO = 300;
+
+/** Telefone ou e-mail extra da empresa (canais como central e financeiro, não pessoas). */
 export interface ContatoCliente {
   id: number;
   tipo: TipoContatoCliente;
@@ -49,6 +71,8 @@ export interface Cliente extends DadosFaturamento {
   criado_por: string | null;
   alterado_por: string | null;
   contatos: ContatoCliente[];
+  /** Pessoas de contato (a principal primeiro; inativas no fim) */
+  pessoas: PessoaContato[];
 }
 
 /** Linha da lista / resultado da busca. */
@@ -71,6 +95,10 @@ export interface ResumoCliente {
   duplicidades: number;
   carteira_id: number | null;
   carteira: string | null;
+  /** Pessoas de contato ativas */
+  contatos: number;
+  /** Busca do carrinho: a pessoa de contato encontrada (nome, telefone ou e-mail dela) */
+  pessoa?: ContatoVinculado | null;
 }
 
 export interface HistoricoCliente {

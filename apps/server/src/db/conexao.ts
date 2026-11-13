@@ -5,6 +5,7 @@ import { garantirAcessoInicial } from './repositorio-usuarios';
 import { garantirEsquema } from './esquema';
 import { migrarClientesDosOrcamentos } from './repositorio-cadastro-clientes';
 import { carteiraInicialParaRenomear, migrarCarteirasDeClientes, renomearCarteiraInicial } from './repositorio-comissoes';
+import { migrarPessoasDeContato } from './repositorio-pessoas-contato';
 
 export type Banco = Database.Database;
 
@@ -17,7 +18,17 @@ export function abrirBanco(caminho: string): Banco {
   prepararCadastroClientes(db, caminho);
   prepararCarteirasDeClientes(db, caminho);
   prepararNomeCarteiraInicial(db, caminho);
+  prepararPessoasDeContato(db, caminho);
   return db;
+}
+
+/** Uma vez: contato principal de cada cliente e o contato dos orçamentos e pedidos (cópia do banco antes). */
+function prepararPessoasDeContato(db: Banco, caminho: string): void {
+  if (db.prepare("SELECT 1 FROM parametros WHERE chave = 'migracao_pessoas_contato'").get()) return;
+  if (db.prepare('SELECT 1 FROM clientes LIMIT 1').get()) copiarAntes(db, caminho, 'antes-contatos');
+  const r = migrarPessoasDeContato(db);
+  if (r && r.clientes)
+    console.log(`  Contatos: ${r.clientes} cliente(s) com o contato principal criado; ${r.conferir} para conferir o nome`);
 }
 
 /**

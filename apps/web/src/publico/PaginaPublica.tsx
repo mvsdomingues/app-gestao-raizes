@@ -140,7 +140,14 @@ export function PaginaPublica() {
             total: o.total,
             observacao: o.observacao,
             entregaPrevista: o.entrega_prevista,
-            cliente: o.cliente ? { id: 0, nome: o.cliente.nome, telefone: o.cliente.telefone } : null,
+            cliente: o.cliente
+              ? {
+                  id: 0,
+                  nome: o.cliente.nome,
+                  telefone: o.cliente.telefone,
+                  contato: o.cliente.contato ? { id: 0, nome: o.cliente.contato } : null,
+                }
+              : null,
             itens: o.itens.map(({ personalizacoes, ...i }) => ({
               ...i,
               artes: personalizacoes ?? [],

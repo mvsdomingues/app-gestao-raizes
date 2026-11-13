@@ -7,6 +7,7 @@ import {
   resumoDescricao,
   diferencasFaturamento,
   linhasFaturamento,
+  type DadosFaturamento,
   type ItemOrcamento,
   type LinkOrcamento,
   type OrcamentoPublico,
@@ -16,7 +17,12 @@ import {
 } from '@raizes/shared';
 import { isoLocal } from '../lib/datas';
 import { faturamentoDoBanco, lerFaturamento } from '../lib/faturamento';
-import { aplicarFaturamentoNoCliente, criarClienteDoFaturamento, obterClienteCadastro, vincularOrcamentoECliente } from './repositorio-cadastro-clientes';
+import {
+  aplicarFaturamentoNoCliente,
+  criarClienteDoFaturamento,
+  obterClienteCadastro,
+  vincularOrcamentoECliente,
+} from './repositorio-cadastro-clientes';
 import { ErroHttp } from '../lib/http';
 import type { Banco } from './conexao';
 import { SQL_STATUS_ORCAMENTO } from './repositorio-orcamentos';
@@ -115,7 +121,15 @@ export function extrairLink(
     : null;
   const resposta_cliente: RespostaDoCliente | null =
     x.resposta && x.resposta_em ? { resposta: x.resposta, em: x.resposta_em, observacao: x.resposta_obs } : null;
-  for (const c of ['link_codigo', 'link_enviado_em', 'link_valido_ate', 'link_visto_em', 'resposta', 'resposta_em', 'resposta_obs']) {
+  for (const c of [
+    'link_codigo',
+    'link_enviado_em',
+    'link_valido_ate',
+    'link_visto_em',
+    'resposta',
+    'resposta_em',
+    'resposta_obs',
+  ]) {
     delete l[c];
   }
   return { link, resposta_cliente };
@@ -135,6 +149,7 @@ interface LinhaPublica extends LinhaLink {
   faturamento_json: string | null;
   cliente_nome: string | null;
   cliente_telefone: string | null;
+  contato_nome: string | null;
   usuario_id: number | null;
   situacao: string;
 }
@@ -143,7 +158,7 @@ function porCodigo(db: Banco, codigo: string): LinhaPublica {
   const l = codigoLinkValido(codigo)
     ? (db
         .prepare(
-          `SELECT id, data_hora, itens_json, subtotal, frete, total, observacao, entrega_prevista, faturamento_json, cliente_nome, cliente_telefone, usuario_id,
+          `SELECT id, data_hora, itens_json, subtotal, frete, total, observacao, entrega_prevista, faturamento_json, cliente_nome, cliente_telefone, contato_nome, usuario_id,
                   ${COLUNAS_LINK}, ${SQL_STATUS_ORCAMENTO} AS situacao
              FROM orcamentos WHERE link_codigo = ?`,
         )
@@ -208,14 +223,21 @@ export function orcamentoPublico(db: Banco, codigo: string): OrcamentoPublico {
     data_hora: l.data_hora,
     valido_ate: l.link_valido_ate,
     situacao,
-    cliente: l.cliente_nome ? { nome: l.cliente_nome, telefone: l.cliente_telefone } : null,
+    // Só o contato deste orçamento (nunca os outros contatos da empresa); igual ao nome = pessoa física, não repete
+    cliente: l.cliente_nome
+      ? {
+          nome: l.cliente_nome,
+          telefone: l.cliente_telefone,
+          contato: l.contato_nome && l.contato_nome !== l.cliente_nome ? l.contato_nome : null,
+        }
+      : null,
     itens,
     subtotal: l.subtotal,
     frete: l.frete,
     total: l.total,
     observacao: l.observacao?.trim() || null,
     entrega_prevista: l.entrega_prevista,
-    faturamento: faturamentoDoBanco(l.faturamento_json),
+    faturamento: comContato(faturamentoDoBanco(l.faturamento_json), l.contato_nome),
     impressao: lerParametrosImpressao(db).valores,
     mockups,
     pedido,
@@ -224,6 +246,11 @@ export function orcamentoPublico(db: Banco, codigo: string): OrcamentoPublico {
         ? { resposta: l.resposta, em: l.resposta_em, observacao: l.resposta_obs }
         : null,
   };
+}
+
+/** "Pessoa de contato" do faturamento: sem preencher, a do orçamento. */
+function comContato(f: DadosFaturamento | null, contato: string | null): DadosFaturamento | null {
+  return f && !f.contato?.trim() && contato ? { ...f, contato } : f;
 }
 
 export interface Rastro {
@@ -269,7 +296,8 @@ export function aceitarPeloLink(
     // Cadastro do cliente: os dados confirmados no aceite atualizam o cliente deste orçamento
     // (ou criam o cliente, em orçamento antigo sem cliente); vale antes de gerar o pedido
     const autor = { usuarioId: null, nome: 'Cliente (link)', origem: 'ACEITE' as const };
-    const vinculado = (db.prepare('SELECT cliente_id FROM orcamentos WHERE id = ?').get(l.id) as { cliente_id: number | null }).cliente_id;
+    const vinculado = (db.prepare('SELECT cliente_id FROM orcamentos WHERE id = ?').get(l.id) as { cliente_id: number | null })
+      .cliente_id;
     if (vinculado && obterClienteCadastro(db, vinculado)) aplicarFaturamentoNoCliente(db, vinculado, faturamento, autor);
     else vincularOrcamentoECliente(db, l.id, criarClienteDoFaturamento(db, faturamento, l.cliente_telefone, autor));
     const pedido = criarPedido(db, l.id, obs, l.usuario_id, {
@@ -287,18 +315,23 @@ export function aceitarPeloLink(
       ? mudancas.length
         ? `Dados de faturamento alterados pelo cliente no aceite:\n${mudancas.map((m) => `• ${m}`).join('\n')}`
         : 'Dados de faturamento confirmados pelo cliente no aceite (sem alterações).'
-      : `Dados de faturamento informados pelo cliente no aceite:\n${linhasFaturamento(faturamento).map((m) => `• ${m}`).join('\n')}`;
-    db.prepare("INSERT INTO pedidos_observacoes (pedido_id, texto, data_hora, usuario_id, origem) VALUES (?, ?, ?, NULL, 'CLIENTE')").run(
-      pid,
-      texto,
-      agora,
-    );
+      : `Dados de faturamento informados pelo cliente no aceite:\n${linhasFaturamento(faturamento)
+          .map((m) => `• ${m}`)
+          .join('\n')}`;
+    db.prepare(
+      "INSERT INTO pedidos_observacoes (pedido_id, texto, data_hora, usuario_id, origem) VALUES (?, ?, ?, NULL, 'CLIENTE')",
+    ).run(pid, texto, agora);
     return { orcamentoId: l.id, pedido };
   })();
 }
 
 /** Recusa pelo link: orçamento Cancelado, com o motivo. */
-export function recusarPeloLink(db: Banco, codigo: string, motivo: string, rastro: Rastro): { orcamentoId: number; motivo: string } {
+export function recusarPeloLink(
+  db: Banco,
+  codigo: string,
+  motivo: string,
+  rastro: Rastro,
+): { orcamentoId: number; motivo: string } {
   const m = motivo.trim();
   if (m.length < 5) throw new ErroHttp(400, 'Conte para nós o motivo (pelo menos 5 caracteres)');
   if (m.length > 1000) throw new ErroHttp(400, 'O motivo pode ter no máximo 1.000 caracteres');

@@ -88,14 +88,24 @@ const REGRAS: Regra[] = [
   { metodos: 'TODOS', caminho: /^\/api\/kommo\/(sincronizacao|sincronizar)$/, telas: ['status'] },
   { metodos: 'GET', caminho: /^\/api\/kommo\/config$/, telas: [] },
   // Cadastro de clientes: busca e pré-cadastro também pelo carrinho; o resto só na tela Clientes
-  { metodos: 'GET', caminho: /^\/api\/clientes(\/\d+(\/faturamento)?)?$/, telas: ['clientes', 'carrinho', 'orcamentos', 'pedidos'] },
+  {
+    metodos: 'GET',
+    caminho: /^\/api\/clientes(\/\d+(\/faturamento)?)?$/,
+    telas: ['clientes', 'carrinho', 'orcamentos', 'pedidos'],
+  },
   { metodos: 'ESCRITA', caminho: /^\/api\/clientes$/, telas: ['clientes', 'carrinho'] },
+  // Contato novo do cliente: também pelo carrinho (alterar, inativar e excluir só na tela Clientes)
+  { metodos: 'ESCRITA', caminho: /^\/api\/clientes\/\d+\/pessoas$/, telas: ['clientes', 'carrinho'] },
   { metodos: 'TODOS', caminho: /^\/api\/clientes(\/|$)/, telas: ['clientes'] },
   { metodos: 'ESCRITA', caminho: /^\/api\/parametros(\/|$)/, telas: ['parametros'] },
   { metodos: 'ESCRITA', caminho: /^\/api\/produtos-proprios(\/|$)/, telas: ['produtos-proprios'] },
   { metodos: 'TODOS', caminho: /^\/api\/dashboards(\/|$)/, telas: ['dash-geral'] },
   // Comissões: parâmetros (leitura também para quem marca carteiras ou apura), marcação e apuração
-  { metodos: 'GET', caminho: /^\/api\/comissoes\/parametros(\/|$)/, telas: ['comissoes-parametros', 'comissoes-carteiras', 'comissoes-apuracao'] },
+  {
+    metodos: 'GET',
+    caminho: /^\/api\/comissoes\/parametros(\/|$)/,
+    telas: ['comissoes-parametros', 'comissoes-carteiras', 'comissoes-apuracao'],
+  },
   { metodos: 'ESCRITA', caminho: /^\/api\/comissoes\/parametros(\/|$)/, telas: ['comissoes-parametros'] },
   { metodos: 'TODOS', caminho: /^\/api\/comissoes\/pedidos(\/|$)/, telas: ['comissoes-carteiras'] },
   { metodos: 'TODOS', caminho: /^\/api\/comissoes\/clientes(\/|$)/, telas: ['comissoes-carteiras'] },
@@ -117,9 +127,7 @@ export function exigirAcesso() {
     if (!caminho.startsWith('/api/') && !caminho.startsWith('/static/imagens/')) return next();
     const escrita = req.method !== 'GET' && req.method !== 'HEAD';
     const regra = REGRAS.find(
-      (r) =>
-        r.caminho.test(caminho) &&
-        (r.metodos === 'TODOS' || (r.metodos === 'GET' ? !escrita : escrita)),
+      (r) => r.caminho.test(caminho) && (r.metodos === 'TODOS' || (r.metodos === 'GET' ? !escrita : escrita)),
     );
     if (regra && regra.telas === null) return next();
     const usuario = usuarioLogado(res);

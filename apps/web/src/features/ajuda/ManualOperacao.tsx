@@ -290,12 +290,22 @@ export function ManualOperacao() {
           setas e Enter para escolher. A lista mostra telefone, e-mail, código, cidade, quantos orçamentos o cliente tem e os
           avisos <i>pré-cadastro</i> e <i>possível duplicidade</i>.
         </p>
+        <Dica tipo="regra">
+          A <b>empresa</b> é o cliente (um cadastro por CNPJ) e cada <b>pessoa</b> que compra por ela é um <b>contato</b> desse
+          cliente. A busca também encontra pelo nome, telefone ou e-mail da pessoa: o resultado mostra “Fulano · contato de
+          Empresa X” e, ao escolher, já vem esse contato.
+        </Dica>
         <Passos
           itens={[
             'Busque primeiro: o botão “+ Novo cliente” só aparece depois de uma busca (para evitar cadastro repetido).',
             <>
-              Não é nenhum da lista? <Bt>+ Novo cliente</Bt>: informe o nome ou razão social e o telefone ou o e-mail (o que você
-              digitou na busca já vem preenchido). É um <b>pré-cadastro</b>; o resto vem do aceite.
+              Não é nenhum da lista? <Bt>+ Novo cliente</Bt> e escolha <b>Empresa</b> ou <b>Pessoa física</b>. Empresa: nome da
+              empresa, CNPJ (opcional) e a pessoa que está comprando — nome, cargo (opcional), telefone ou e-mail —, que vira o
+              contato principal. Pessoa física: nome e telefone ou e-mail. É um <b>pré-cadastro</b>; o resto vem do aceite.
+            </>,
+            <>
+              CNPJ já cadastrado: o sistema não cria outra empresa. Mostra a empresa encontrada e <Bt>Incluir como contato</Bt>{' '}
+              coloca a pessoa como contato dela.
             </>,
             <>
               Se o telefone ou o e-mail já estiver em outro cadastro, o sistema mostra quem é: <Bt>Usar este cliente</Bt> ou{' '}
@@ -308,6 +318,12 @@ export function ManualOperacao() {
             Cliente escolhido: <Bt>Ver cadastro</Bt> (quem tem a tela Clientes), <Bt>Trocar</Bt> e <Bt>Remover</Bt>.
           </li>
           <li>
+            <b>Contato</b>: abaixo do cliente escolhido. Vem o contato principal (ou a pessoa encontrada na busca); troque na
+            lista ou use <i>+ Novo contato…</i> para incluir outra pessoa da empresa. O orçamento guarda o contato: o telefone e o
+            e-mail dele vão para o link e o WhatsApp, a folha mostra “A/C Fulano” e a pessoa de contato do faturamento passa a ser
+            ele.
+          </li>
+          <li>
             Ao escolher o cliente, os dados de faturamento do cadastro preenchem o carrinho (se o carrinho já tiver outros, o
             sistema pergunta qual manter).
           </li>
@@ -316,7 +332,10 @@ export function ManualOperacao() {
             inclua o cliente” e leva ao campo. Orçamentos antigos sem cliente continuam abertos para consulta; para alterá-los ou
             gerar pedido, escolha o cliente.
           </li>
-          <li>O orçamento guarda uma cópia do nome, telefone e e-mail do momento; o vínculo com o cadastro continua.</li>
+          <li>
+            O orçamento guarda uma cópia do nome do cliente e do nome, telefone e e-mail do contato do momento (sem telefone ou
+            e-mail no contato, os do cliente); o vínculo com o cadastro continua.
+          </li>
         </ul>
         <h4>Faturamento e entrega</h4>
         <Passos
@@ -632,6 +651,13 @@ export function ManualOperacao() {
               'Pode ser alterada só na etapa Criado; cada mudança vira uma observação (“alterada de … para …”).',
             ],
             [
+              'Contato',
+              <span key="c">
+                A pessoa de contato do pedido (vem do orçamento). Com o pedido em andamento, <Bt>Trocar</Bt> escolhe outro contato
+                ativo do cliente; a troca vira observação (“Contato: antes → depois”).
+              </span>,
+            ],
+            [
               'Faturamento e entrega',
               <span key="f">
                 Alterável com o pedido em andamento (<Bt>Alterar dados</Bt>); cada mudança vira observação com o antes → depois.
@@ -712,8 +738,20 @@ export function ManualOperacao() {
             levar os que ainda não entraram em produção.
           </li>
           <li>
-            Telefones e e-mails adicionais, com descrição (ex.: financeiro). Também são usados na busca e na conferência de
-            duplicidade.
+            <b>Contatos (pessoas)</b>: quem compra pela empresa — nome, cargo/setor, telefone, e-mail e observação. Um é o{' '}
+            <b>principal</b> (vem primeiro no carrinho). <Bt>+ Novo contato</Bt>, <i>alterar</i>, <i>tornar principal</i>,{' '}
+            <i>inativar</i>/<i>reativar</i> (quem saiu da empresa) e <i>excluir</i> (só contato nunca usado em orçamento ou
+            pedido; o principal não é inativado nem excluído — marque outro antes). Tudo vai para o histórico. Pelo carrinho, o
+            vendedor só inclui contatos novos.
+          </li>
+          <li>
+            Telefones e e-mails adicionais da empresa (canais como central e financeiro, não pessoas), com descrição. Também são
+            usados na busca e na conferência de duplicidade, assim como os dos contatos.
+          </li>
+          <li>
+            <Bt>Transformar em contato de…</Bt>: quando um cadastro avulso é, na verdade, uma pessoa de uma empresa já cadastrada.
+            Escolha a empresa: os contatos, orçamentos e pedidos passam para ela (cada um mantém a sua pessoa de contato) e o
+            cadastro avulso fica inativo com a referência.
           </li>
           <li>
             Totais, pedidos e orçamentos do cliente, e o <b>histórico</b>: quem alterou o quê, quando e por onde (cadastro,
@@ -739,9 +777,13 @@ export function ManualOperacao() {
             ],
             [
               'Aceite com CPF/CNPJ que já é de outro cliente',
-              'Não bloqueia o cliente: grava no cliente do orçamento e marca os dois como possível duplicidade.',
+              'Não bloqueia o cliente: grava no cliente do orçamento e marca os dois como possível duplicidade. Se o do orçamento era pré-cadastro, fica a pendência “parece ser um contato dessa empresa”.',
             ],
             ['Cadastro manual com CPF/CNPJ de outro cliente', 'Bloqueia (o documento é único entre os ativos).'],
+            [
+              'Carrinho com CNPJ de outro cliente',
+              'Não cria outra empresa: oferece incluir a pessoa como contato da empresa encontrada.',
+            ],
             ['Telefone ou e-mail iguais', 'Avisa e permite seguir; o par fica marcado como possível duplicidade.'],
             ['Nome parecido', 'Só aparece como sugestão na busca.'],
           ]}
@@ -758,6 +800,10 @@ export function ManualOperacao() {
               Se forem o mesmo, <Bt>Mesclar</Bt>: escolha qual cadastro fica e, campo a campo, qual valor vale. Orçamentos,
               pedidos e contatos passam para o que fica; o outro é inativado com a referência. Tudo vai para o histórico dos dois.
             </>,
+            <>
+              Se um deles é uma pessoa da empresa do outro (ex.: pré-cadastro de um comprador e a empresa já cadastrada), use{' '}
+              <Bt>Virar contato de …</Bt> / <Bt>Trazer … como contato</Bt>: o pré-cadastro vira contato da empresa.
+            </>,
           ]}
         />
         <h4>Pedido</h4>
@@ -766,8 +812,8 @@ export function ManualOperacao() {
           <Bt>Atualizar o cadastro do cliente com estes dados</Bt> nos detalhes do pedido.
         </p>
         <Dica>
-          CPF, endereço e histórico só aparecem para quem tem a tela Clientes. Vendedores (carrinho) só buscam e fazem o
-          pré-cadastro.
+          CPF, endereço e histórico só aparecem para quem tem a tela Clientes. Vendedores (carrinho) só buscam, fazem o
+          pré-cadastro e incluem contatos novos.
         </Dica>
       </Secao>
 

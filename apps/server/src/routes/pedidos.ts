@@ -16,6 +16,7 @@ import {
   buscarPedido,
   cancelarPedido,
   alterarFaturamentoPedido,
+  trocarContatoDoPedido,
   vincularClienteAoPedido,
   criarPedido,
   listarPedidos,
@@ -119,13 +120,23 @@ export function rotasPedidos(db: Banco, kommo: ServicoKommo | null = null): Rout
 
   r.post('/api/pedidos/:codigo/avancar', (req, res) => {
     const corpo = corpoJson(req);
-    avancarPedido(db, req.params.codigo, exigirUsuario(res).id, typeof corpo.status_atual === 'string' ? corpo.status_atual : undefined);
+    avancarPedido(
+      db,
+      req.params.codigo,
+      exigirUsuario(res).id,
+      typeof corpo.status_atual === 'string' ? corpo.status_atual : undefined,
+    );
     res.json(detalhe(req.params.codigo));
   });
 
   r.post('/api/pedidos/:codigo/retroceder', (req, res) => {
     const corpo = corpoJson(req);
-    retrocederPedido(db, req.params.codigo, exigirUsuario(res).id, typeof corpo.status_atual === 'string' ? corpo.status_atual : undefined);
+    retrocederPedido(
+      db,
+      req.params.codigo,
+      exigirUsuario(res).id,
+      typeof corpo.status_atual === 'string' ? corpo.status_atual : undefined,
+    );
     res.json(detalhe(req.params.codigo));
   });
 
@@ -147,7 +158,8 @@ export function rotasPedidos(db: Banco, kommo: ServicoKommo | null = null): Rout
     db.transaction(() => {
       alterarFaturamentoPedido(db, String(req.params.codigo), dados, eu.id);
       // "Atualizar também o cadastro do cliente" (o cadastro não muda sozinho a partir do pedido)
-      if (corpo.atualizar_cadastro === true) atualizarCadastroPeloPedido(db, String(req.params.codigo), dados, { usuarioId: eu.id, nome: eu.nome, origem: 'PEDIDO' });
+      if (corpo.atualizar_cadastro === true)
+        atualizarCadastroPeloPedido(db, String(req.params.codigo), dados, { usuarioId: eu.id, nome: eu.nome, origem: 'PEDIDO' });
     })();
     res.json(detalhe(String(req.params.codigo)));
   });
@@ -156,7 +168,17 @@ export function rotasPedidos(db: Banco, kommo: ServicoKommo | null = null): Rout
   r.post('/api/pedidos/:codigo/cliente', (req, res) => {
     const corpo = corpoJson(req);
     const eu = exigirUsuario(res);
-    vincularClienteAoPedido(db, String(req.params.codigo), corpo.cliente_id, corpo.usar_faturamento === true, { id: eu.id, nome: eu.nome });
+    vincularClienteAoPedido(db, String(req.params.codigo), corpo.cliente_id, corpo.usar_faturamento === true, {
+      id: eu.id,
+      nome: eu.nome,
+    });
+    res.json(detalhe(String(req.params.codigo)));
+  });
+
+  /** Troca a pessoa de contato do pedido em andamento: { contato_id } */
+  r.post('/api/pedidos/:codigo/contato', (req, res) => {
+    const eu = exigirUsuario(res);
+    trocarContatoDoPedido(db, String(req.params.codigo), corpoJson(req).contato_id, { id: eu.id, nome: eu.nome });
     res.json(detalhe(String(req.params.codigo)));
   });
 

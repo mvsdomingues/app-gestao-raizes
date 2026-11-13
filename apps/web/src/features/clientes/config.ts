@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import type { ClienteVinculado, ConfigClientes, ResumoCliente } from '@raizes/shared';
+import type { ClienteVinculado, ConfigClientes, ContatoVinculado, PessoaContato, ResumoCliente } from '@raizes/shared';
 import { api } from '../../lib/api';
 
 const DESLIGADO: ConfigClientes = { ativo: false, subdominio: null };
@@ -33,7 +33,28 @@ export function useConfigClientes(): ConfigClientes {
   return c;
 }
 
-/** Cliente da busca → dados gravados no orçamento. */
-export function paraVinculo(c: Pick<ResumoCliente, 'id' | 'nome' | 'telefone' | 'email' | 'codigo'>): ClienteVinculado {
-  return { id: c.id, nome: c.nome, telefone: c.telefone || null, email: c.email || null, codigo: c.codigo };
+/**
+ * Cliente da busca → dados gravados no orçamento. Com a pessoa de contato (encontrada na busca
+ * ou escolhida), o telefone e o e-mail são os dela; sem ela, o servidor usa o contato principal.
+ */
+export function paraVinculo(
+  c: Pick<ResumoCliente, 'id' | 'nome' | 'telefone' | 'email' | 'codigo'> & { pessoa?: ContatoVinculado | null },
+  contato: ContatoVinculado | null = c.pessoa ?? null,
+): ClienteVinculado {
+  return {
+    id: c.id,
+    nome: c.nome,
+    telefone: contato?.telefone || c.telefone || null,
+    email: contato?.email || c.email || null,
+    codigo: c.codigo,
+    contato,
+  };
 }
+
+/** Pessoa de contato → resumo gravado no orçamento. */
+export const contatoDe = (p: Pick<PessoaContato, 'id' | 'nome' | 'telefone' | 'email'>): ContatoVinculado => ({
+  id: p.id,
+  nome: p.nome,
+  telefone: p.telefone || null,
+  email: p.email || null,
+});

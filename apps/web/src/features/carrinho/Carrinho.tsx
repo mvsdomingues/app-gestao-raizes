@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import {
   calcComParametros,
   diferencasFaturamento,
@@ -36,12 +36,30 @@ export function Carrinho() {
   const temFaturamento = faturamentoPreenchido(faturamento);
   const [gerando, setGerando] = useState(false);
 
-  /** Cliente escolhido: o faturamento do cadastro preenche o do carrinho (pergunta antes de trocar o já digitado). */
+  // Último cliente/contato e faturamento escolhidos (a resposta do cadastro pode chegar depois da escolha do contato)
+  const atual = useRef({ cliente, faturamento });
+  atual.current = { cliente, faturamento };
+
+  /**
+   * Cliente escolhido: o faturamento do cadastro preenche o do carrinho (pergunta antes de trocar o já digitado).
+   * Só o contato mudou: a "Pessoa de contato" do faturamento passa a ser a dele.
+   */
   const escolherCliente = async (c: ClienteVinculado | null) => {
+    const anterior = atual.current.cliente;
     definirCliente(c);
     if (!c) return;
+    if (anterior && anterior.id === c.id) {
+      const f = atual.current.faturamento;
+      const nome = c.contato?.nome;
+      if (nome && faturamentoPreenchido(f) && (!f.contato || f.contato === anterior.contato?.nome))
+        definirFaturamento({ ...f, contato: nome });
+      return;
+    }
     try {
       const r = await api.faturamentoCliente(c.id);
+      // Pessoa de contato do faturamento: a escolhida no carrinho (ou a do cadastro)
+      const contato = atual.current.cliente?.id === c.id ? atual.current.cliente.contato?.nome : c.contato?.nome;
+      if (contato && faturamentoPreenchido(r.faturamento)) r.faturamento = { ...r.faturamento, contato };
       if (!faturamentoPreenchido(r.faturamento) || diferencasFaturamento(faturamento, r.faturamento).length === 0) return;
       if (
         temFaturamento &&
@@ -129,6 +147,7 @@ export function Carrinho() {
       total: tot,
       observacao: observacao.trim(),
       cliente_id: cliente?.id ?? null,
+      contato_id: cliente?.contato?.id ?? null,
       entrega_prevista: entregaPrevista || null,
       faturamento: temFaturamento ? faturamento : null,
     };
@@ -244,7 +263,7 @@ export function Carrinho() {
                   </span>
                   <span className="cart-cliente-dica">{cliente ? cliente.codigo : 'obrigatório'}</span>
                 </label>
-                <SeletorCliente id="campo-cliente" valor={cliente} aoMudar={(c) => void escolherCliente(c)} />
+                <SeletorCliente id="campo-cliente" comContato valor={cliente} aoMudar={(c) => void escolherCliente(c)} />
               </div>
 
               <div className="cart-extra-fields">

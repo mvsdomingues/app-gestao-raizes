@@ -34,6 +34,7 @@ import { api, ErroApi, type RespostaCliente } from '../../lib/api';
 import { avisar, confirmar, erroDe } from '../../lib/dialogo';
 import { formatarDataHora } from '../pedidos/comum';
 import { FormularioFaturamento } from './FormularioFaturamento';
+import { ModalTransformar, SecaoPessoas, transformarEmContato } from './PessoasContato';
 
 const POR_PAGINA = 30;
 
@@ -145,7 +146,12 @@ function Lista({ visita, abrir }: { visita: number; abrir: (id: number) => void 
         </div>
         <div className="orc-filtro">
           <label htmlFor="filtro-cli-carteira">Carteira</label>
-          <select id="filtro-cli-carteira" className="custom-input" value={carteira} onChange={(e) => setCarteira(e.target.value)}>
+          <select
+            id="filtro-cli-carteira"
+            className="custom-input"
+            value={carteira}
+            onChange={(e) => setCarteira(e.target.value)}
+          >
             <option value="">Todas</option>
             {carteiras.map((c) => (
               <option key={c.id} value={c.id}>
@@ -221,6 +227,7 @@ function Lista({ visita, abrir }: { visita: number; abrir: (id: number) => void 
                   </td>
                   <td className="cliente-col-contato">
                     {[c.telefone ? formatarTelefone(c.telefone) : '', c.email].filter(Boolean).join(' · ') || '—'}
+                    {c.contatos > 1 && <span className="opcao-meta"> · {c.contatos} contatos</span>}
                   </td>
                   <td>{c.documento ? formatarDocumento(c.documento) : '—'}</td>
                   <td>{c.cidade ? `${c.cidade}/${c.uf}` : '—'}</td>
@@ -359,7 +366,11 @@ function ModalCliente({ fechar, salvo }: { fechar: () => void; salvo: (c: Client
     }
     setSalvando(true);
     try {
-      const r = await api.criarCliente({ ...corpo, carteira_id: carteiraId ? Number(carteiraId) : null, criar_mesmo_assim: mesmoAssim });
+      const r = await api.criarCliente({
+        ...corpo,
+        carteira_id: carteiraId ? Number(carteiraId) : null,
+        criar_mesmo_assim: mesmoAssim,
+      });
       salvo(r.cliente);
       await avisarParecidos(r);
     } catch (e) {
@@ -419,7 +430,12 @@ function ModalCliente({ fechar, salvo }: { fechar: () => void; salvo: (c: Client
           <>
             <div className="clientes-telefone">
               <label htmlFor="novo-cli-carteira">Carteira (comissões)</label>
-              <select id="novo-cli-carteira" className="custom-input" value={carteiraId} onChange={(e) => setCarteiraId(e.target.value)}>
+              <select
+                id="novo-cli-carteira"
+                className="custom-input"
+                value={carteiraId}
+                onChange={(e) => setCarteiraId(e.target.value)}
+              >
                 {carteiras.map((c) => (
                   <option key={c.id} value={c.geral ? '' : c.id}>
                     {c.nome}
@@ -465,6 +481,7 @@ function Ficha({ id, voltar, abrir }: { id: number; voltar: () => void; abrir: (
   const [falha, setFalha] = useState('');
   const [salvando, setSalvando] = useState(false);
   const [mesclar, setMesclar] = useState<SuspeitaDuplicidade | null>(null);
+  const [transformar, setTransformar] = useState(false);
   const [novoContato, setNovoContato] = useState<{ tipo: TipoContatoCliente; valor: string; descricao: string }>({
     tipo: 'TELEFONE',
     valor: '',
@@ -542,6 +559,16 @@ function Ficha({ id, voltar, abrir }: { id: number; voltar: () => void; abrir: (
           </p>
         </div>
         <div className="clientes-acoes-topo">
+          {c.ativo && (
+            <button
+              className="btn-secondary"
+              id="btn-transformar-contato"
+              title="Este cadastro é, na verdade, uma pessoa de uma empresa já cadastrada"
+              onClick={() => setTransformar(true)}
+            >
+              Transformar em contato de…
+            </button>
+          )}
           {c.ativo ? (
             <button
               className="btn-secondary perigo"
@@ -613,6 +640,21 @@ function Ficha({ id, voltar, abrir }: { id: number; voltar: () => void; abrir: (
                   <button className="btn-primary btn-mesclar" onClick={() => setMesclar(s)}>
                     Mesclar
                   </button>
+                  {/* Pessoa da mesma empresa: o pré-cadastro vira contato do outro cadastro */}
+                  <button
+                    className="btn-secondary btn-transformar"
+                    onClick={async () => {
+                      const origemEhOutro = o.situacao === 'PRE_CADASTRO' && c.situacao !== 'PRE_CADASTRO';
+                      const f = origemEhOutro ? await transformarEmContato(o, c) : await transformarEmContato(c, o);
+                      if (!f) return;
+                      if (f.cliente.id === c.id) await carregar();
+                      else abrir(f.cliente.id);
+                    }}
+                  >
+                    {o.situacao === 'PRE_CADASTRO' && c.situacao !== 'PRE_CADASTRO'
+                      ? `Trazer ${o.codigo} como contato`
+                      : `Virar contato de ${o.codigo}`}
+                  </button>
                   <button
                     className="btn-secondary btn-nao-mesmo"
                     onClick={async () => {
@@ -662,7 +704,11 @@ function Ficha({ id, voltar, abrir }: { id: number; voltar: () => void; abrir: (
               disabled={!novaCarteira}
               onClick={async () => {
                 const nome = carteiras.find((x) => x.id === Number(novaCarteira))?.nome;
-                if (!(await confirmar(`Mudar ${c.codigo} para a carteira "${nome}"? Vale para os próximos pedidos.`, { ok: 'Mudar carteira' })))
+                if (
+                  !(await confirmar(`Mudar ${c.codigo} para a carteira "${nome}"? Vale para os próximos pedidos.`, {
+                    ok: 'Mudar carteira',
+                  }))
+                )
                   return;
                 const levar =
                   ficha.pedidos_abertos > 0 &&
@@ -705,6 +751,16 @@ function Ficha({ id, voltar, abrir }: { id: number; voltar: () => void; abrir: (
               {salvando ? 'Salvando…' : 'Salvar alterações'}
             </button>
           </div>
+
+          <SecaoPessoas
+            cliente={c}
+            atualizar={async (f) => {
+              if (f) {
+                setFicha(f);
+                setV(formDe(f.cliente));
+              } else await carregar();
+            }}
+          />
 
           <div className="clientes-secao-titulo">Telefones e e-mails adicionais</div>
           {c.contatos.length === 0 && <p className="fat-dica">Nenhum contato adicional.</p>}
@@ -828,6 +884,16 @@ function Ficha({ id, voltar, abrir }: { id: number; voltar: () => void; abrir: (
         </aside>
       </div>
 
+      {transformar && (
+        <ModalTransformar
+          origem={c}
+          fechar={() => setTransformar(false)}
+          feito={(destino) => {
+            setTransformar(false);
+            abrir(destino);
+          }}
+        />
+      )}
       {mesclar && (
         <ModalMesclar
           atual={c}
