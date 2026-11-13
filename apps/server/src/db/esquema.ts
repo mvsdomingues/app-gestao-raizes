@@ -556,6 +556,8 @@ function migrarColunas(db: Database.Database): void {
     db.exec('ALTER TABLE clientes ADD COLUMN carteira_id INTEGER REFERENCES carteiras(id)');
   db.exec('CREATE INDEX IF NOT EXISTS ix_clientes_carteira ON clientes(carteira_id)');
   db.exec('CREATE INDEX IF NOT EXISTS ix_pedidos_carteira ON pedidos(carteira_id)');
+  // Razão social de um aceite diferente do nome do cadastro (pendência para a equipe conferir)
+  if (!colunas(db, 'clientes').includes('nome_aceite')) db.exec('ALTER TABLE clientes ADD COLUMN nome_aceite TEXT');
   // Pessoa de contato do orçamento (com a cópia do nome) e do pedido
   if (!colunas(db, 'orcamentos').includes('contato_id'))
     db.exec('ALTER TABLE orcamentos ADD COLUMN contato_id INTEGER REFERENCES clientes_pessoas(id)');

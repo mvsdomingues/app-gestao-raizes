@@ -234,3 +234,5 @@
 .clientes-pessoa-obs { font-size: .76rem; color: var(--grafite); margin-top: 3px; white-space: pre-wrap; }
 .clientes-pessoa-acoes { display: flex; flex-wrap: wrap; align-content: flex-start; justify-content: flex-end; gap: 4px 10px; font-size: .74rem; }
 #modal-transformar .seletor-cliente { margin: 8px 0 4px; }
+.cliente-nome-orcamento { font-size: .78em; color: var(--muted); }
+.clientes-aviso #btn-usar-nome-aceite { width: auto; }

@@ -156,9 +156,12 @@ export function FolhaOrcamento({
       {folha.cliente && (
         <div className="orc-cliente" id="orc-cliente">
           <span className="orc-cliente-rotulo">Cliente</span>
-          <span className="orc-cliente-nome">{folha.cliente.nome || `Contato #${folha.cliente.id}`}</span>
+          {/* Documento: o nome gravado no orçamento quando foi gerado (não o atual do cadastro) */}
+          <span className="orc-cliente-nome">
+            {folha.cliente.nome_orcamento || folha.cliente.nome || `Contato #${folha.cliente.id}`}
+          </span>
           {/* "Aos cuidados de": a pessoa de contato do orçamento (pessoa física com o mesmo nome não repete) */}
-          {folha.cliente.contato?.nome && folha.cliente.contato.nome !== folha.cliente.nome && (
+          {folha.cliente.contato?.nome && folha.cliente.contato.nome !== (folha.cliente.nome_orcamento || folha.cliente.nome) && (
             <span className="orc-cliente-contato">A/C {folha.cliente.contato.nome}</span>
           )}
           {folha.cliente.telefone && <span className="orc-cliente-tel">{formatarTelefone(folha.cliente.telefone)}</span>}

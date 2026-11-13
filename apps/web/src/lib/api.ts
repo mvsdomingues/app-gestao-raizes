@@ -323,6 +323,8 @@ export const api = {
   alterarCliente: (id: number, dados: Record<string, unknown>) => enviar<RespostaCliente>('PUT', `/api/clientes/${id}`, dados),
   ativoCliente: (id: number, ativo: boolean) => enviar<Cliente>('POST', `/api/clientes/${id}/ativo`, { ativo }),
   conferirCliente: (id: number) => enviar<Cliente>('POST', `/api/clientes/${id}/conferido`),
+  /** Pendência "razão social diferente no aceite": usa o nome informado no aceite */
+  usarNomeAceite: (id: number) => enviar<FichaCliente>('POST', `/api/clientes/${id}/usar-nome-aceite`),
   incluirContatoCliente: (id: number, dados: { tipo: TipoContatoCliente; valor: string; descricao: string }) =>
     enviar<RespostaCliente>('POST', `/api/clientes/${id}/contatos`, dados),
   excluirContatoCliente: (id: number, contato: number) => enviar<Cliente>('DELETE', `/api/clientes/${id}/contatos/${contato}`),

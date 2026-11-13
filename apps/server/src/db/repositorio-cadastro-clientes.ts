@@ -75,6 +75,7 @@ interface LinhaCliente {
   ativo: number;
   observacoes: string;
   alerta: string | null;
+  nome_aceite: string | null;
   kommo_id: number | null;
   mesclado_em: number | null;
   carteira_id: number | null;
@@ -119,6 +120,7 @@ function paraCliente(db: Banco, l: LinhaCliente): Cliente {
     ativo: !!l.ativo,
     observacoes: l.observacoes,
     alerta: l.alerta,
+    nome_aceite: l.nome_aceite,
     kommo_id: l.kommo_id,
     carteira_id: l.carteira_id,
     carteira: l.carteira_nome,
@@ -498,25 +500,55 @@ export function alterarClienteCadastro(
  * sempre atualização do cliente desse orçamento. Documento de outro cliente vira
  * suspeita de duplicidade; documento diferente do que o cliente já tinha vira alerta.
  */
-export function aplicarFaturamentoNoCliente(db: Banco, clienteId: number, fat: DadosFaturamento, autor: Autor): void {
+export function aplicarFaturamentoNoCliente(
+  db: Banco,
+  clienteId: number,
+  fat: DadosFaturamento,
+  autor: Autor,
+  /** Orçamento de onde vieram os dados (ex.: ORC-0015), para o histórico */
+  referencia?: string,
+): void {
   const atual = obterClienteCadastro(db, clienteId);
   if (!atual) return;
   const antes = dadosAtuais(atual);
+  // Aceite de cliente já completo com outra razão social: o nome do cadastro fica e a equipe confere
+  // (só o pré-cadastro, de nome provisório, recebe o nome do aceite automaticamente)
+  const manterNome = autor.origem === 'ACEITE' && atual.situacao === 'COMPLETO';
+  // Pendência só quando é outro nome (a mesma razão social com outra grafia não é diferença)
+  const nomeDoAceite = manterNome && fat.nome && chaveNome(fat.nome) !== chaveNome(antes.nome) ? fat.nome : null;
   // O nome do cadastro só é trocado quando o faturamento traz um; o telefone fica o do cadastro
   const depois: DadosCliente = {
     ...antes,
     ...fat,
-    nome: fat.nome || antes.nome,
+    nome: manterNome ? antes.nome : fat.nome || antes.nome,
     email: normalizarEmail(fat.email) || antes.email,
   };
   const linhas = diferencasCliente(antes, depois);
-  if (!linhas.length) return;
-  gravarLinha(db, clienteId, depois, autor.usuarioId);
-  registrarHistorico(db, clienteId, autor, linhas.join('\n'));
-  if (antes.documento && depois.documento && antes.documento !== depois.documento) {
-    db.prepare('UPDATE clientes SET alerta = ? WHERE id = ?').run(
-      `Documento alterado (${ROTULO_ORIGEM[autor.origem].toLowerCase()}) em ${isoLocal().slice(0, 10).split('-').reverse().join('/')}: confira se é o mesmo cliente`,
+  if (!linhas.length && !nomeDoAceite) return;
+  if (linhas.length) {
+    gravarLinha(db, clienteId, depois, autor.usuarioId);
+    registrarHistorico(db, clienteId, autor, linhas.join('\n'));
+  }
+  if (nomeDoAceite) {
+    const de = referencia ? ` do ${referencia}` : '';
+    registrarHistorico(
+      db,
       clienteId,
+      autor,
+      `Razão social informada no aceite${de}: “${nomeDoAceite}” (o cadastro manteve “${antes.nome}”)`,
+    );
+    adicionarAlerta(
+      db,
+      clienteId,
+      `${PREFIXO_ALERTA_NOME}${de}: “${nomeDoAceite}”. O cadastro manteve “${antes.nome}”; confira o nome`,
+    );
+    db.prepare('UPDATE clientes SET nome_aceite = ? WHERE id = ?').run(nomeDoAceite, clienteId);
+  }
+  if (antes.documento && depois.documento && antes.documento !== depois.documento) {
+    adicionarAlerta(
+      db,
+      clienteId,
+      `Documento alterado (${ROTULO_ORIGEM[autor.origem].toLowerCase()}) em ${isoLocal().slice(0, 10).split('-').reverse().join('/')}: confira se é o mesmo cliente`,
     );
   }
   const iguais = coincidencias(db, { documento: depois.documento, email: depois.email }, clienteId);
@@ -579,6 +611,33 @@ export function vincularOrcamentoECliente(db: Banco, orcamentoId: number, client
   db.prepare('UPDATE pedidos SET cliente_id = ?, contato_id = ? WHERE orcamento_id = ?').run(clienteId, contato.id, orcamentoId);
 }
 
+const PREFIXO_ALERTA_NOME = 'Razão social diferente no aceite';
+
+/** Acrescenta uma pendência ao alerta do cliente (as pendências ficam separadas por " · "). */
+function adicionarAlerta(db: Banco, clienteId: number, texto: string): void {
+  const atual = (db.prepare('SELECT alerta FROM clientes WHERE id = ?').get(clienteId) as { alerta: string | null }).alerta;
+  db.prepare('UPDATE clientes SET alerta = ? WHERE id = ?').run(atual ? `${atual} · ${texto}` : texto, clienteId);
+}
+
+/** Pendência "razão social diferente no aceite": o nome do cadastro passa a ser o informado no aceite. */
+export function usarNomeDoAceite(db: Banco, id: number, autor: Autor): Cliente {
+  const c = exigirCliente(db, id);
+  const linha = db.prepare('SELECT nome_aceite, alerta FROM clientes WHERE id = ?').get(id) as {
+    nome_aceite: string | null;
+    alerta: string | null;
+  };
+  if (!linha.nome_aceite) throw new ErroHttp(409, 'Não há razão social do aceite para usar');
+  const resto = (linha.alerta ?? '')
+    .split(' · ')
+    .filter((p) => p && !p.startsWith(PREFIXO_ALERTA_NOME))
+    .join(' · ');
+  db.prepare(
+    'UPDATE clientes SET nome = ?, nome_chave = ?, nome_aceite = NULL, alerta = ?, atualizado = ?, alterado_por = ? WHERE id = ?',
+  ).run(linha.nome_aceite, chaveNome(linha.nome_aceite), resto || null, isoLocal(), autor.usuarioId, id);
+  registrarHistorico(db, id, autor, `Nome: ${c.nome} → ${linha.nome_aceite} (razão social informada no aceite)`);
+  return exigirCliente(db, id);
+}
+
 export function definirAtivo(db: Banco, id: number, ativo: boolean, autor: Autor): Cliente {
   const c = exigirCliente(db, id);
   if (c.ativo === ativo) return c;
@@ -598,7 +657,7 @@ export function definirAtivo(db: Banco, id: number, ativo: boolean, autor: Autor
 export function conferirAlerta(db: Banco, id: number, autor: Autor): Cliente {
   const c = exigirCliente(db, id);
   if (c.alerta) {
-    db.prepare('UPDATE clientes SET alerta = NULL WHERE id = ?').run(id);
+    db.prepare('UPDATE clientes SET alerta = NULL, nome_aceite = NULL WHERE id = ?').run(id);
     registrarHistorico(db, id, autor, `Pendência conferida: ${c.alerta}`);
   }
   return exigirCliente(db, id);

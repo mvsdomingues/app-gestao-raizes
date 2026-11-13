@@ -171,6 +171,7 @@ describe('cadastro de clientes (API)', () => {
     expect((await req('GET', `/api/orcamentos/${com.json.id}`)).json.cliente).toEqual({
       id: thais,
       nome: 'Thaís Lima',
+      nome_orcamento: 'Thaís Lima',
       telefone: '11984735364',
       email: null,
       codigo: codigoCliente(thais),

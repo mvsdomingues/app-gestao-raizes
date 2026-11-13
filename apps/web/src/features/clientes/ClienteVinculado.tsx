@@ -18,6 +18,13 @@ export function ClienteVinculado({
   return (
     <span className="cliente-vinculado">
       <span className="cliente-nome">{cliente.nome || cliente.codigo || codigoCliente(cliente.id)}</span>
+      {/* Nome atual do cadastro; nos detalhes, quando o orçamento foi gerado com outro nome, ele aparece de leve */}
+      {link && cliente.nome_orcamento && cliente.nome_orcamento !== cliente.nome && (
+        <span className="cliente-nome-orcamento" title="Nome do cliente quando o orçamento foi gerado (o que a folha mostra)">
+          {' '}
+          (no orçamento: {cliente.nome_orcamento})
+        </span>
+      )}
       {cliente.contato?.nome && cliente.contato.nome !== cliente.nome && (
         <span className="cliente-contato-nome" title="Pessoa de contato">
           {' '}

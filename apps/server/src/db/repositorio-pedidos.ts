@@ -50,7 +50,7 @@ interface LinhaPedido {
 
 const SELECT_PEDIDO = `
   SELECT p.id, p.codigo, p.status, p.orcamento_id, p.observacao, p.criado, p.atualizado, p.entrega_prevista,
-         o.total, o.qtd_itens, p.cliente_id, o.cliente_nome, o.cliente_telefone, o.cliente_email,
+         o.total, o.qtd_itens, p.cliente_id, o.cliente_nome, cl.nome AS cliente_nome_atual, o.cliente_telefone, o.cliente_email,
          p.contato_id, cp.nome AS contato_nome, cp.telefone AS contato_telefone, cp.email AS contato_email,
          cl.telefone AS cli_telefone, cl.email AS cli_email,
          (SELECT ca.nome FROM carteiras ca WHERE ca.id = p.carteira_id) AS carteira,
@@ -80,7 +80,9 @@ function resumo(l: LinhaPedido): ResumoPedido & { observacao: string | null } {
   const cliente = cid
     ? {
         id: cid,
-        nome: (linha.cliente_nome as string) ?? '',
+        // Listas e relatórios: o nome atual do cadastro; a folha usa o gravado no orçamento
+        nome: (linha.cliente_nome_atual as string) || ((linha.cliente_nome as string) ?? ''),
+        nome_orcamento: (linha.cliente_nome as string | null) ?? null,
         telefone: contato?.telefone ?? (linha.cliente_telefone as string | null) ?? null,
         email: contato?.email ?? (linha.cliente_email as string | null) ?? null,
         codigo: codigoCliente(cid),
@@ -97,6 +99,7 @@ function resumo(l: LinhaPedido): ResumoPedido & { observacao: string | null } {
     'contato_telefone',
     'contato_email',
     'cli_telefone',
+    'cliente_nome_atual',
     'cli_email',
   ])
     delete linha[k];

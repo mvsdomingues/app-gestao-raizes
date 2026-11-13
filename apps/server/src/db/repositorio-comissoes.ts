@@ -350,6 +350,7 @@ interface LinhaPedido {
   orcamento_id: number;
   status: string;
   criado: string;
+  cliente_id: number | null;
   cliente_nome: string | null;
   subtotal: number;
   vendedor_id: number | null;
@@ -360,13 +361,18 @@ interface LinhaPedido {
 }
 
 const SELECT_PEDIDOS = `
-  SELECT p.id, p.codigo, p.orcamento_id, p.status, p.criado, o.cliente_nome, o.subtotal,
+  SELECT p.id, p.codigo, p.orcamento_id, p.status, p.criado, p.cliente_id, COALESCE(cl.nome, o.cliente_nome) AS cliente_nome, o.subtotal,
          o.usuario_id AS vendedor_id, u.nome AS vendedor, p.carteira_id, c.nome AS carteira,
          ${SQL_CONCLUSAO} AS conclusao
     FROM pedidos p
     JOIN orcamentos o ON o.id = p.orcamento_id
+    LEFT JOIN clientes cl ON cl.id = p.cliente_id
     LEFT JOIN usuarios u ON u.id = o.usuario_id
     LEFT JOIN carteiras c ON c.id = p.carteira_id`;
+
+/** Cliente do pedido nos relatórios: o nome atual do cadastro com o código (não a cópia gravada no orçamento). */
+const nomeClienteRelatorio = (l: { cliente_id: number | null; cliente_nome: string | null }): string | null =>
+  l.cliente_id ? `${l.cliente_nome ?? ''} (${codigoCliente(l.cliente_id)})`.trim() : l.cliente_nome;
 
 /** O pedido conta para a comissão? (chegou a Em Produção, não cancelado nem voltou antes dela) */
 const comissionavel = (l: Pick<LinhaPedido, 'status' | 'conclusao'>) =>
@@ -396,8 +402,8 @@ export function listarPedidosCarteira(db: Banco, f: FiltroPedidosCarteira): { to
   if (f.busca) {
     const b = f.busca.trim();
     const num = /^\D*0*(\d+)$/.exec(b)?.[1];
-    cond.push(`(p.codigo LIKE ? OR o.cliente_nome LIKE ?${num ? ' OR o.id = ?' : ''})`);
-    args.push(`%${b}%`, `%${b}%`);
+    cond.push(`(p.codigo LIKE ? OR o.cliente_nome LIKE ? OR cl.nome LIKE ?${num ? ' OR o.id = ?' : ''})`);
+    args.push(`%${b}%`, `%${b}%`, `%${b}%`);
     if (num) args.push(Number(num));
   }
   if (f.carteira && /^\d+$/.test(f.carteira)) {
@@ -410,7 +416,9 @@ export function listarPedidosCarteira(db: Banco, f: FiltroPedidosCarteira): { to
   }
   const where = `WHERE ${cond.join(' AND ')}`;
   const { c: total } = db
-    .prepare(`SELECT COUNT(*) AS c FROM pedidos p JOIN orcamentos o ON o.id = p.orcamento_id ${where}`)
+    .prepare(
+      `SELECT COUNT(*) AS c FROM pedidos p JOIN orcamentos o ON o.id = p.orcamento_id LEFT JOIN clientes cl ON cl.id = p.cliente_id ${where}`,
+    )
     .get(...args) as { c: number };
   const limit = Math.min(Math.max(f.limit ?? 50, 1), 200);
   const linhas = db
@@ -426,7 +434,7 @@ export function listarPedidosCarteira(db: Banco, f: FiltroPedidosCarteira): { to
       return {
         codigo: l.codigo,
         orcamento: numeroOrcamento(l.orcamento_id),
-        cliente: l.cliente_nome,
+        cliente: nomeClienteRelatorio(l),
         vendedor: l.vendedor,
         status: l.status,
         valor: l.subtotal ?? 0,
@@ -578,7 +586,7 @@ export function calcularApuracao(db: Banco, competencia: string): ApuracaoComiss
     pedido_id: l.id,
     codigo: l.codigo,
     orcamento: numeroOrcamento(l.orcamento_id),
-    cliente: l.cliente_nome,
+    cliente: nomeClienteRelatorio(l),
     vendedor_id: l.vendedor_id,
     vendedor: l.vendedor ?? 'Sem responsável',
     data_conclusao: l.conclusao!,

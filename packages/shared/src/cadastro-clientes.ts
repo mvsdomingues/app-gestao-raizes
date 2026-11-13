@@ -59,6 +59,8 @@ export interface Cliente extends DadosFaturamento {
   observacoes: string;
   /** Pendência para a equipe conferir (ex.: documento alterado no aceite) */
   alerta: string | null;
+  /** Razão social informada num aceite e diferente do nome do cadastro (botão "Usar este nome") */
+  nome_aceite: string | null;
   /** Código do contato no Kommo (referência; integração desligada) */
   kommo_id: number | null;
   /** Cliente em que este foi mesclado (inativo) */

@@ -44,6 +44,8 @@ function clienteDaLinha(l: Record<string, unknown>): ClienteVinculado | null {
   const email = l.cliente_email as string | null;
   const contatoId = l.contato_id as number | null;
   const contatoNome = l.contato_nome as string | null;
+  const nomeAtual = l.cliente_nome_atual as string | null;
+  delete l.cliente_nome_atual;
   delete l.cliente_id;
   delete l.cliente_nome;
   delete l.cliente_telefone;
@@ -52,13 +54,23 @@ function clienteDaLinha(l: Record<string, unknown>): ClienteVinculado | null {
   delete l.contato_nome;
   // Contato: a cópia do momento (nome) com o telefone e o e-mail gravados no orçamento
   const contato = contatoId ? { id: contatoId, nome: contatoNome ?? '', telefone: telefone ?? null, email: email ?? null } : null;
+  // Nome: o atual do cadastro (listas); o gravado no orçamento fica em nome_orcamento (folha e link)
   return id
-    ? { id, nome: nome ?? '', telefone: telefone ?? null, email: email ?? null, codigo: codigoCliente(id), contato }
+    ? {
+        id,
+        nome: nomeAtual || (nome ?? ''),
+        nome_orcamento: nome ?? null,
+        telefone: telefone ?? null,
+        email: email ?? null,
+        codigo: codigoCliente(id),
+        contato,
+      }
     : null;
 }
 
 const COLUNAS_CLIENTE =
-  'orcamentos.cliente_id, orcamentos.cliente_nome, orcamentos.cliente_telefone, orcamentos.cliente_email, orcamentos.contato_id, orcamentos.contato_nome';
+  'orcamentos.cliente_id, orcamentos.cliente_nome, orcamentos.cliente_telefone, orcamentos.cliente_email, orcamentos.contato_id, orcamentos.contato_nome, ' +
+  '(SELECT cl.nome FROM clientes cl WHERE cl.id = orcamentos.cliente_id) AS cliente_nome_atual';
 
 interface LinhaOrcamento extends Omit<ResumoOrcamento, 'numero' | 'responsavel' | 'alterado_por' | 'cliente'> {
   itens_json: string;

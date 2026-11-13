@@ -336,6 +336,11 @@ export function ManualOperacao() {
             O orçamento guarda uma cópia do nome do cliente e do nome, telefone e e-mail do contato do momento (sem telefone ou
             e-mail no contato, os do cliente); o vínculo com o cadastro continua.
           </li>
+          <li>
+            Listas de orçamentos e pedidos e a apuração de comissões mostram o <b>nome atual do cadastro</b> (na apuração, com o
+            código CLI); a folha, a impressão e o link mostram o nome de quando o orçamento foi gerado. Nos detalhes, se forem
+            diferentes, aparece “(no orçamento: …)”.
+          </li>
         </ul>
         <h4>Faturamento e entrega</h4>
         <Passos
@@ -771,6 +776,10 @@ export function ManualOperacao() {
               'Atualizam sempre o cliente ligado a esse orçamento — nunca outro.',
             ],
             ['Aceite com CPF/CNPJ novo ou igual', 'Atualiza o cadastro (fica Completo) e registra o que mudou no histórico.'],
+            [
+              'Aceite de cliente já Completo com outra razão social',
+              'O nome do cadastro não muda (só o pré-cadastro recebe o nome do aceite). A razão social informada vai para o histórico e fica a pendência “Razão social diferente no aceite”: Usar “…” troca o nome; Conferido mantém o atual.',
+            ],
             [
               'Aceite com CPF/CNPJ diferente do que o cliente tinha',
               'Atualiza e deixa a pendência “documento alterado”: confira e clique em Conferido.',

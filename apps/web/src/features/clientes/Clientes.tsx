@@ -608,6 +608,29 @@ function Ficha({ id, voltar, abrir }: { id: number; voltar: () => void; abrir: (
       {c.alerta && (
         <div className="clientes-aviso" id="cliente-alerta">
           <span>⚠ {c.alerta}</span>
+          {c.nome_aceite && c.ativo && (
+            <button
+              className="btn-secondary"
+              id="btn-usar-nome-aceite"
+              onClick={async () => {
+                if (
+                  !(await confirmar(`Trocar o nome do cadastro de “${c.nome}” para “${c.nome_aceite}”?`, {
+                    ok: 'Usar este nome',
+                  }))
+                )
+                  return;
+                try {
+                  const f = await api.usarNomeAceite(c.id);
+                  setFicha(f);
+                  setV(formDe(f.cliente));
+                } catch (e) {
+                  void erroDe('Não foi possível trocar o nome.', e);
+                }
+              }}
+            >
+              Usar “{c.nome_aceite}”
+            </button>
+          )}
           <button
             className="btn-secondary"
             id="btn-conferido"

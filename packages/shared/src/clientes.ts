@@ -88,6 +88,11 @@ export interface ClienteVinculado {
   email?: string | null;
   /** CLI-000001 */
   codigo?: string;
+  /**
+   * Orçamento e pedido: nome do cliente gravado no orçamento quando foi gerado (o que a folha e o
+   * link mostram). `nome` é o nome atual do cadastro (listas e relatórios).
+   */
+  nome_orcamento?: string | null;
   /** Pessoa de contato que pediu (orçamento e pedido) */
   contato?: ContatoVinculado | null;
 }

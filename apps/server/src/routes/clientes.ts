@@ -17,6 +17,7 @@ import {
   obterClienteCadastro,
   suspeitasDe,
   transformarEmContato,
+  usarNomeDoAceite,
   type Autor,
 } from '../db/repositorio-cadastro-clientes';
 import {
@@ -244,6 +245,12 @@ export function rotasClientes(db: Banco, kommo: ServicoKommo | null): Router {
   r.post('/api/clientes/:id/transformar', (req, res) => {
     const destino = transformarEmContato(db, idDe(req.params.id), Number(corpoJson(req).destino), autorDe(res, 'MESCLAGEM'));
     res.json(fichaCliente(db, destino.id));
+  });
+
+  /** Pendência "razão social diferente no aceite": usa o nome informado no aceite */
+  r.post('/api/clientes/:id/usar-nome-aceite', (req, res) => {
+    usarNomeDoAceite(db, idDe(req.params.id), autorDe(res, 'CADASTRO'));
+    res.json(fichaCliente(db, idDe(req.params.id)));
   });
 
   r.post('/api/clientes/:id/conferido', (req, res) => {

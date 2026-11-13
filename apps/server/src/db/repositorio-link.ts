@@ -298,7 +298,8 @@ export function aceitarPeloLink(
     const autor = { usuarioId: null, nome: 'Cliente (link)', origem: 'ACEITE' as const };
     const vinculado = (db.prepare('SELECT cliente_id FROM orcamentos WHERE id = ?').get(l.id) as { cliente_id: number | null })
       .cliente_id;
-    if (vinculado && obterClienteCadastro(db, vinculado)) aplicarFaturamentoNoCliente(db, vinculado, faturamento, autor);
+    if (vinculado && obterClienteCadastro(db, vinculado))
+      aplicarFaturamentoNoCliente(db, vinculado, faturamento, autor, numeroOrcamento(l.id));
     else vincularOrcamentoECliente(db, l.id, criarClienteDoFaturamento(db, faturamento, l.cliente_telefone, autor));
     const pedido = criarPedido(db, l.id, obs, l.usuario_id, {
       origem: 'CLIENTE',
