@@ -50,6 +50,16 @@ export const config = {
   urlPublica: process.env.APP_URL_PUBLICA?.trim().replace(/\/+$/, '') || null,
   /** Integração com o Kommo (desligada sem KOMMO_ATIVO=1, KOMMO_SUBDOMINIO e KOMMO_TOKEN). */
   kommo: configKommo(),
+  /** Backup diário da base (npm run backup) */
+  backup: {
+    /** Fora do projeto: no servidor, /var/backups/raizes; no Windows, a pasta backups/ do projeto (fora do Git) */
+    pasta: caminho(process.env.BACKUP_DIR, process.platform === 'win32' ? 'backups' : '/var/backups/raizes'),
+    dias: Math.max(1, Math.floor(Number(process.env.BACKUP_DIAS)) || 7),
+    /** Remoto do rclone (ex.: gdrive:raizes-backups); vazio = sem cópia fora do servidor */
+    destinoExterno: process.env.BACKUP_RCLONE_DESTINO?.trim() || null,
+  },
+  /** Logs dos comandos agendados (backup) */
+  logsDir: resolve(RAIZ, 'logs'),
 };
 
 /** Configuração do Kommo; null quando não há token ou subdomínio. */

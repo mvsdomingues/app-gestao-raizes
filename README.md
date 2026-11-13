@@ -17,11 +17,11 @@ Aplicação interna para consultar produtos de vários fornecedores, montar orç
 │   │   │   ├── app.ts          ← rotas e arquivos estáticos
 │   │   │   ├── config.ts       ← lê o .env e resolve caminhos
 │   │   │   ├── routes/         ← catálogo, produtos próprios, parâmetros, orçamentos, atualização, proxy
-│   │   │   ├── services/       ← gerenciador da atualização, extração de imagens SPOT
+│   │   │   ├── services/       ← gerenciador da atualização, backup da base, extração de imagens SPOT
 │   │   │   ├── fornecedores/   ← coletores ASIA, SM, SPOT, XBZ
 │   │   │   ├── db/             ← conexão, esquema e repositórios
 │   │   │   ├── lib/            ← datas, conversões, utilitários HTTP
-│   │   │   └── cli/            ← comandos de linha (atualizar-produtos, baixar-imagens-spot)
+│   │   │   └── cli/            ← comandos de linha (atualizar-produtos, baixar-imagens-spot, backup-base, restaurar-base)
 │   │   └── test/               ← testes da API, dos coletores e do scraper
 │   └── web/                    ← interface React
 │       └── src/
@@ -116,6 +116,65 @@ O comando antigo de download com Playwright continua disponível, mas só é nec
 npm run setup:playwright          # uma única vez (instala o Chromium)
 npm run imagens:spot -- --force   # reprocessa todos
 ```
+
+---
+
+## 💾 Backup da base
+
+Todo dia às 03:00 o servidor faz uma cópia **online** do `data/produtos.db` (o sistema continua no ar), confere com `PRAGMA integrity_check` e as tabelas do sistema, compacta (gzip) e guarda os últimos **7 dias**. As cópias antigas só são apagadas depois que a do dia passa na conferência. O cartão **Backup da base** em Sistema › Atualização mostra a situação e fica vermelho se o último backup falhou ou tem mais de 26 h.
+
+```bash
+npm run backup                                         # faz um backup agora (também antes de um deploy)
+npm run restaurar                                      # lista os backups
+npm run restaurar -- produtos-2026-11-14_0300.db.gz    # restaura (com o sistema parado: pm2 stop all)
+```
+
+| Variável no `.env` | Padrão | Uso |
+|---|---|---|
+| `BACKUP_DIR` | `/var/backups/raizes` (Windows: `backups/` do projeto) | Pasta das cópias, fora do projeto |
+| `BACKUP_DIAS` | `7` | Dias guardados (aqui e no Google Drive) |
+| `BACKUP_RCLONE_DESTINO` | vazio | Cópia fora do servidor, ex.: `gdrive:raizes-backups`. Vazio = só no servidor |
+
+Arquivos: `produtos-AAAA-MM-DD_HHMM.db.gz` (+ `estado.json`, lido pelo cartão). Log: `logs/backup.log`, uma linha por execução.
+
+### Ligar no servidor (uma vez)
+
+```bash
+cd /opt/app-gestao-raizes
+git pull --ff-only && npm run build && pm2 restart raizes
+sudo mkdir -p /var/backups/raizes && sudo chown "$USER" /var/backups/raizes && chmod 700 /var/backups/raizes
+npm run backup                         # primeiro backup, para conferir
+timedatectl | grep "Time zone"         # fuso do servidor (define o horário do cron)
+which node                             # caminho do node para o cron
+crontab -e
+```
+
+Linha do `crontab` (troque `/usr/bin/node` pelo resultado do `which node`; se o fuso do servidor for UTC, use `0 6` em vez de `0 3` para rodar às 03:00 de Brasília):
+
+```cron
+0 3 * * * cd /opt/app-gestao-raizes && /usr/bin/node apps/server/dist/cli/backup-base.js >> logs/backup-cron.log 2>&1
+```
+
+O cron usa o build (`dist/`): depois de cada deploy o `npm run build` já o atualiza. Para conferir: `crontab -l` e, no dia seguinte, o cartão na tela Atualização.
+
+### Restaurar
+
+1. `pm2 stop all`
+2. `npm run restaurar -- <arquivo>` e digite `SIM`. O comando recusa se o sistema ainda responder na porta, confere o backup antes de trocar e guarda a base atual em `data/produtos.db.antes-restauracao-AAAAMMDD-HHMMSS.bak`.
+3. `pm2 start raizes` (e `pm2 start raizes-atualizar`, se estava ligado).
+
+### Cópia no Google Drive (rclone)
+
+Destino: uma pasta `raizes-backups` no **Meu Drive** da conta Google escolhida (criada pelo rclone no primeiro envio). Lá também ficam 7 dias (`rclone delete --min-age 7d` só dos `produtos-*.db.gz`). Uma falha no envio não desfaz o backup local, mas deixa o cartão vermelho.
+
+1. **Credencial própria no Google** (o client_id compartilhado do rclone está sendo desativado em 2026): em [console.cloud.google.com](https://console.cloud.google.com), crie um projeto → *APIs e serviços* → ative a **Google Drive API** → *Tela de permissão OAuth*: tipo **Externo**, seu e-mail como usuário de teste → **Publicar aplicativo** (em "Teste", a autorização vence em 7 dias) → *Credenciais* → **ID do cliente OAuth** do tipo **App para computador**. Guarde o ID e a chave secreta.
+2. **Instale o rclone** no servidor (`sudo -v ; curl https://rclone.org/install.sh | sudo bash`) e no seu PC (rclone.org/downloads), de preferência na mesma versão.
+3. **No servidor**, `rclone config` → `n` (novo) → nome `gdrive` → tipo `drive` → informe o ID e a chave do passo 1 → escopo **`drive.file`** (o rclone só enxerga o que ele mesmo criou, não os outros arquivos do Drive) → `service_account_file` vazio → configuração avançada `n` → *Use web browser…?* **`n`**.
+4. O rclone mostra um comando `rclone authorize "drive" …`: rode-o **no seu PC**, entre com a conta Google e autorize (aparece um aviso de app não verificado: é o seu próprio app, pode continuar). Copie o token que aparece e cole no servidor em `config_token>`. Em *Shared Drive* responda `n`, confirme com `y`.
+5. Teste: `rclone mkdir gdrive:raizes-backups && rclone lsd gdrive:`
+6. No `.env` do servidor: `BACKUP_RCLONE_DESTINO=gdrive:raizes-backups`. Rode `npm run backup`, confira o arquivo no Drive e faça `pm2 restart raizes` para o cartão mostrar o destino.
+
+A base tem dados de clientes: use uma conta Google da empresa com verificação em duas etapas.
 
 ---
 
@@ -361,3 +420,4 @@ Todas as rotas exigem login, exceto as de `/api/auth`. Cada rota também exige a
 | `PUT /api/pedidos/:codigo/entrega` | Data prevista de entrega (`{ entrega_prevista: 'AAAA-MM-DD' \| null }`; só na etapa Criado, registra observação) |
 | `POST /api/pedidos/:codigo/observacoes` | Inclui uma observação no histórico (`{ texto }`), em qualquer situação |
 | `POST /api/atualizar` · `GET /api/atualizar/status` | Atualização dos fornecedores |
+| `GET /api/backup/status` | Situação do backup diário (só leitura; tela Atualização) |

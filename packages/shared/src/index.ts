@@ -13,3 +13,4 @@ export * from './tabelas-precificacao';
 export * from './personalizacao';
 export * from './comissoes';
 export * from './cadastro-clientes';
+export * from './backup';

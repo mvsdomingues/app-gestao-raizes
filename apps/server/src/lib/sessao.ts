@@ -85,6 +85,7 @@ const REGRAS: Regra[] = [
   { metodos: 'TODOS', caminho: /^\/api\/usuarios(\/|$)/, telas: ['usuarios'] },
   { metodos: 'TODOS', caminho: /^\/api\/acessos(\/|$)/, telas: ['acessos'] },
   { metodos: 'TODOS', caminho: /^\/api\/atualizar(\/|$)/, telas: ['status'] },
+  { metodos: 'TODOS', caminho: /^\/api\/backup(\/|$)/, telas: ['status'] },
   { metodos: 'TODOS', caminho: /^\/api\/kommo\/(sincronizacao|sincronizar)$/, telas: ['status'] },
   { metodos: 'GET', caminho: /^\/api\/kommo\/config$/, telas: [] },
   // Cadastro de clientes: busca e pré-cadastro também pelo carrinho; o resto só na tela Clientes

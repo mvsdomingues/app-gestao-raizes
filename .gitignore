@@ -17,6 +17,9 @@ data/*
 *.db-wal
 *.db-shm
 
+# Backups da base (npm run backup; no Windows ficam em backups/)
+backups/
+
 # Logs
 logs/
 *.log

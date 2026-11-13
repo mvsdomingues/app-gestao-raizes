@@ -30,7 +30,15 @@ const kommo = config.kommo
   : null;
 kommo?.iniciarAgendamento();
 
-const app = criarApp({ db, gerenciador, imagensDir: config.imagensDir, webDist: config.webDist, kommo, urlPublica: config.urlPublica });
+const app = criarApp({
+  db,
+  gerenciador,
+  imagensDir: config.imagensDir,
+  webDist: config.webDist,
+  kommo,
+  urlPublica: config.urlPublica,
+  backup: config.backup,
+});
 
 const servidor = app.listen(config.porta, config.host, () => {
   const linha = '='.repeat(50);

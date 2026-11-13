@@ -29,6 +29,7 @@ const SUMARIO = [
   { id: 'man-tabelas', titulo: 'Tabelas gerais' },
   { id: 'man-usuarios', titulo: 'Usuários e acessos' },
   { id: 'man-atualizacao', titulo: 'Atualização de produtos' },
+  { id: 'man-backup', titulo: 'Backup da base' },
   { id: 'man-kommo', titulo: 'Integração com o Kommo' },
   { id: 'man-problemas', titulo: 'Problemas comuns' },
   { id: 'man-glossario', titulo: 'Glossário' },
@@ -1030,8 +1031,53 @@ export function ManualOperacao() {
         </p>
       </Secao>
 
+      {/* ─────────────────────────────── Backup */}
+      <Secao id="man-backup" titulo="Backup da base" numero={26}>
+        <p>
+          Todo dia, de madrugada (03:00), o servidor faz sozinho uma cópia da base de dados, confere se ela está íntegra e guarda
+          as dos últimos 7 dias, apagando as mais antigas. O sistema continua no ar durante a cópia. Só depois que a cópia do dia
+          passa na conferência as antigas são apagadas: se um backup falhar, nada antigo se perde.
+        </p>
+        <ul>
+          <li>
+            Em <Menu>Sistema › Atualização</Menu>, o cartão <i>Backup da base</i> mostra o último backup, as cópias guardadas e a
+            cópia fora do servidor (Google Drive), quando configurada.
+          </li>
+          <li>
+            O cartão fica em <b>vermelho</b> se o último backup falhou, se a cópia externa falhou ou se não houve backup nas
+            últimas 26 horas. Nesse caso, avise quem cuida do servidor.
+          </li>
+          <li>
+            Entra no backup só a base de dados (cadastros, orçamentos, pedidos, comissões, parâmetros e a cena de cada mockup). As
+            imagens prontas dos mockups e as fotos baixadas ficam em outra pasta e não entram.
+          </li>
+        </ul>
+        <h4>Restaurar um backup (no servidor)</h4>
+        <Passos
+          itens={[
+            <>
+              Pare o sistema: <code>pm2 stop all</code>.
+            </>,
+            <>
+              Veja as cópias: <code>npm run restaurar</code>.
+            </>,
+            <>
+              Restaure a escolhida: <code>npm run restaurar -- produtos-AAAA-MM-DD_0300.db.gz</code> e digite SIM. A base atual
+              fica guardada ao lado (<code>produtos.db.antes-restauracao-….bak</code>).
+            </>,
+            <>
+              Ligue de novo: <code>pm2 start raizes</code> (e <code>pm2 start raizes-atualizar</code>, se estava ligado).
+            </>,
+          ]}
+        />
+        <Dica tipo="atencao">
+          Restaurar volta a base inteira para o momento do backup: o que foi gravado depois (orçamentos, pedidos, clientes) se
+          perde.
+        </Dica>
+      </Secao>
+
       {/* ─────────────────────────────── 24 */}
-      <Secao id="man-kommo" titulo="Integração com o Kommo" numero={26}>
+      <Secao id="man-kommo" titulo="Integração com o Kommo" numero={27}>
         <Dica tipo="atencao">
           A integração está <b>desligada</b>: os clientes ficam no cadastro do próprio sistema (<Menu>Cadastros › Clientes</Menu>
           ). Os clientes criados a partir dos orçamentos antigos guardam o código do contato no Kommo só como referência.
@@ -1050,7 +1096,7 @@ export function ManualOperacao() {
       </Secao>
 
       {/* ─────────────────────────────── 25 */}
-      <Secao id="man-problemas" titulo="Problemas comuns" numero={27}>
+      <Secao id="man-problemas" titulo="Problemas comuns" numero={28}>
         <Tabela
           colunas={['Situação', 'Causa e solução']}
           linhas={[
@@ -1096,7 +1142,7 @@ export function ManualOperacao() {
       </Secao>
 
       {/* ─────────────────────────────── 26 */}
-      <Secao id="man-glossario" titulo="Glossário" numero={28}>
+      <Secao id="man-glossario" titulo="Glossário" numero={29}>
         <Tabela
           colunas={['Termo', 'Significado']}
           linhas={[

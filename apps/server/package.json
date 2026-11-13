@@ -10,6 +10,8 @@
     "start": "node dist/index.js",
     "atualizar": "tsx src/cli/atualizar-produtos.ts",
     "imagens:spot": "tsx src/cli/baixar-imagens-spot.ts",
+    "backup": "tsx src/cli/backup-base.ts",
+    "restaurar": "tsx src/cli/restaurar-base.ts",
     "setup:playwright": "playwright install chromium",
     "typecheck": "tsc -p tsconfig.json"
   },

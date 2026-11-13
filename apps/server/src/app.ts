@@ -6,6 +6,7 @@ import { ErroHttp } from './lib/http';
 import { carregarSessao, exigirAcesso } from './lib/sessao';
 import { rotasAuth } from './routes/auth';
 import { rotasAtualizacao } from './routes/atualizacao';
+import { rotasBackup } from './routes/backup';
 import { rotasCatalogo } from './routes/catalogo';
 import { rotasDashboards } from './routes/dashboards';
 import { rotasMockups } from './routes/mockups';
@@ -19,6 +20,7 @@ import { rotasClientes } from './routes/clientes';
 import { rotasComissoes } from './routes/comissoes';
 import { rotasPublicas } from './routes/publico';
 import type { ServicoKommo } from './kommo/servico';
+import type { ConfigBackup } from './services/backup';
 import type { GerenciadorAtualizacao } from './services/gerenciador-atualizacao';
 
 export interface OpcoesApp {
@@ -31,9 +33,11 @@ export interface OpcoesApp {
   kommo?: ServicoKommo | null;
   /** Endereço dos links enviados aos clientes (APP_URL_PUBLICA); padrão: o endereço de acesso */
   urlPublica?: string | null;
+  /** Backup diário (pasta, dias, destino externo) para o quadro da tela Atualização; ausente = sem a rota */
+  backup?: ConfigBackup | null;
 }
 
-export function criarApp({ db, gerenciador, imagensDir, webDist, kommo = null, urlPublica = null }: OpcoesApp) {
+export function criarApp({ db, gerenciador, imagensDir, webDist, kommo = null, urlPublica = null, backup = null }: OpcoesApp) {
   const app = express();
   app.disable('x-powered-by');
   app.set('json spaces', 0);
@@ -64,6 +68,7 @@ export function criarApp({ db, gerenciador, imagensDir, webDist, kommo = null, u
   app.use(rotasParametros(db));
   app.use(rotasComissoes(db));
   app.use(rotasAtualizacao(gerenciador));
+  if (backup) app.use(rotasBackup(backup));
   app.use(rotaProxyImagem());
 
   // Imagens baixadas localmente (ex.: /static/imagens/spot/11103-103.jpg)
