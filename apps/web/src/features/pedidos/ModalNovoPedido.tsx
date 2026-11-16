@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from 'react';
-import { formatBRL, type ResumoOrcamento } from '@raizes/shared';
+import { formatBRL, type ResumoOrcamento, type UsuarioResumo } from '@raizes/shared';
 import { useApp } from '../../app/contexto';
+import { useSessao } from '../../app/sessao';
 import { api } from '../../lib/api';
 
 interface Props {
@@ -23,6 +24,11 @@ export function ModalNovoPedido({ aberto, orcamento, fechar }: Props) {
   const [erro, setErro] = useState('');
   const [salvando, setSalvando] = useState(false);
   const debounce = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const { usuario } = useSessao();
+  /** Responsável do orçamento escolhido (undefined = carregando) */
+  const [respOrcamento, setRespOrcamento] = useState<UsuarioResumo | null | undefined>(undefined);
+  /** Quem fica responsável pelo pedido, quando o orçamento é de outra pessoa ('' = ainda não escolhido) */
+  const [responsavel, setResponsavel] = useState<'' | 'eu' | 'orcamento'>('');
 
   const buscar = async (termo: string) => {
     const t = termo.trim();
@@ -46,12 +52,35 @@ export function ModalNovoPedido({ aberto, orcamento, fechar }: Props) {
     if (!orcamento) void buscar('');
   }, [aberto, orcamento]);
 
+  // Ao escolher o orçamento, busca o responsável dele (para perguntar quem fica no pedido)
+  useEffect(() => {
+    setResponsavel('');
+    setRespOrcamento(undefined);
+    if (!escolhido) return;
+    let ativo = true;
+    api.orcamento(escolhido.id).then(
+      (o) => ativo && setRespOrcamento(o.responsavel ?? null),
+      () => ativo && setRespOrcamento(null),
+    );
+    return () => {
+      ativo = false;
+    };
+  }, [escolhido?.id]);
+
+  /** O orçamento é de outra pessoa: pergunta quem fica responsável pelo pedido */
+  const outroResponsavel = !!respOrcamento && !!usuario && respOrcamento.id !== usuario.id;
+
   const confirmar = async () => {
     if (!escolhido) return setErro('Escolha o orçamento do pedido.');
+    if (outroResponsavel && !responsavel) return setErro('Escolha quem fica responsável pelo pedido.');
     setSalvando(true);
     setErro('');
     try {
-      const p = await api.criarPedido(escolhido.id, observacao);
+      const p = await api.criarPedido(
+        escolhido.id,
+        observacao,
+        outroResponsavel && responsavel === 'orcamento' ? respOrcamento!.id : undefined,
+      );
       definirPedidoDaFolha(p.orcamento_id, { codigo: p.codigo, status: p.status });
       fechar();
       mostrarPedido(p);
@@ -81,8 +110,8 @@ export function ModalNovoPedido({ aberto, orcamento, fechar }: Props) {
           </button>
         </div>
         <p className="custom-modal-sub">
-          O pedido usa os itens do orçamento escolhido. O código (PED-000001…) é gerado ao confirmar e o orçamento
-          deixa de poder ser alterado.
+          O pedido usa os itens do orçamento escolhido. O código (PED-000001…) é gerado ao confirmar e o orçamento deixa de poder
+          ser alterado.
         </p>
 
         {escolhido ? (
@@ -149,13 +178,47 @@ export function ModalNovoPedido({ aberto, orcamento, fechar }: Props) {
           />
         </div>
 
+        {outroResponsavel && (
+          <fieldset className="pedido-responsavel" id="pedido-responsavel">
+            <legend className="custom-modal-label">Responsável pelo pedido</legend>
+            <p className="pedido-responsavel-dica">
+              O orçamento é de <b>{respOrcamento!.nome}</b>. Quem fica como responsável pelo pedido (vendas e relatórios)?
+            </p>
+            <label className="com-check">
+              <input
+                type="radio"
+                name="pedido-responsavel"
+                value="orcamento"
+                checked={responsavel === 'orcamento'}
+                onChange={() => setResponsavel('orcamento')}
+              />
+              {respOrcamento!.nome} (responsável do orçamento)
+            </label>
+            <label className="com-check">
+              <input
+                type="radio"
+                name="pedido-responsavel"
+                value="eu"
+                checked={responsavel === 'eu'}
+                onChange={() => setResponsavel('eu')}
+              />
+              {usuario!.nome} (você, que está gerando)
+            </label>
+          </fieldset>
+        )}
+
         {erro && <div className="form-mensagem erro">{erro}</div>}
 
         <div className="custom-modal-actions">
           <button className="btn-secondary" onClick={fechar} type="button">
             Cancelar
           </button>
-          <button className="btn-primary" id="btn-confirmar-pedido" onClick={() => void confirmar()} disabled={salvando || !escolhido}>
+          <button
+            className="btn-primary"
+            id="btn-confirmar-pedido"
+            onClick={() => void confirmar()}
+            disabled={salvando || !escolhido || respOrcamento === undefined || (outroResponsavel && !responsavel)}
+          >
             {salvando ? 'Gerando…' : 'Gerar pedido'}
           </button>
         </div>

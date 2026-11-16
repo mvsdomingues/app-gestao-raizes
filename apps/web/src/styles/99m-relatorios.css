@@ -1,0 +1,87 @@
+/* ══════════════════════════════════
+   RELATÓRIOS DE VENDAS e EQUIPES
+══════════════════════════════════ */
+.rel-exportar { white-space: nowrap; }
+.rel-periodo-texto { font-size: .76rem; color: var(--viz-muted); margin: -6px 0 14px; }
+
+/* Barra de filtros comum */
+.rel-filtros { display: flex; flex-direction: column; gap: 10px; margin-bottom: 18px; }
+.rel-filtros .dash-filtros { margin-bottom: 0; }
+.rel-linha-filtros { display: flex; flex-wrap: wrap; align-items: flex-end; gap: 10px 14px; }
+.rel-mais-filtros { padding: 12px 14px; border: 1px solid var(--border); border-radius: 10px; background: var(--surface, #fff); }
+.rel-filtro { display: flex; flex-direction: column; gap: 4px; font-size: .8rem; color: var(--viz-ink-2); position: relative; }
+.rel-filtro-rotulo { font-size: .66rem; font-weight: 600; letter-spacing: 1px; text-transform: uppercase; color: var(--muted); }
+.rel-filtro select, .rel-filtro .custom-input {
+  border: 1px solid var(--border2); border-radius: 7px; padding: 6px 8px; font: inherit; font-size: .82rem; background: #fff; color: var(--viz-ink); min-height: 34px;
+}
+.rel-texto .custom-input { width: 210px; }
+.rel-faixa-campos { display: flex; align-items: center; gap: 6px; }
+.rel-faixa-campos .custom-input { width: 92px; border: 1px solid var(--border2); border-radius: 7px; padding: 6px 8px; font-size: .82rem; }
+.rel-cliente { min-width: 240px; }
+.rel-mais, .rel-limpar { font-size: .8rem; padding-bottom: 8px; }
+
+/* Lista com caixas de seleção */
+.rel-multi-botao {
+  min-width: 170px; max-width: 240px; text-align: left; border: 1px solid var(--border2); border-radius: 7px; padding: 6px 28px 6px 10px;
+  font: inherit; font-size: .82rem; background: #fff; color: var(--viz-ink); cursor: pointer; min-height: 34px; position: relative;
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+}
+.rel-multi-botao::after { content: '▾'; position: absolute; right: 10px; top: 50%; transform: translateY(-50%); color: var(--muted); }
+.rel-multi-botao.ativo { border-color: var(--uva); color: var(--uva); font-weight: 600; }
+.rel-multi-lista {
+  position: absolute; top: 100%; left: 0; z-index: 30; margin-top: 4px; min-width: 240px; max-height: 320px; overflow: auto;
+  background: #fff; border: 1px solid var(--border); border-radius: 8px; box-shadow: 0 8px 24px rgba(58, 24, 63, .12); padding: 6px;
+}
+.rel-multi-item { display: flex; align-items: center; gap: 8px; padding: 6px 8px; border-radius: 6px; font-size: .84rem; cursor: pointer; color: var(--viz-ink); }
+.rel-multi-item:hover { background: var(--creme); }
+.rel-multi-grupo { font-size: .66rem; font-weight: 600; letter-spacing: 1px; text-transform: uppercase; color: var(--muted); padding: 8px 8px 2px; }
+.rel-multi-vazio { padding: 8px; font-size: .8rem; color: var(--muted); }
+.rel-multi-limpar { display: block; margin: 6px 8px 2px; font-size: .78rem; }
+
+/* Ver por vendedor / equipe */
+.rel-visao { display: flex; align-items: center; gap: 4px; font-size: .8rem; color: var(--viz-ink-2); }
+.rel-visao span { margin-right: 6px; }
+.rel-visao .dash-periodo { border: 1px solid var(--border); background: #fff; }
+.rel-visao .dash-periodo.ativo { background: var(--uva); border-color: var(--uva); }
+
+/* Tabelas dos relatórios */
+.rel-tabela-wrap { overflow-x: auto; }
+.rel-tabela th.num, .rel-tabela td.num { text-align: right; white-space: nowrap; }
+.rel-tabela tfoot td { font-weight: 700; border-top: 1px solid var(--border); border-bottom: none; }
+.rel-nome { display: block; font-weight: 500; }
+.rel-sub { display: block; font-size: .7rem; color: var(--viz-muted); }
+.rel-abrir { font-weight: 600; }
+.rel-idade { display: inline-block; min-width: 28px; padding: 1px 6px; border-radius: 10px; text-align: center; font-weight: 600; }
+.rel-idade.f-ate7 { background: #e4f6ee; color: #11734f; }
+.rel-idade.f-8a15 { background: #fbf1d6; color: #7a5a00; }
+.rel-idade.f-16a30 { background: #fde6dc; color: #a2401a; }
+.rel-idade.f-mais30 { background: #f8dcd9; color: #8f241e; }
+.rel-vencido { color: var(--danger); }
+
+/* Gráficos novos */
+.dash-media { stroke: var(--viz-muted-line); stroke-width: 1; stroke-dasharray: 4 4; }
+.dash-ponto-nome { fill: var(--viz-ink-2); font-weight: 500; }
+.dash-barra-pilha { display: flex; height: 14px; min-width: 2px; border-radius: 0 4px 4px 0; overflow: hidden; flex: 0 0 auto; max-width: calc(100% - 78px); }
+.dash-barra-parte { display: block; height: 100%; }
+
+/* Equipes */
+.equipes-grade { display: grid; grid-template-columns: repeat(auto-fill, minmax(320px, 1fr)); gap: 16px; margin-bottom: 16px; }
+.equipes-cartao.inativa { opacity: .7; }
+.equipes-cartao-topo { display: flex; justify-content: space-between; gap: 12px; margin-bottom: 10px; }
+.equipes-acoes { display: flex; gap: 10px; align-items: flex-start; font-size: .8rem; }
+.equipes-chips { display: flex; flex-wrap: wrap; gap: 6px; }
+.equipes-chip { padding: 3px 10px; border-radius: 12px; background: var(--creme); font-size: .8rem; color: var(--viz-ink, var(--text)); }
+.equipes-chip.inativo { color: var(--muted); font-style: italic; }
+.equipes-sem { margin-bottom: 16px; }
+.equipes-sem .equipes-chips { margin-top: 10px; }
+.equipes-subtitulo { font-family: var(--font-display); color: var(--berinjela); font-size: 1.3rem; margin: 18px 0 10px; }
+.equipes-membros { border: 1px solid var(--border); border-radius: 8px; padding: 8px 12px; max-height: 260px; overflow: auto; display: flex; flex-direction: column; gap: 4px; }
+.equipes-membros legend { font-size: .8rem; font-weight: 600; padding: 0 4px; }
+.equipes-membros .com-check { display: flex; align-items: center; gap: 8px; font-size: .86rem; }
+.equipes-de-outra { color: var(--muted); font-size: .76rem; }
+
+@media (max-width: 760px) {
+  .rel-multi-botao { min-width: 140px; }
+  .rel-texto .custom-input { width: 100%; }
+  .rel-filtro { flex: 1 1 140px; }
+}

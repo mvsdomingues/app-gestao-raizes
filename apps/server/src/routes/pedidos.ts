@@ -103,7 +103,9 @@ export function rotasPedidos(db: Banco, kommo: ServicoKommo | null = null): Rout
       throw new ErroHttp(400, 'Informe o orçamento do pedido');
     }
     const eu = exigirUsuario(res);
-    const codigo = criarPedido(db, orcamentoId, textoOpcional(corpo.observacao), eu.id);
+    const responsavelId = corpo.responsavel_id === undefined || corpo.responsavel_id === null ? null : Number(corpo.responsavel_id);
+    if (responsavelId !== null && (!Number.isInteger(responsavelId) || responsavelId <= 0)) throw new ErroHttp(400, 'Responsável inválido');
+    const codigo = criarPedido(db, orcamentoId, textoOpcional(corpo.observacao), eu.id, { responsavelId });
     const p = detalhe(codigo);
     // Fase 4 da integração: nota no contato do Kommo (enviada em segundo plano, com nova tentativa)
     const contatoKommo = p.cliente ? kommoIdDoCliente(db, p.cliente.id) : null;

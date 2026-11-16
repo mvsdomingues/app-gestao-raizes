@@ -226,7 +226,14 @@ export function Indicador({
 export function Medidor({ valor, rotulo }: { valor: number; rotulo: string }) {
   const p = Math.max(0, Math.min(1, valor));
   return (
-    <div className="dash-medidor" role="meter" aria-valuemin={0} aria-valuemax={100} aria-valuenow={Math.round(p * 100)} aria-label={rotulo}>
+    <div
+      className="dash-medidor"
+      role="meter"
+      aria-valuemin={0}
+      aria-valuemax={100}
+      aria-valuenow={Math.round(p * 100)}
+      aria-label={rotulo}
+    >
       <span className="dash-medidor-fill" style={{ width: `${p * 100}%` }} />
     </div>
   );
@@ -290,7 +297,13 @@ export function GraficoLinhas({
           ))}
           {rotulos.map((r, i) =>
             i % passoRotulo === 0 || i === n - 1 ? (
-              <text key={i} x={x(i)} y={altura - 8} className="dash-eixo" textAnchor={i === 0 && n > 1 ? 'start' : i === n - 1 && n > 1 ? 'end' : 'middle'}>
+              <text
+                key={i}
+                x={x(i)}
+                y={altura - 8}
+                className="dash-eixo"
+                textAnchor={i === 0 && n > 1 ? 'start' : i === n - 1 && n > 1 ? 'end' : 'middle'}
+              >
                 {r}
               </text>
             ) : null,
@@ -460,7 +473,12 @@ export function BarrasHorizontais({
   return (
     <ul className="dash-barras">
       {itens.map((i) => (
-        <li key={i.nome} className="dash-barra" tabIndex={0} title={`${i.nome}: ${formatar(i.valor)}${i.detalhe ? ` · ${i.detalhe}` : ''}`}>
+        <li
+          key={i.nome}
+          className="dash-barra"
+          tabIndex={0}
+          title={`${i.nome}: ${formatar(i.valor)}${i.detalhe ? ` · ${i.detalhe}` : ''}`}
+        >
           <span className="dash-barra-nome">
             <span className="dash-barra-nome-texto">{i.nome}</span>
             {i.detalhe && <span className="dash-barra-detalhe">{i.detalhe}</span>}
@@ -489,7 +507,12 @@ export function BarraSegmentada({
   const visiveis = partes.filter((p) => p.valor > 0);
   return (
     <div>
-      <div className="dash-segmentos" ref={ref} role="img" aria-label={visiveis.map((p) => `${p.nome}: ${formatar(p.valor)}`).join(', ')}>
+      <div
+        className="dash-segmentos"
+        ref={ref}
+        role="img"
+        aria-label={visiveis.map((p) => `${p.nome}: ${formatar(p.valor)}`).join(', ')}
+      >
         {visiveis.map((p) => {
           const frac = p.valor / total;
           const texto = percentual(frac);
@@ -518,5 +541,169 @@ export function BarraSegmentada({
         ))}
       </ul>
     </div>
+  );
+}
+
+// ── Dispersão ──────────────────────────────────────────────
+
+/**
+ * Dispersão (duas medidas por item, ex.: conversão × ticket médio), com o nome ao lado de cada
+ * ponto, linhas da média (tracejadas) e dica ao passar o mouse.
+ */
+export function GraficoDispersao({
+  pontos,
+  rotuloX,
+  rotuloY,
+  formatarX,
+  formatarY,
+  cor,
+  altura = 280,
+  vazio = 'Sem dados no período.',
+}: {
+  pontos: { nome: string; x: number; y: number; detalhe?: string }[];
+  rotuloX: string;
+  rotuloY: string;
+  formatarX: (v: number) => string;
+  formatarY: (v: number) => string;
+  cor: string;
+  altura?: number;
+  vazio?: string;
+}) {
+  const [ref, largura] = useLargura<HTMLDivElement>();
+  const [foco, setFoco] = useState<number | null>(null);
+  if (!pontos.length) return <p className="dash-vazio">{vazio}</p>;
+  const ML = 64;
+  const MR = 24;
+  const MT = 14;
+  const MB = 40;
+  const W = Math.max(largura, 280);
+  const pw = W - ML - MR;
+  const ph = altura - MT - MB;
+  const xmax = Math.min(1, Math.max(0.1, ...pontos.map((p) => p.x)) * 1.1);
+  const marcasY = escalaLimpa(Math.max(0, ...pontos.map((p) => p.y)));
+  const ymax = marcasY[marcasY.length - 1]!;
+  const marcasX = [0, 0.25, 0.5, 0.75, 1].filter((m) => m <= xmax + 0.001);
+  const x = (v: number) => ML + (v / xmax) * pw;
+  const y = (v: number) => MT + ph - (v / ymax) * ph;
+  const mediaX = pontos.reduce((s, p) => s + p.x, 0) / pontos.length;
+  const mediaY = pontos.reduce((s, p) => s + p.y, 0) / pontos.length;
+  const f = foco !== null ? pontos[foco] : null;
+  return (
+    <div className="dash-grafico" ref={ref} style={{ height: altura }}>
+      {largura > 0 && (
+        <svg width={W} height={altura} role="img" aria-label={`${rotuloX} × ${rotuloY}`}>
+          {marcasY.map((m) => (
+            <g key={`y${m}`}>
+              <line x1={ML} x2={W - MR} y1={y(m)} y2={y(m)} className={m === 0 ? 'dash-base' : 'dash-grade'} />
+              <text x={ML - 8} y={y(m)} className="dash-eixo" textAnchor="end" dominantBaseline="middle">
+                {moedaCompacta(m)}
+              </text>
+            </g>
+          ))}
+          {marcasX.map((m) => (
+            <text key={`x${m}`} x={x(m)} y={MT + ph + 16} className="dash-eixo" textAnchor="middle">
+              {percentual(m)}
+            </text>
+          ))}
+          <text x={ML + pw} y={altura - 4} className="dash-eixo" textAnchor="end">
+            {rotuloX} →
+          </text>
+          <text x={ML} y={MT - 2} className="dash-eixo" textAnchor="start" dominantBaseline="hanging" dx={6}>
+            ↑ {rotuloY}
+          </text>
+          <line x1={x(mediaX)} x2={x(mediaX)} y1={MT} y2={MT + ph} className="dash-media" />
+          <line x1={ML} x2={W - MR} y1={y(mediaY)} y2={y(mediaY)} className="dash-media" />
+          {pontos.map((p, i) => (
+            <g
+              key={p.nome}
+              onPointerEnter={() => setFoco(i)}
+              onPointerLeave={() => setFoco(null)}
+              tabIndex={0}
+              onFocus={() => setFoco(i)}
+              onBlur={() => setFoco(null)}
+            >
+              <circle
+                cx={x(p.x)}
+                cy={y(p.y)}
+                r={foco === i ? 8 : 6}
+                fill={cor}
+                fillOpacity={0.75}
+                stroke="#fff"
+                strokeWidth={1.5}
+              />
+              {/* Perto da borda direita, o nome vai à esquerda do ponto (não é cortado) */}
+              <text
+                x={x(p.x) > ML + pw * 0.8 ? x(p.x) - 10 : x(p.x) + 10}
+                y={y(p.y)}
+                textAnchor={x(p.x) > ML + pw * 0.8 ? 'end' : 'start'}
+                className="dash-eixo dash-ponto-nome"
+                dominantBaseline="middle"
+              >
+                {p.nome}
+              </text>
+            </g>
+          ))}
+        </svg>
+      )}
+      {f && largura > 0 && (
+        <div className="dash-dica" style={{ left: Math.min(Math.max(x(f.x) - 90, 0), W - 190), top: Math.max(0, y(f.y) - 70) }}>
+          <div className="dash-dica-titulo">{f.nome}</div>
+          <div className="dash-dica-linha">
+            <b>{formatarX(f.x)}</b> <span>{rotuloX}</span>
+          </div>
+          <div className="dash-dica-linha">
+            <b>{formatarY(f.y)}</b> <span>{rotuloY}</span>
+          </div>
+          {f.detalhe && <div className="dash-dica-linha">{f.detalhe}</div>}
+        </div>
+      )}
+    </div>
+  );
+}
+
+// ── Barras empilhadas (horizontais) ────────────────────────
+
+/** Uma barra por item, dividida em partes (ex.: valor em aberto por faixa de idade), na mesma escala. */
+export function BarrasEmpilhadas({
+  itens,
+  partes,
+  formatar,
+  vazio = 'Sem dados.',
+}: {
+  itens: { nome: string; detalhe?: string; valores: number[] }[];
+  partes: { nome: string; cor: string }[];
+  formatar: (v: number) => string;
+  vazio?: string;
+}) {
+  const max = Math.max(0, ...itens.map((i) => i.valores.reduce((s, v) => s + v, 0)));
+  if (!itens.length || max <= 0) return <p className="dash-vazio">{vazio}</p>;
+  return (
+    <ul className="dash-barras">
+      {itens.map((i) => {
+        const total = i.valores.reduce((s, v) => s + v, 0);
+        const dica = `${i.nome}: ${formatar(total)} — ${partes
+          .map((p, k) => (i.valores[k] ? `${p.nome}: ${formatar(i.valores[k]!)}` : ''))
+          .filter(Boolean)
+          .join(' · ')}`;
+        return (
+          <li key={i.nome} className="dash-barra" tabIndex={0} title={dica}>
+            <span className="dash-barra-nome">
+              <span className="dash-barra-nome-texto">{i.nome}</span>
+              {i.detalhe && <span className="dash-barra-detalhe">{i.detalhe}</span>}
+            </span>
+            <span className="dash-barra-trilho">
+              <span className="dash-barra-pilha" style={{ width: `${(total / max) * 100}%` }}>
+                {i.valores.map((v, k) =>
+                  v > 0 ? (
+                    <span key={k} className="dash-barra-parte" style={{ flexGrow: v, background: partes[k]!.cor }} />
+                  ) : null,
+                )}
+              </span>
+              <span className="dash-barra-valor">{formatar(total)}</span>
+            </span>
+          </li>
+        );
+      })}
+    </ul>
   );
 }

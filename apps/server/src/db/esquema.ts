@@ -568,4 +568,26 @@ function migrarColunas(db: Database.Database): void {
   if (!colunas(db, 'orcamentos').includes('contato_nome')) db.exec('ALTER TABLE orcamentos ADD COLUMN contato_nome TEXT');
   if (!colunas(db, 'pedidos').includes('contato_id'))
     db.exec('ALTER TABLE pedidos ADD COLUMN contato_id INTEGER REFERENCES clientes_pessoas(id)');
+  // Equipes de vendas (relatórios): gestor e vendedores, com histórico de quem esteve em cada equipe
+  db.exec(`
+    CREATE TABLE IF NOT EXISTS equipes (
+      id         INTEGER PRIMARY KEY AUTOINCREMENT,
+      nome       TEXT NOT NULL,
+      gestor_id  INTEGER REFERENCES usuarios(id),
+      ativa      INTEGER NOT NULL DEFAULT 1,
+      criado     TEXT NOT NULL,
+      atualizado TEXT NOT NULL
+    );
+    CREATE UNIQUE INDEX IF NOT EXISTS ux_equipes_nome ON equipes(nome COLLATE NOCASE);
+    -- Vendedor numa equipe de "desde" (inclusive) até "ate" (exclusive; NULL = ainda está). Uma equipe por vez.
+    CREATE TABLE IF NOT EXISTS equipes_membros (
+      id         INTEGER PRIMARY KEY AUTOINCREMENT,
+      equipe_id  INTEGER NOT NULL REFERENCES equipes(id),
+      usuario_id INTEGER NOT NULL REFERENCES usuarios(id),
+      desde      TEXT NOT NULL,
+      ate        TEXT
+    );
+    CREATE UNIQUE INDEX IF NOT EXISTS ux_equipes_membro_atual ON equipes_membros(usuario_id) WHERE ate IS NULL;
+    CREATE INDEX IF NOT EXISTS ix_equipes_membros_usuario ON equipes_membros(usuario_id, desde);
+  `);
 }

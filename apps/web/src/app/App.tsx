@@ -11,6 +11,9 @@ import { Catalogo } from '../features/catalogo/Catalogo';
 import { Clientes } from '../features/clientes/Clientes';
 import { TelaLogin } from '../features/login/TelaLogin';
 import { DashGeral } from '../features/dashboards/DashGeral';
+import { Equipes } from '../features/equipes/Equipes';
+import { RelAbertos } from '../features/relatorios/RelAbertos';
+import { RelDesempenho } from '../features/relatorios/RelDesempenho';
 import { Orcamentos } from '../features/orcamentos/Orcamentos';
 import { Parametros } from '../features/parametros/Parametros';
 import { Pedidos } from '../features/pedidos/Pedidos';
@@ -85,6 +88,9 @@ const TELAS: Record<IdTela, ReactNode> = {
   pedidos: <Pedidos />,
   mockup: <MockupSobDemanda />,
   'dash-geral': <DashGeral />,
+  'rel-desempenho': <RelDesempenho />,
+  'rel-abertos': <RelAbertos />,
+  equipes: <Equipes />,
   clientes: <Clientes />,
   'produtos-proprios': <ProdutosProprios />,
   parametros: <Parametros />,

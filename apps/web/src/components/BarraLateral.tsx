@@ -18,12 +18,6 @@ interface ItemMenu {
  */
 const GRUPOS: { titulo: string; icone: NomeIcone; itens: ItemMenu[] }[] = [
   {
-    // Central de acompanhamento (novos painéis entram aqui)
-    titulo: 'Dashboards',
-    icone: 'dashboard',
-    itens: [{ tela: 'dash-geral', rotulo: 'Visão geral', icone: 'dashboard', id: 'tab-dash-geral' }],
-  },
-  {
     titulo: 'Vendas',
     icone: 'carrinho',
     itens: [
@@ -50,6 +44,7 @@ const GRUPOS: { titulo: string; icone: NomeIcone; itens: ItemMenu[] }[] = [
       { tela: 'clientes', rotulo: 'Clientes', icone: 'clientes', id: 'tab-clientes' },
       { tela: 'produtos-proprios', rotulo: 'Produtos Próprios', icone: 'produtos', id: 'tab-produtos-proprios' },
       { tela: 'parametros', rotulo: 'Parâmetros', icone: 'parametros', id: 'tab-parametros' },
+      { tela: 'equipes', rotulo: 'Equipes', icone: 'equipes', id: 'tab-equipes' },
     ],
   },
   {
@@ -67,6 +62,16 @@ const GRUPOS: { titulo: string; icone: NomeIcone; itens: ItemMenu[] }[] = [
     itens: [
       { tela: 'ajuda-calculos', rotulo: 'Cálculos', icone: 'calculo', id: 'tab-ajuda-calculos' },
       { tela: 'ajuda-manual', rotulo: 'Manual', icone: 'manual', id: 'tab-ajuda-manual' },
+    ],
+  },
+  {
+    // Central de acompanhamento e relatórios de vendas (último grupo do menu)
+    titulo: 'Dashboards',
+    icone: 'dashboard',
+    itens: [
+      { tela: 'dash-geral', rotulo: 'Visão geral', icone: 'dashboard', id: 'tab-dash-geral' },
+      { tela: 'rel-desempenho', rotulo: 'Desempenho', icone: 'desempenho', id: 'tab-rel-desempenho' },
+      { tela: 'rel-abertos', rotulo: 'Em aberto', icone: 'relogio', id: 'tab-rel-abertos' },
     ],
   },
 ];

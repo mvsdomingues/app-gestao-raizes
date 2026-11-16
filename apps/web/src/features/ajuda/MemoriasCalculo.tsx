@@ -11,6 +11,8 @@ import {
   calcularPersonalizacoesOrcamento,
   entradaVazia,
   getFaixa,
+  indicadores,
+  metricasVazias,
   personalizacaoVazia,
   type ParametrosCalculo,
   type ResultadoPersonalizacao,
@@ -739,6 +741,59 @@ export function MemoriasCalculo() {
             ['Ticket médio', `${brl(25000)} ÷ 10`, brl(2500)],
           ]}
         />
+        <h4>Relatórios de vendas (Desempenho da equipe e Orçamentos em aberto)</h4>
+        <Tabela
+          colunas={['Indicador', 'Como é calculado']}
+          linhas={[
+            [
+              'Orçamentos e valor orçado',
+              'Orçamentos criados no período, contados para o responsável do orçamento (quem o criou)',
+            ],
+            ['Convertidos', 'Desses orçamentos, os que têm pedido ativo (não cancelado)'],
+            ['Conversão', 'Convertidos ÷ orçamentos do período'],
+            [
+              'Conversão em valor',
+              'Valor dos pedidos desses orçamentos ÷ valor orçado (mostra se os orçamentos grandes se perdem)',
+            ],
+            ['Recusas', 'Orçamentos do período recusados pelo cliente no link'],
+            ['Pedidos e valor vendido', 'Pedidos gerados no período (sem os cancelados), contados para o responsável do pedido'],
+            ['Ticket médio', 'Valor vendido ÷ pedidos'],
+            ['Dias até o pedido', 'Média de dias entre a criação do orçamento e a geração do pedido'],
+            ['Equipe', 'A equipe do responsável na data do orçamento ou do pedido (mudar de equipe não leva as vendas antigas)'],
+            [
+              'Valores',
+              'Total com frete (o frete alterado no pedido vale para o vendido); “sem frete” usa só os produtos, como a comissão',
+            ],
+            ['Em aberto', 'Hoje: orçamentos Enviados, sem pedido e sem recusa; a idade conta do envio ao cliente'],
+          ]}
+        />
+        <Dica>
+          Quem gera o pedido de um orçamento de outra pessoa escolhe o responsável pelo pedido: o do orçamento ou ele mesmo. O
+          valor vendido vai para quem ficou responsável; a conversão continua com quem criou o orçamento.
+        </Dica>
+        {(() => {
+          // Exemplo calculado pelas mesmas funções dos relatórios
+          const m = {
+            ...metricasVazias(),
+            orcamentos: 20,
+            valor_orcado: 50000,
+            convertidos: 6,
+            valor_convertido: 18000,
+            pedidos: 5,
+            valor_vendido: 16000,
+          };
+          const r = indicadores(m);
+          return (
+            <Exemplo
+              titulo={`Exemplo: 20 orçamentos (${brl(50000)}), 6 viraram pedido (${brl(18000)}); 5 pedidos do vendedor no período (${brl(16000)})`}
+              passos={[
+                ['Conversão', '6 ÷ 20', pct(r.conversao ?? 0)],
+                ['Conversão em valor', `${brl(18000)} ÷ ${brl(50000)}`, pct(r.conversao_valor ?? 0)],
+                ['Ticket médio', `${brl(16000)} ÷ 5`, brl(r.ticket ?? 0)],
+              ]}
+            />
+          );
+        })()}
       </Secao>
 
       <Secao id="calc-comissoes" titulo="Comissões dos vendedores (apuração mensal)" numero={15}>

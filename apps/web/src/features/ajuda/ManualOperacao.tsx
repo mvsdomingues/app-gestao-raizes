@@ -588,6 +588,7 @@ export function ManualOperacao() {
               <Bt>+ Novo pedido</Bt> e escolha o orçamento.
             </>,
             'Informe uma observação, se quiser (vira o primeiro registro do histórico do pedido).',
+            'Se o orçamento é de outra pessoa, escolha quem fica responsável pelo pedido: o responsável do orçamento ou você (a escolha fica nas observações e define de quem é a venda nos relatórios).',
             'Confirme. O orçamento passa para Pedido gerado e os dados de faturamento são copiados para o pedido.',
           ]}
         />
@@ -732,6 +733,42 @@ export function ManualOperacao() {
             Passe o mouse para ver os valores; <Bt>Ver tabela</Bt> mostra os números de cada gráfico.
           </li>
         </ul>
+        <h4>Desempenho da equipe</h4>
+        <p>
+          Quanto cada vendedor (ou equipe) orçou e vendeu no período, com conversão, ticket médio, recusas e dias até o pedido.{' '}
+          <Ir tela="rel-desempenho">Abrir Desempenho</Ir>
+        </p>
+        <ul>
+          <li>
+            Cartões com orçado, vendido, conversão e ticket, comparados com o período anterior ou com o mesmo período do ano
+            passado.
+          </li>
+          <li>
+            <Bt>Ver por</Bt> vendedor ou equipe; gráficos de orçado × vendido e de conversão × ticket (quem converte pouco, quem
+            vende caro).
+          </li>
+          <li>
+            Tabela com todos os números e o total; <Bt>⤓ Exportar Excel</Bt> baixa a planilha com os filtros no topo.
+          </li>
+        </ul>
+        <h4>Orçamentos em aberto</h4>
+        <p>
+          Os orçamentos enviados ao cliente que ainda não têm resposta nem pedido, do mais antigo para o mais novo, com a idade
+          (dias desde o envio), se o cliente abriu o link e a validade do link. Clique no número para abrir o orçamento.{' '}
+          <Ir tela="rel-abertos">Abrir Em aberto</Ir>
+        </p>
+        <h4>Filtros dos relatórios</h4>
+        <p>
+          Os mesmos nos dois relatórios e guardados ao trocar de tela: período, comparação, equipe, vendedor, com ou sem frete e,
+          em <Bt>Mais filtros</Bt>, carteira, cliente, tipo (PF/PJ), UF, produto ou fornecedor e faixa de valor. Equipe e vendedor
+          aceitam vários ao mesmo tempo.
+        </p>
+        <h4>Equipes de vendas</h4>
+        <p>
+          Em <Menu>Cadastros › Equipes</Menu>, cada equipe tem nome, gestor e vendedores (um vendedor em uma equipe por vez).
+          Mudar um vendedor de equipe vale a partir de hoje: as vendas anteriores continuam na equipe antiga. A primeira equipe de
+          um vendedor vale também para o histórico dele. Equipe com vendedores não é inativada — passe-os para outra antes.
+        </p>
         <Dica>
           Como cada indicador é calculado: <Menu>Ajuda › Memórias de cálculo › Indicadores dos dashboards</Menu>.
         </Dica>

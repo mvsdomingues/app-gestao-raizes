@@ -1,4 +1,9 @@
 import type {
+  Equipe,
+  OpcoesRelatorio,
+  RelatorioAbertos,
+  RelatorioDesempenho,
+  RespostaEquipes,
   OpcaoResponsavel,
   StatusBackup,
   CarteiraComissao,
@@ -181,6 +186,16 @@ export const api = {
   atualizarOrcamento: (id: number, dados: NovoOrcamento) => enviar<OrcamentoCriado>('PUT', `/api/orcamentos/${id}`, dados),
 
   /** Lista paginada de orçamentos com filtros. */
+  // ── Relatórios de vendas e equipes ──
+  opcoesRelatorio: () => enviar<OpcoesRelatorio>('GET', '/api/relatorios/opcoes'),
+  relatorioDesempenho: (query: string) => enviar<RelatorioDesempenho>('GET', `/api/relatorios/desempenho?${query}`),
+  relatorioAbertos: (query: string) => enviar<RelatorioAbertos>('GET', `/api/relatorios/abertos?${query}`),
+  equipes: () => enviar<RespostaEquipes>('GET', '/api/equipes'),
+  criarEquipe: (dados: { nome: string; gestor_id: number | null; membros: number[] }) =>
+    enviar<Equipe>('POST', '/api/equipes', dados),
+  alterarEquipe: (id: number, dados: { nome?: string; gestor_id?: number | null; ativa?: boolean; membros?: number[] }) =>
+    enviar<Equipe>('PUT', `/api/equipes/${id}`, dados),
+
   /** Usuários para o filtro "Responsável" de orçamentos e pedidos */
   responsaveis: () => enviar<OpcaoResponsavel[]>('GET', '/api/usuarios/responsaveis'),
   orcamentos: (filtros: FiltrosOrcamentos, limit: number, offset: number) => {
@@ -252,8 +267,9 @@ export const api = {
       cliente_id: clienteId,
       usar_faturamento: usarFaturamento,
     }),
-  criarPedido: (orcamentoId: number, observacao: string) =>
-    enviar<Pedido>('POST', '/api/pedidos', { orcamento_id: orcamentoId, observacao }),
+  /** Gera o pedido; responsavelId = o responsável do orçamento, quando escolhido no lugar de quem gera */
+  criarPedido: (orcamentoId: number, observacao: string, responsavelId?: number) =>
+    enviar<Pedido>('POST', '/api/pedidos', { orcamento_id: orcamentoId, observacao, responsavel_id: responsavelId ?? null }),
   avancarPedido: (codigo: string, statusAtual: string) =>
     enviar<Pedido>('POST', `/api/pedidos/${encodeURIComponent(codigo)}/avancar`, { status_atual: statusAtual }),
   retrocederPedido: (codigo: string, statusAtual: string) =>

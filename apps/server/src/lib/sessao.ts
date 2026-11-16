@@ -83,7 +83,7 @@ const REGRAS: Regra[] = [
   // Página do cliente (link do orçamento): sem login, protegida pelo código aleatório
   { metodos: 'TODOS', caminho: /^\/api\/publico\//, telas: null },
   // Filtro "Responsável" das listas de orçamentos e pedidos (só id e nome)
-  { metodos: 'GET', caminho: /^\/api\/usuarios\/responsaveis$/, telas: ['orcamentos', 'pedidos', 'usuarios'] },
+  { metodos: 'GET', caminho: /^\/api\/usuarios\/responsaveis$/, telas: ['orcamentos', 'pedidos', 'usuarios', 'equipes'] },
   { metodos: 'TODOS', caminho: /^\/api\/usuarios(\/|$)/, telas: ['usuarios'] },
   { metodos: 'TODOS', caminho: /^\/api\/acessos(\/|$)/, telas: ['acessos'] },
   { metodos: 'TODOS', caminho: /^\/api\/atualizar(\/|$)/, telas: ['status'] },
@@ -94,7 +94,7 @@ const REGRAS: Regra[] = [
   {
     metodos: 'GET',
     caminho: /^\/api\/clientes(\/\d+(\/faturamento)?)?$/,
-    telas: ['clientes', 'carrinho', 'orcamentos', 'pedidos'],
+    telas: ['clientes', 'carrinho', 'orcamentos', 'pedidos', 'rel-desempenho', 'rel-abertos'],
   },
   { metodos: 'ESCRITA', caminho: /^\/api\/clientes$/, telas: ['clientes', 'carrinho'] },
   // Contato novo do cliente: também pelo carrinho (alterar, inativar e excluir só na tela Clientes)
@@ -103,6 +103,12 @@ const REGRAS: Regra[] = [
   { metodos: 'ESCRITA', caminho: /^\/api\/parametros(\/|$)/, telas: ['parametros'] },
   { metodos: 'ESCRITA', caminho: /^\/api\/produtos-proprios(\/|$)/, telas: ['produtos-proprios'] },
   { metodos: 'TODOS', caminho: /^\/api\/dashboards(\/|$)/, telas: ['dash-geral'] },
+  // Relatórios de vendas: opções dos filtros para quem tem algum relatório; cada relatório, a sua tela
+  { metodos: 'GET', caminho: /^\/api\/relatorios\/opcoes$/, telas: ['rel-desempenho', 'rel-abertos'] },
+  { metodos: 'GET', caminho: /^\/api\/relatorios\/desempenho(\/excel)?$/, telas: ['rel-desempenho'] },
+  { metodos: 'GET', caminho: /^\/api\/relatorios\/abertos(\/excel)?$/, telas: ['rel-abertos'] },
+  { metodos: 'TODOS', caminho: /^\/api\/relatorios(\/|$)/, telas: ['rel-desempenho'] },
+  { metodos: 'TODOS', caminho: /^\/api\/equipes(\/|$)/, telas: ['equipes'] },
   // Comissões: parâmetros (leitura também para quem marca carteiras ou apura), marcação e apuração
   {
     metodos: 'GET',

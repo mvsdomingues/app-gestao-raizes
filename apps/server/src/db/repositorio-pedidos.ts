@@ -289,6 +289,11 @@ export interface OpcoesCriarPedido {
   origem?: OrigemMovimento;
   /** Texto da movimentação de criação (padrão: a observação do pedido) */
   observacaoMovimento?: string;
+  /**
+   * Responsável pelo pedido quando é diferente de quem o gera: só pode ser o responsável do orçamento
+   * (a escolha é feita ao gerar; fica registrada nas observações).
+   */
+  responsavelId?: number | null;
 }
 
 /** Cria o pedido (status Criado) a partir de um orçamento sem pedido ativo. */
@@ -304,9 +309,10 @@ export function criarPedido(
   const quemMovimenta = origem === 'CLIENTE' ? null : usuarioId;
   return db.transaction(() => {
     const existe = db
-      .prepare('SELECT status, entrega_prevista, faturamento_json, cliente_id, contato_id FROM orcamentos WHERE id = ?')
+      .prepare('SELECT status, entrega_prevista, faturamento_json, cliente_id, contato_id, usuario_id FROM orcamentos WHERE id = ?')
       .get(orcamentoId) as
       | {
+          usuario_id: number | null;
           status: string;
           entrega_prevista: string | null;
           faturamento_json: string | null;
@@ -328,6 +334,14 @@ export function criarPedido(
     if (existe.status === 'CANCELADO') {
       throw new ErroHttp(409, `O ${numeroOrcamento(orcamentoId)} está cancelado. Reabra o orçamento antes de gerar o pedido.`);
     }
+    // Responsável do pedido: quem gera, ou (por escolha) o responsável do orçamento
+    let responsavel = usuarioId;
+    if (opcoes.responsavelId && opcoes.responsavelId !== usuarioId) {
+      if (opcoes.responsavelId !== existe.usuario_id) {
+        throw new ErroHttp(400, 'O responsável do pedido deve ser quem o gera ou o responsável do orçamento.');
+      }
+      responsavel = opcoes.responsavelId;
+    }
     const seq = db.prepare(`SELECT seq FROM sqlite_sequence WHERE name = 'pedidos'`).get() as { seq: number } | undefined;
     const maxId = (db.prepare('SELECT MAX(id) AS m FROM pedidos').get() as { m: number | null }).m ?? 0;
     const id = Math.max(seq?.seq ?? 0, maxId) + 1;
@@ -343,7 +357,7 @@ export function criarPedido(
       observacao,
       agora,
       agora,
-      usuarioId,
+      responsavel,
       existe.entrega_prevista,
       existe.faturamento_json,
       existe.cliente_id,
@@ -354,6 +368,18 @@ export function criarPedido(
     );
     registrarMovimento(db, id, null, 'CRIADO', agora, opcoes.observacaoMovimento ?? observacao, quemMovimenta, origem);
     if (observacao) inserirObservacao(db, id, observacao, agora, quemMovimenta, origem);
+    if (responsavel !== usuarioId && responsavel) {
+      const nome = (n: number | null) =>
+        n ? ((db.prepare('SELECT nome FROM usuarios WHERE id = ?').get(n) as { nome: string } | undefined)?.nome ?? '') : '';
+      inserirObservacao(
+        db,
+        id,
+        `Pedido gerado por ${nome(usuarioId)}; responsável: ${nome(responsavel)} (responsável do orçamento).`,
+        agora,
+        quemMovimenta,
+        origem,
+      );
+    }
     // Situação do orçamento passa a "Pedido gerado"
     const anterior = (
       db.prepare('SELECT status FROM orcamentos WHERE id = ?').get(orcamentoId) as { status: 'ABERTO' | 'ENVIADO' }

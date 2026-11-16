@@ -21,6 +21,7 @@ import { erro } from '../../lib/dialogo';
 import { ClienteVinculado } from '../clientes/ClienteVinculado';
 import { SeletorCliente } from '../clientes/SeletorCliente';
 import { FiltroResponsavel } from '../../components/FiltroResponsavel';
+import { useAbrirOrcamento } from './abrirOrcamento';
 import type { ClienteVinculado as Cliente } from '@raizes/shared';
 
 const POR_PAGINA = 20;
@@ -146,30 +147,7 @@ export function ListaOrcamentos() {
     document.querySelector('.app-views')?.scrollTo(0, 0);
   };
 
-  const abrir = async (id: number) => {
-    try {
-      const o = await api.orcamento(id);
-      mostrarOrcamento({
-        id: o.id,
-        numero: o.numero,
-        dataHora: o.data_hora,
-        itens: o.itens,
-        subtotal: o.subtotal,
-        frete: o.frete,
-        total: o.total,
-        pedido: o.pedido ?? null,
-        status: o.status,
-        observacao: o.observacao ?? null,
-        responsavel: o.responsavel ?? null,
-        alteradoPor: o.alterado_por ?? null,
-        cliente: o.cliente ?? null,
-        entregaPrevista: o.entrega_prevista ?? null,
-      });
-    } catch (e) {
-      console.error(e);
-      void erro('Não foi possível abrir este orçamento.');
-    }
-  };
+  const abrir = useAbrirOrcamento();
 
   const campo = (k: keyof FiltrosOrcamentos) => ({
     value: filtros[k] ?? '',

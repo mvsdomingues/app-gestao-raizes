@@ -2,11 +2,7 @@ import { useEffect, useRef, useState, type ReactNode } from 'react';
 import { useApp, type Tela } from '../../app/contexto';
 
 /** Normaliza para busca: minúsculas e sem acento. */
-const normalizar = (s: string) =>
-  s
-    .toLowerCase()
-    .normalize('NFD')
-    .replace(/[̀-ͯ]/g, '');
+const normalizar = (s: string) => s.toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, '');
 
 export interface ItemSumario {
   id: string;
@@ -90,9 +86,7 @@ export function TelaAjuda({
         </nav>
         <div className="ajuda-conteudo" ref={conteudo}>
           {semResultado && (
-            <div className="ajuda-vazio">
-              Nada encontrado para “{busca}”. Tente outra palavra (a busca ignora acentos).
-            </div>
+            <div className="ajuda-vazio">Nada encontrado para “{busca}”. Tente outra palavra (a busca ignora acentos).</div>
           )}
           {children}
         </div>
@@ -230,5 +224,6 @@ export const Bt = ({ children }: { children: ReactNode }) => <span className="aj
 export const Menu = ({ children }: { children: ReactNode }) => <span className="ajuda-menu">{children}</span>;
 
 export const brl = (v: number) => v.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
-export const num = (v: number, max = 4, min = 0) => v.toLocaleString('pt-BR', { minimumFractionDigits: min, maximumFractionDigits: max });
+export const num = (v: number, max = 4, min = 0) =>
+  v.toLocaleString('pt-BR', { minimumFractionDigits: min, maximumFractionDigits: max });
 export const pct = (v: number, casas = 1) => `${num(v * 100, casas)}%`;

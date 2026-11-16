@@ -276,12 +276,17 @@ Menu **Ajuda**, liberado a todos os usuários ativos (ajustável em Acessos):
 
 ### Dashboards
 
-Menu **Dashboards** (central de acompanhamento; novos painéis entram nesse grupo). Permissão por painel na tela Acessos.
+Menu **Dashboards** (o último grupo da barra lateral: central de acompanhamento e relatórios de vendas; novos painéis entram nesse grupo). Permissão por painel na tela Acessos.
 
 - **Visão geral**: filtros de período (hoje, 7/30/90 dias, este mês, mês anterior, este ano ou datas personalizadas) e de vendedor, valendo para todos os indicadores. Cada número é comparado com o período anterior de mesma duração.
   - Destaque para o **valor em pedidos gerados**; cartões de total de pedidos, total de orçamentos, valor em orçamentos, ticket médio, conversão de orçamentos em pedidos (medidor), tempo médio até virar pedido, pedidos com entrega atrasada e entregas dos próximos 7 dias.
   - Gráficos: valor gerado e quantidade por dia/semana/mês (conforme o tamanho do período), funil dos orçamentos, situação atual dos orçamentos, etapa atual dos pedidos, produtos mais vendidos, pedidos por fornecedor e por vendedor. Passe o mouse para ver os valores; *Ver tabela* mostra os números de cada gráfico.
   - Regras: o orçamento conta na data em que foi criado; o pedido, na data em que foi gerado; pedidos cancelados não entram nos totais de pedidos (aparecem só na etapa "Cancelado").
+- **Desempenho** (relatório): por vendedor ou por equipe, orçado (orçamentos criados no período, pelo responsável do orçamento), convertidos, conversão em quantidade e em valor, recusas no link, vendido (pedidos gerados no período, pelo responsável do pedido), ticket médio e dias até o pedido; comparação com o período anterior ou com o mesmo período do ano passado; gráficos orçado × vendido e conversão × ticket; exportação para Excel (abas por vendedor, por equipe e comparação).
+- **Em aberto** (relatório): orçamentos Enviados, sem pedido e sem recusa, com idade desde o envio (até 7, 8 a 15, 16 a 30, mais de 30 dias), se o cliente abriu o link e a validade do link; valor por idade e por responsável; exportação para Excel.
+- **Filtros dos relatórios** (os mesmos nos dois e guardados na sessão): período, comparação, equipes e vendedores (vários), com/sem frete e, em *Mais filtros*, carteira, cliente, tipo PF/PJ, UF, produto/fornecedor e faixa de valor. A planilha é gerada no servidor (`lib/xlsx.ts`, sem dependências) com os filtros no topo.
+- **Equipes de vendas** (*Cadastros › Equipes*): nome, gestor e vendedores (um vendedor em uma equipe por vez). A mudança vale a partir do dia em que é feita — as vendas anteriores continuam na equipe antiga (`equipes_membros` com `desde`/`ate`); a primeira equipe de um vendedor vale para o histórico dele. Equipe com vendedores não é inativada.
+- **Responsável do pedido**: quem gera o pedido de um orçamento de outra pessoa escolhe quem fica responsável (o do orçamento ou ele mesmo); a escolha fica nas observações do pedido e define de quem é a venda nos relatórios.
 
 ### Link do orçamento (aceite pelo cliente)
 
@@ -385,6 +390,8 @@ Todas as rotas exigem login, exceto as de `/api/auth`. Cada rota também exige a
 | `PUT /api/pedidos/:codigo/faturamento` | Altera os dados de faturamento do pedido em andamento (`{ faturamento }`; registra a mudança nas observações) |
 | `POST /api/pedidos/:codigo/cliente` | Vincula cliente a pedido sem cliente (`{ cliente_id, usar_faturamento }`): orçamento, carteira (se o mês não estiver fechado), faturamento opcional e registros; 409 se cancelado ou já com cliente |
 | `GET /api/dashboards/geral?de&ate&usuario` · `GET /api/dashboards/usuarios` | Indicadores da Visão geral / vendedores do filtro |
+| `GET /api/relatorios/opcoes` · `GET /api/relatorios/desempenho[/excel]?de&ate&…` · `GET /api/relatorios/abertos[/excel]?…` | Relatórios de vendas (filtros: comparar, equipes, vendedores, carteiras, cliente, tipo, produto, min, max, uf, frete=sem) |
+| `GET/POST /api/equipes` · `PUT /api/equipes/:id` | Equipes de vendas ({ nome, gestor_id, ativa, membros }) |
 | `GET /api/categorias` · `GET /api/cores` | Categorias / cores com a quantidade de produtos (`?fornecedor=`) |
 | `GET/POST /api/produtos-proprios` | Lista (`?q=` busca) / inclui produto próprio |
 | `GET/PUT/PATCH/DELETE /api/produtos-proprios/:codigo` | Consulta, substitui, altera campos ou exclui (`PDP-000001`) |
