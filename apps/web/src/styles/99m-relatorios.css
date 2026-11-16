@@ -85,3 +85,17 @@
   .rel-texto .custom-input { width: 100%; }
   .rel-filtro { flex: 1 1 140px; }
 }
+
+/* Funil por vendedor: quantidade, % dos criados e uma barra fina */
+.rel-funil-tabela td.rel-funil-celula { position: relative; padding-bottom: 9px; min-width: 96px; }
+.rel-funil-celula b { font-weight: 600; }
+.rel-funil-celula .rel-sub { display: inline; margin-left: 6px; }
+.rel-funil-barra { position: absolute; left: 8px; bottom: 3px; height: 3px; max-width: calc(100% - 16px); border-radius: 2px; }
+.rel-comentario { max-width: 420px; white-space: normal; }
+
+/* Evolução: opções do relatório abaixo da barra de filtros */
+.rel-evolucao-opcoes { margin: -6px 0 14px; }
+
+/* Desempenho: abrir as listas filtradas */
+.rel-links { display: flex; gap: 8px; margin-top: 2px; }
+.rel-links .link-botao { font-size: .72rem; }

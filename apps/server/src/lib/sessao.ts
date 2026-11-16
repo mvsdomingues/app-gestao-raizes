@@ -94,7 +94,7 @@ const REGRAS: Regra[] = [
   {
     metodos: 'GET',
     caminho: /^\/api\/clientes(\/\d+(\/faturamento)?)?$/,
-    telas: ['clientes', 'carrinho', 'orcamentos', 'pedidos', 'rel-desempenho', 'rel-abertos'],
+    telas: ['clientes', 'carrinho', 'orcamentos', 'pedidos', 'rel-desempenho', 'rel-abertos', 'rel-funil', 'rel-evolucao'],
   },
   { metodos: 'ESCRITA', caminho: /^\/api\/clientes$/, telas: ['clientes', 'carrinho'] },
   // Contato novo do cliente: também pelo carrinho (alterar, inativar e excluir só na tela Clientes)
@@ -104,9 +104,11 @@ const REGRAS: Regra[] = [
   { metodos: 'ESCRITA', caminho: /^\/api\/produtos-proprios(\/|$)/, telas: ['produtos-proprios'] },
   { metodos: 'TODOS', caminho: /^\/api\/dashboards(\/|$)/, telas: ['dash-geral'] },
   // Relatórios de vendas: opções dos filtros para quem tem algum relatório; cada relatório, a sua tela
-  { metodos: 'GET', caminho: /^\/api\/relatorios\/opcoes$/, telas: ['rel-desempenho', 'rel-abertos'] },
+  { metodos: 'GET', caminho: /^\/api\/relatorios\/opcoes$/, telas: ['rel-desempenho', 'rel-abertos', 'rel-funil', 'rel-evolucao'] },
   { metodos: 'GET', caminho: /^\/api\/relatorios\/desempenho(\/excel)?$/, telas: ['rel-desempenho'] },
   { metodos: 'GET', caminho: /^\/api\/relatorios\/abertos(\/excel)?$/, telas: ['rel-abertos'] },
+  { metodos: 'GET', caminho: /^\/api\/relatorios\/funil(\/excel)?$/, telas: ['rel-funil'] },
+  { metodos: 'GET', caminho: /^\/api\/relatorios\/evolucao(\/excel)?$/, telas: ['rel-evolucao'] },
   { metodos: 'TODOS', caminho: /^\/api\/relatorios(\/|$)/, telas: ['rel-desempenho'] },
   { metodos: 'TODOS', caminho: /^\/api\/equipes(\/|$)/, telas: ['equipes'] },
   // Comissões: parâmetros (leitura também para quem marca carteiras ou apura), marcação e apuração

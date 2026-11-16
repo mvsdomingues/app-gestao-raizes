@@ -19,6 +19,8 @@ const CAMINHOS = {
   desempenho: 'M4 20h16M4 16l5-5 4 3 7-8M15 6h5v5',
   relogio: 'M12 21a9 9 0 1 0 0-18 9 9 0 0 0 0 18zM12 7v5l3 2',
   equipes: 'M8 11a3 3 0 1 0 0-6 3 3 0 0 0 0 6zM16 11a3 3 0 1 0 0-6 3 3 0 0 0 0 6zM2.5 20v-1a4 4 0 0 1 4-4h3a4 4 0 0 1 4 4v1M14.5 15h3a4 4 0 0 1 4 4v1',
+  funil: 'M3 5h18l-7 8v6l-4 2v-8z',
+  evolucao: 'M4 20h16M4 17l4-5 4 2 4-6 4 3M4 12.5V20',
   recolher: 'M15 6l-6 6 6 6',
   expandir: 'M9 6l6 6-6 6',
 } as const;

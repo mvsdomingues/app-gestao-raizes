@@ -2,6 +2,8 @@ import type {
   Equipe,
   OpcoesRelatorio,
   RelatorioAbertos,
+  RelatorioEvolucao,
+  RelatorioFunil,
   RelatorioDesempenho,
   RespostaEquipes,
   OpcaoResponsavel,
@@ -190,6 +192,8 @@ export const api = {
   opcoesRelatorio: () => enviar<OpcoesRelatorio>('GET', '/api/relatorios/opcoes'),
   relatorioDesempenho: (query: string) => enviar<RelatorioDesempenho>('GET', `/api/relatorios/desempenho?${query}`),
   relatorioAbertos: (query: string) => enviar<RelatorioAbertos>('GET', `/api/relatorios/abertos?${query}`),
+  relatorioFunil: (query: string) => enviar<RelatorioFunil>('GET', `/api/relatorios/funil?${query}`),
+  relatorioEvolucao: (query: string) => enviar<RelatorioEvolucao>('GET', `/api/relatorios/evolucao?${query}`),
   equipes: () => enviar<RespostaEquipes>('GET', '/api/equipes'),
   criarEquipe: (dados: { nome: string; gestor_id: number | null; membros: number[] }) =>
     enviar<Equipe>('POST', '/api/equipes', dados),

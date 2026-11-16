@@ -1,7 +1,7 @@
 import type { Server } from 'node:http';
 import type { AddressInfo } from 'node:net';
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
-import { DESDE_SEMPRE, faixaIdade, periodoDeComparacao } from '@raizes/shared';
+import { agrupamentoAutomatico, DESDE_SEMPRE, faixaIdade, intervalosDoPeriodo, periodoDeComparacao } from '@raizes/shared';
 import { criarApp } from '../src/app';
 import { abrirBanco } from '../src/db/conexao';
 import { relatorioAbertos } from '../src/db/relatorios';
@@ -274,5 +274,104 @@ describe('regras compartilhadas', () => {
     expect(periodoDeComparacao('2028-02-29', '2028-03-31', 'ano')).toEqual({ de: '2027-02-28', ate: '2027-03-31' });
     expect(periodoDeComparacao('2026-11-01', '2026-11-30', 'nenhuma')).toBeNull();
     expect([0, 7, 8, 15, 16, 30, 31].map(faixaIdade)).toEqual(['ate7', 'ate7', '8a15', '8a15', '16a30', '16a30', 'mais30']);
+  });
+});
+
+describe('Funil de conversão', () => {
+  it('conta quem chegou em cada etapa, as respostas do link e as recusas com comentário', async () => {
+    db.prepare("UPDATE orcamentos SET link_enviado_em = ?, resposta_em = ?, resposta_obs = 'Achei caro' WHERE id = ?").run(
+      `${hoje}T09:00:00`,
+      `${hoje}T10:00:00`,
+      id.o2,
+    );
+    // PED-000001 (orçamento da Maria) vai até Encerrado
+    for (const s of ['CRIADO', 'EM_FECHAMENTO', 'EM_PRODUCAO', 'PRODUZIDO', 'FATURADO', 'ENVIADO'])
+      expect((await req('POST', '/api/pedidos/PED-000001/avancar', { status_atual: s })).status).toBe(200);
+
+    const d = (await req('GET', `/api/relatorios/funil?${q('&comparar=nenhuma')}`)).json;
+    const e = (id: string) => d.etapas.find((x: { etapa: string }) => x.etapa === id);
+    expect(e('criados')).toMatchObject({ quantidade: 4, valor: 2000, passagem: null, do_inicio: 1 });
+    expect(e('enviados')).toMatchObject({ quantidade: 4, passagem: 1 });
+    expect(e('pedidos')).toMatchObject({ quantidade: 2, valor: 1200, passagem: 0.5, do_inicio: 0.5, dias_medios: 0 });
+    expect(e('producao')).toMatchObject({ quantidade: 1, valor: 1000, passagem: 0.5 });
+    expect(e('encerrados')).toMatchObject({ quantidade: 1, passagem: 1 });
+    expect(d.respostas).toEqual({ link_enviado: 2, aceitos: 0, recusados: 1, sem_resposta: 1 });
+    expect(d.recusas).toEqual([
+      expect.objectContaining({ id: id.o2, comentario: 'Achei caro', responsavel: 'Maria Norte', valor: 500 }),
+    ]);
+    const maria = d.vendedores.find((v: { usuario_id: number }) => v.usuario_id === id.maria);
+    expect(maria.quantidades).toEqual({ criados: 2, enviados: 2, pedidos: 1, producao: 1, encerrados: 1 });
+    expect(d.equipes.find((x: { nome: string }) => x.nome === 'Sul').quantidades).toMatchObject({ criados: 2, pedidos: 1 });
+    expect(d.comparacao).toBeNull();
+  });
+
+  it('filtros valem no funil e o Excel é gerado', async () => {
+    const d = (await req('GET', `/api/relatorios/funil?${q(`&vendedores=${id.joao}`)}`)).json;
+    expect(d.etapas[0].quantidade).toBe(2);
+    expect(d.comparacao.etapas[0].quantidade).toBe(0);
+    const x = await req('GET', `/api/relatorios/funil/excel?${q()}`);
+    expect(x.status).toBe(200);
+    expect(x.bin!.toString('utf8')).toContain('Achei caro');
+  });
+});
+
+describe('Evolução de vendas', () => {
+  it('série por intervalo com conversão, clientes novos e vendido por equipe', async () => {
+    const d = (await req('GET', `/api/relatorios/evolucao?${q('&agrupar=dia')}`)).json;
+    expect(d.agrupamento).toBe('dia');
+    expect(d.pontos).toHaveLength(1);
+    expect(d.pontos[0]).toMatchObject({
+      inicio: hoje,
+      orcamentos: 4,
+      valor_orcado: 2000,
+      convertidos: 2,
+      pedidos: 2,
+      valor_vendido: 1200,
+      conversao: 0.5,
+      ticket: 600,
+      clientes_novos: 1,
+      clientes_recorrentes: 0,
+      comp_valor_vendido: 0,
+    });
+    expect(d.por_grupo.dimensao).toBe('equipe');
+    expect(d.por_grupo.grupos.map((g: { nome: string; total: number }) => [g.nome, g.total])).toEqual([
+      ['Norte', 1000],
+      ['Sem equipe', 200],
+    ]);
+    expect(d.por_grupo.valores).toEqual([[1000, 200]]);
+    expect(d.totais).toMatchObject({ orcamentos: 4, valor_vendido: 1200 });
+  });
+
+  it('agrupa por semana ou mês, por carteira, e recusa dia em período longo', async () => {
+    const semana = (await req('GET', `/api/relatorios/evolucao?de=2026-11-01&ate=2026-11-30&agrupar=semana&comparar=ano`)).json;
+    expect(semana.pontos.map((p: { inicio: string }) => p.inicio)).toEqual([
+      '2026-10-26',
+      '2026-11-02',
+      '2026-11-09',
+      '2026-11-16',
+      '2026-11-23',
+      '2026-11-30',
+    ]);
+    expect(semana.comparacao).toMatchObject({ de: '2025-11-01', ate: '2025-11-30', modo: 'ano' });
+    const carteira = (await req('GET', `/api/relatorios/evolucao?${q('&dimensao=carteira')}`)).json;
+    expect(carteira.por_grupo.dimensao).toBe('carteira');
+    expect(carteira.por_grupo.grupos.reduce((s: number, g: { total: number }) => s + g.total, 0)).toBe(1200);
+    expect((await req('GET', '/api/relatorios/evolucao?de=2026-01-01&ate=2026-12-31&agrupar=dia')).status).toBe(400);
+    const x = await req('GET', `/api/relatorios/evolucao/excel?${q()}`);
+    expect(x.status).toBe(200);
+    expect(x.bin!.toString('utf8')).toContain('Vendido por equipe');
+  });
+
+  it('intervalos do período', () => {
+    expect(intervalosDoPeriodo('2026-01-15', '2026-03-02', 'mes')).toEqual(['2026-01-01', '2026-02-01', '2026-03-01']);
+    expect(intervalosDoPeriodo('2026-11-14', '2026-11-16', 'dia')).toEqual(['2026-11-14', '2026-11-15', '2026-11-16']);
+    expect(agrupamentoAutomatico('2026-01-01', '2026-01-31')).toBe('dia');
+    expect(agrupamentoAutomatico('2026-01-01', '2026-06-30')).toBe('semana');
+    expect(agrupamentoAutomatico('2026-01-01', '2026-12-31')).toBe('mes');
+  });
+
+  it('acesso só com a tela de cada relatório', async () => {
+    expect((await req('GET', `/api/relatorios/funil?${q()}`, undefined, joao)).status).toBe(403);
+    expect((await req('GET', `/api/relatorios/evolucao?${q()}`, undefined, joao)).status).toBe(403);
   });
 });

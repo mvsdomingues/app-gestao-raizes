@@ -4,6 +4,19 @@
  * com as regras de `@raizes/shared` (metricas, indicadores, faixas de idade).
  */
 import {
+  agrupamentoAutomatico,
+  ETAPAS_FUNIL,
+  etapasDoFunil,
+  inicioDoIntervalo,
+  intervalosDoPeriodo,
+  rotuloDoIntervalo,
+  type Agrupamento,
+  type DimensaoEvolucao,
+  type EtapaFunil,
+  type LinhaFunil,
+  type PontoEvolucao,
+  type RelatorioEvolucao,
+  type RelatorioFunil,
   codigoCliente,
   comIndicadores,
   diasEntre,
@@ -375,5 +388,300 @@ export function opcoesRelatorio(db: Banco): OpcoesRelatorio {
     ufs: (db.prepare("SELECT DISTINCT upper(uf) AS uf FROM clientes WHERE uf <> '' ORDER BY 1").all() as { uf: string }[]).map(
       (x) => x.uf,
     ),
+  };
+}
+
+// ── Funil de conversão ─────────────────────────────────────
+
+interface LinhaFunilBanco extends LinhaBase {
+  id: number;
+  criado: string;
+  cliente_nome: string | null;
+  usuario_nome: string | null;
+  resposta: string | null;
+  resposta_em: string | null;
+  resposta_obs: string | null;
+  link_enviado_em: string | null;
+  enviado_mov: string | null;
+  pedido_id: number | null;
+  pedido_criado: string | null;
+  pedido_status: string | null;
+  pedido_valor: number | null;
+  producao_em: string | null;
+  encerrado_em: string | null;
+}
+
+const zeroEtapas = <T>(v: () => T) => Object.fromEntries(ETAPAS_FUNIL.map((e) => [e.id, v()])) as Record<EtapaFunil, T>;
+const POS_PRODUCAO = ['EM_PRODUCAO', 'PRODUZIDO', 'FATURADO', 'ENVIADO', 'ENCERRADO'];
+
+function linhasFunil(db: Banco, de: string, ate: string, semFrete: boolean): LinhaFunilBanco[] {
+  const valorOrc = semFrete ? 'orcamentos.subtotal' : 'orcamentos.total';
+  const valorPed = semFrete ? 'orcamentos.subtotal' : '(orcamentos.total + COALESCE(p.frete - orcamentos.frete, 0))';
+  return (
+    db
+      .prepare(
+        `SELECT * FROM (
+         SELECT orcamentos.id, ${SQL_CRIACAO} AS criado, orcamentos.usuario_id, u.nome AS usuario_nome, ${valorOrc} AS valor,
+                orcamentos.cliente_id, COALESCE(cl.nome, orcamentos.cliente_nome) AS cliente_nome, cl.tipo_pessoa, cl.uf, cl.carteira_id,
+                orcamentos.itens_json, orcamentos.resposta, orcamentos.resposta_em, orcamentos.resposta_obs, orcamentos.link_enviado_em,
+                (SELECT MIN(m.data_hora) FROM orcamentos_movimentos m WHERE m.orcamento_id = orcamentos.id AND m.status_novo = 'ENVIADO') AS enviado_mov,
+                p.id AS pedido_id, p.criado AS pedido_criado, p.status AS pedido_status,
+                CASE WHEN p.id IS NULL THEN NULL ELSE ${valorPed} END AS pedido_valor,
+                (SELECT MIN(pm.data_hora) FROM pedidos_movimentos pm WHERE pm.pedido_id = p.id AND pm.status_novo = 'EM_PRODUCAO') AS producao_em,
+                (SELECT MAX(pm.data_hora) FROM pedidos_movimentos pm WHERE pm.pedido_id = p.id AND pm.status_novo = 'ENCERRADO') AS encerrado_em
+           FROM orcamentos
+           LEFT JOIN clientes cl ON cl.id = orcamentos.cliente_id
+           LEFT JOIN usuarios u ON u.id = orcamentos.usuario_id
+           LEFT JOIN pedidos p ON p.orcamento_id = orcamentos.id AND p.status <> 'CANCELADO'
+       ) WHERE substr(criado, 1, 10) BETWEEN ? AND ?`,
+      )
+      .all(de, ate) as LinhaFunilBanco[]
+  ).map((r) => ({ ...r, equipe_id: equipeNaData(db, r.usuario_id, r.criado) }));
+}
+
+/** Em que etapa (ou além) o orçamento chegou, e as datas de cada uma. */
+function caminho(l: LinhaFunilBanco) {
+  const envio = [l.enviado_mov, l.link_enviado_em].filter(Boolean).sort()[0] ?? null;
+  const pedido = l.pedido_id !== null;
+  const producao = pedido && (!!l.producao_em || POS_PRODUCAO.includes(l.pedido_status ?? ''));
+  const encerrado = pedido && l.pedido_status === 'ENCERRADO';
+  return {
+    alcancou: { criados: true, enviados: !!envio || pedido, pedidos: pedido, producao, encerrados: encerrado } as Record<
+      EtapaFunil,
+      boolean
+    >,
+    envio,
+  };
+}
+
+function calcularFunil(linhas: LinhaFunilBanco[]) {
+  const q = zeroEtapas(() => 0);
+  const v = zeroEtapas(() => 0);
+  const dias = zeroEtapas(() => ({ soma: 0, n: 0 }));
+  const somarDias = (e: EtapaFunil, a: string | null, b: string | null) => {
+    if (!a || !b) return;
+    dias[e].soma += Math.max(0, diasEntre(a, b));
+    dias[e].n++;
+  };
+  for (const l of linhas) {
+    const { alcancou, envio } = caminho(l);
+    for (const e of ETAPAS_FUNIL) {
+      if (!alcancou[e.id]) continue;
+      q[e.id]++;
+      v[e.id] += e.id === 'criados' || e.id === 'enviados' ? l.valor : (l.pedido_valor ?? 0);
+    }
+    somarDias('enviados', l.criado, envio);
+    if (alcancou.pedidos) somarDias('pedidos', envio ?? l.criado, l.pedido_criado);
+    if (alcancou.producao) somarDias('producao', l.pedido_criado, l.producao_em);
+    if (alcancou.encerrados) somarDias('encerrados', l.producao_em ?? l.pedido_criado, l.encerrado_em);
+  }
+  return { etapas: etapasDoFunil(q, v, dias), q };
+}
+
+export function relatorioFunil(db: Banco, filtros: Partial<FiltrosRelatorio> & { de: string; ate: string }): RelatorioFunil {
+  const { de, ate } = filtros;
+  validarPeriodo(de, ate);
+  const f = lerFiltros(filtros);
+  const linhas = linhasFunil(db, de, ate, f.semFrete).filter((l) => passa(l, f));
+  const { etapas } = calcularFunil(linhas);
+
+  const usuarios = new Map(
+    (db.prepare('SELECT id, nome, inativo FROM usuarios').all() as { id: number; nome: string; inativo: number }[]).map((u) => [
+      u.id,
+      u,
+    ]),
+  );
+  const equipes = new Map(
+    (db.prepare('SELECT id, nome FROM equipes').all() as { id: number; nome: string }[]).map((e) => [e.id, e.nome]),
+  );
+  const porChave = (chave: (l: LinhaFunilBanco) => number | null) => {
+    const m = new Map<number | null, LinhaFunilBanco[]>();
+    for (const l of linhas) {
+      const k = chave(l);
+      m.set(k, [...(m.get(k) ?? []), l]);
+    }
+    return [...m.entries()];
+  };
+  const vendedores: LinhaFunil[] = porChave((l) => l.usuario_id)
+    .map(([id, ls]) => {
+      const u = id ? usuarios.get(id) : undefined;
+      return {
+        chave: `u${id ?? 0}`,
+        nome: u?.nome ?? 'Sem responsável',
+        usuario_id: id,
+        inativo: !!u?.inativo,
+        quantidades: calcularFunil(ls).q,
+      };
+    })
+    .sort((a, b) => b.quantidades.criados - a.quantidades.criados);
+  const linhasEquipe: LinhaFunil[] = porChave((l) => l.equipe_id)
+    .map(([id, ls]) => ({
+      chave: `e${id ?? 0}`,
+      nome: id ? (equipes.get(id) ?? `Equipe ${id}`) : 'Sem equipe',
+      usuario_id: null,
+      quantidades: calcularFunil(ls).q,
+    }))
+    .sort((a, b) => b.quantidades.criados - a.quantidades.criados);
+
+  const modo: ComparacaoRelatorio = filtros.comparar === 'ano' || filtros.comparar === 'nenhuma' ? filtros.comparar : 'anterior';
+  const per = periodoDeComparacao(de, ate, modo);
+  const comparacao = per
+    ? { ...per, modo, etapas: calcularFunil(linhasFunil(db, per.de, per.ate, f.semFrete).filter((l) => passa(l, f))).etapas }
+    : null;
+
+  const comLink = linhas.filter((l) => l.link_enviado_em);
+  return {
+    de,
+    ate,
+    sem_frete: f.semFrete,
+    etapas,
+    comparacao,
+    vendedores,
+    equipes: linhasEquipe,
+    respostas: {
+      link_enviado: comLink.length,
+      aceitos: linhas.filter((l) => l.resposta === 'ACEITO').length,
+      recusados: linhas.filter((l) => l.resposta === 'RECUSADO').length,
+      sem_resposta: comLink.filter((l) => !l.resposta).length,
+    },
+    recusas: linhas
+      .filter((l) => l.resposta === 'RECUSADO')
+      .map((l) => ({
+        id: l.id,
+        numero: numeroOrcamento(l.id),
+        cliente: l.cliente_nome ?? '',
+        responsavel: l.usuario_nome ?? '',
+        valor: l.valor,
+        em: l.resposta_em,
+        comentario: l.resposta_obs?.trim() || null,
+      }))
+      .sort((a, b) => (b.em ?? '').localeCompare(a.em ?? '')),
+  };
+}
+
+// ── Evolução de vendas ─────────────────────────────────────
+
+export function relatorioEvolucao(
+  db: Banco,
+  filtros: Partial<FiltrosRelatorio> & { de: string; ate: string },
+  opcoes: { agrupar?: string; dimensao?: string } = {},
+): RelatorioEvolucao {
+  const { de, ate } = filtros;
+  validarPeriodo(de, ate);
+  const f = lerFiltros(filtros);
+  const ag: Agrupamento =
+    opcoes.agrupar === 'dia' || opcoes.agrupar === 'semana' || opcoes.agrupar === 'mes'
+      ? opcoes.agrupar
+      : agrupamentoAutomatico(de, ate);
+  if (ag === 'dia' && diasEntre(de, ate) > 186)
+    throw new ErroHttp(400, 'Agrupe por semana ou mês em períodos de mais de 6 meses.');
+  const dimensao: DimensaoEvolucao = opcoes.dimensao === 'carteira' ? 'carteira' : 'equipe';
+
+  const serie = (a: string, b: string) => {
+    const orcs = orcamentosDoPeriodo(db, a, b, f.semFrete).filter((l) => passa(l, f));
+    const peds = pedidosDoPeriodo(db, a, b, f.semFrete).filter((l) => passa(l, f));
+    const inicios = intervalosDoPeriodo(a, b, ag);
+    const idx = new Map(inicios.map((s, i) => [s, i]));
+    const m = inicios.map(() => metricasVazias());
+    for (const o of orcs) {
+      const x = m[idx.get(inicioDoIntervalo(o.criado, ag))!]!;
+      x.orcamentos++;
+      x.valor_orcado += o.valor;
+      if (o.pedido_valor !== null) {
+        x.convertidos++;
+        x.valor_convertido += o.pedido_valor;
+      }
+    }
+    for (const p of peds) {
+      const x = m[idx.get(inicioDoIntervalo(p.criado, ag))!]!;
+      x.pedidos++;
+      x.valor_vendido += p.valor;
+      x.soma_dias += Math.max(0, diasEntre(p.orc_criado, p.criado));
+    }
+    return { inicios, idx, m, orcs, peds };
+  };
+
+  const atual = serie(de, ate);
+  const modo: ComparacaoRelatorio = filtros.comparar === 'ano' || filtros.comparar === 'nenhuma' ? filtros.comparar : 'anterior';
+  const per = periodoDeComparacao(de, ate, modo);
+  const comp = per ? serie(per.de, per.ate) : null;
+
+  // Primeiro pedido (não cancelado) de cada cliente, em toda a história
+  const primeiro = new Map(
+    (
+      db
+        .prepare(
+          "SELECT cliente_id, MIN(criado) AS primeiro FROM pedidos WHERE status <> 'CANCELADO' AND cliente_id IS NOT NULL GROUP BY cliente_id",
+        )
+        .all() as {
+        cliente_id: number;
+        primeiro: string;
+      }[]
+    ).map((x) => [x.cliente_id, inicioDoIntervalo(x.primeiro, ag)]),
+  );
+  const clientes = atual.inicios.map(() => ({ novos: new Set<number>(), recorrentes: new Set<number>() }));
+  for (const p of atual.peds) {
+    if (!p.cliente_id) continue;
+    const i = atual.idx.get(inicioDoIntervalo(p.criado, ag))!;
+    (primeiro.get(p.cliente_id) === atual.inicios[i] ? clientes[i]!.novos : clientes[i]!.recorrentes).add(p.cliente_id);
+  }
+
+  const pontos: PontoEvolucao[] = atual.inicios.map((inicio, i) => {
+    const x = comIndicadores(atual.m[i]!);
+    const c = comp?.m[i] ? comIndicadores(comp.m[i]!) : null;
+    return {
+      inicio,
+      rotulo: rotuloDoIntervalo(inicio, ag),
+      orcamentos: x.orcamentos,
+      valor_orcado: x.valor_orcado,
+      convertidos: x.convertidos,
+      pedidos: x.pedidos,
+      valor_vendido: x.valor_vendido,
+      conversao: x.conversao,
+      ticket: x.ticket,
+      clientes_novos: clientes[i]!.novos.size,
+      clientes_recorrentes: clientes[i]!.recorrentes.size,
+      comp_valor_orcado: c ? c.valor_orcado : null,
+      comp_valor_vendido: c ? c.valor_vendido : null,
+      comp_conversao: c ? c.conversao : null,
+    };
+  });
+
+  // Vendido por equipe (na data do pedido) ou pela carteira do pedido
+  const nomes =
+    dimensao === 'equipe'
+      ? new Map((db.prepare('SELECT id, nome FROM equipes').all() as { id: number; nome: string }[]).map((e) => [e.id, e.nome]))
+      : new Map(
+          (db.prepare('SELECT id, nome FROM carteiras').all() as { id: number; nome: string }[]).map((e) => [e.id, e.nome]),
+        );
+  const totaisGrupo = new Map<number | null, number>();
+  for (const p of atual.peds) {
+    const k = dimensao === 'equipe' ? p.equipe_id : p.carteira_id;
+    totaisGrupo.set(k, (totaisGrupo.get(k) ?? 0) + p.valor);
+  }
+  const chaves = [...totaisGrupo.entries()].sort((a, b) => b[1] - a[1]).map(([k]) => k);
+  const valores = atual.inicios.map(() => chaves.map(() => 0));
+  for (const p of atual.peds) {
+    const k = dimensao === 'equipe' ? p.equipe_id : p.carteira_id;
+    valores[atual.idx.get(inicioDoIntervalo(p.criado, ag))!]![chaves.indexOf(k)]! += p.valor;
+  }
+
+  return {
+    de,
+    ate,
+    agrupamento: ag,
+    sem_frete: f.semFrete,
+    comparacao: per ? { ...per, modo } : null,
+    pontos,
+    totais: comIndicadores(atual.m.reduce(somarMetricas, metricasVazias())),
+    por_grupo: {
+      dimensao,
+      grupos: chaves.map((k) => ({
+        chave: String(k ?? 0),
+        nome: k ? (nomes.get(k) ?? `#${k}`) : dimensao === 'equipe' ? 'Sem equipe' : 'Sem carteira',
+        total: totaisGrupo.get(k) ?? 0,
+      })),
+      valores,
+    },
   };
 }

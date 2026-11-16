@@ -22,6 +22,8 @@ export const TELAS_SISTEMA = [
   { id: 'dash-geral', rotulo: 'Visão geral', grupo: 'Dashboards' },
   { id: 'rel-desempenho', rotulo: 'Desempenho da equipe', grupo: 'Dashboards' },
   { id: 'rel-abertos', rotulo: 'Orçamentos em aberto', grupo: 'Dashboards' },
+  { id: 'rel-funil', rotulo: 'Funil de conversão', grupo: 'Dashboards' },
+  { id: 'rel-evolucao', rotulo: 'Evolução de vendas', grupo: 'Dashboards' },
   { id: 'comissoes-apuracao', rotulo: 'Apuração mensal', grupo: 'Comissões' },
   { id: 'comissoes-carteiras', rotulo: 'Carteiras dos clientes', grupo: 'Comissões' },
   { id: 'comissoes-parametros', rotulo: 'Parâmetros de comissão', grupo: 'Comissões' },

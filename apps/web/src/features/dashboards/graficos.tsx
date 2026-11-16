@@ -245,6 +245,8 @@ interface Serie {
   nome: string;
   cor: string;
   valores: number[];
+  /** Linha tracejada e sem área (ex.: período de comparação) */
+  tracejado?: boolean;
 }
 
 /** Gráfico de linhas com cruz (crosshair) e dica com todas as séries. */
@@ -313,8 +315,16 @@ export function GraficoLinhas({
             const area = `${d}L${x(n - 1).toFixed(1)},${y(0)}L${x(0).toFixed(1)},${y(0)}Z`;
             return (
               <g key={s.nome}>
-                <path d={area} fill={s.cor} opacity={0.08} />
-                <path d={d} fill="none" stroke={s.cor} strokeWidth={2} strokeLinejoin="round" strokeLinecap="round" />
+                {!s.tracejado && <path d={area} fill={s.cor} opacity={0.08} />}
+                <path
+                  d={d}
+                  fill="none"
+                  stroke={s.cor}
+                  strokeWidth={s.tracejado ? 1.5 : 2}
+                  strokeDasharray={s.tracejado ? '5 4' : undefined}
+                  strokeLinejoin="round"
+                  strokeLinecap="round"
+                />
                 {n === 1 && <circle cx={x(0)} cy={y(s.valores[0]!)} r={4} fill={s.cor} stroke="#fff" strokeWidth={2} />}
               </g>
             );
@@ -705,5 +715,104 @@ export function BarrasEmpilhadas({
         );
       })}
     </ul>
+  );
+}
+
+// ── Colunas empilhadas ─────────────────────────────────────
+
+/** Colunas empilhadas ao longo do tempo (ex.: vendido por equipe em cada mês), com dica por coluna. */
+export function ColunasEmpilhadas({
+  rotulos,
+  partes,
+  valores,
+  formatar,
+  altura = 260,
+}: {
+  rotulos: string[];
+  partes: { nome: string; cor: string }[];
+  /** valores[intervalo][parte] */
+  valores: number[][];
+  formatar: (v: number) => string;
+  altura?: number;
+}) {
+  const [ref, largura] = useLargura<HTMLDivElement>();
+  const [foco, setFoco] = useState<number | null>(null);
+  const n = rotulos.length;
+  const ML = 56;
+  const MR = 8;
+  const MT = 10;
+  const MB = 28;
+  const W = Math.max(largura, 260);
+  const pw = W - ML - MR;
+  const ph = altura - MT - MB;
+  const totais = valores.map((v) => v.reduce((s, x) => s + x, 0));
+  const marcas = escalaLimpa(Math.max(0, ...totais));
+  const ymax = marcas[marcas.length - 1]!;
+  const banda = pw / Math.max(1, n);
+  const larg = Math.max(3, Math.min(34, banda * 0.65));
+  const y = (v: number) => MT + ph - (v / ymax) * ph;
+  const passoRotulo = Math.max(1, Math.ceil(n / Math.max(2, Math.floor(pw / 56))));
+  return (
+    <div className="dash-grafico" ref={ref} style={{ height: altura }}>
+      {largura > 0 && (
+        <svg width={W} height={altura} role="img" aria-label={partes.map((p) => p.nome).join(', ')}>
+          {marcas.map((m) => (
+            <g key={m}>
+              <line x1={ML} x2={W - MR} y1={y(m)} y2={y(m)} className={m === 0 ? 'dash-base' : 'dash-grade'} />
+              <text x={ML - 8} y={y(m)} className="dash-eixo" textAnchor="end" dominantBaseline="middle">
+                {moedaCompacta(m)}
+              </text>
+            </g>
+          ))}
+          {rotulos.map((r, i) => {
+            const x0 = ML + i * banda + (banda - larg) / 2;
+            let acumulado = 0;
+            return (
+              <g key={i}>
+                {foco === i && <rect x={ML + i * banda} y={MT} width={banda} height={ph} className="dash-foco-banda" />}
+                {partes.map((p, k) => {
+                  const v = valores[i]![k] ?? 0;
+                  if (v <= 0) return null;
+                  const topo = y(acumulado + v);
+                  const base = y(acumulado);
+                  acumulado += v;
+                  return <rect key={p.nome} x={x0} y={topo} width={larg} height={Math.max(0, base - topo - 1)} fill={p.cor} />;
+                })}
+                {(i % passoRotulo === 0 || i === n - 1) && (
+                  <text x={ML + i * banda + banda / 2} y={altura - 8} className="dash-eixo" textAnchor="middle">
+                    {r}
+                  </text>
+                )}
+                <rect
+                  x={ML + i * banda}
+                  y={MT}
+                  width={banda}
+                  height={ph}
+                  fill="transparent"
+                  onPointerEnter={() => setFoco(i)}
+                  onPointerLeave={() => setFoco(null)}
+                />
+              </g>
+            );
+          })}
+        </svg>
+      )}
+      {foco !== null && largura > 0 && (
+        <div className="dash-dica" style={{ left: Math.min(Math.max(ML + foco * banda + banda / 2 - 100, 0), W - 210), top: 4 }}>
+          <div className="dash-dica-titulo">
+            {rotulos[foco]} · {formatar(totais[foco]!)}
+          </div>
+          {partes.map((p, k) =>
+            valores[foco]![k] ? (
+              <div key={p.nome} className="dash-dica-linha">
+                <span className="dash-dica-chave" style={{ background: p.cor }} />
+                <b>{formatar(valores[foco]![k]!)}</b>
+                <span>{p.nome}</span>
+              </div>
+            ) : null,
+          )}
+        </div>
+      )}
+    </div>
   );
 }

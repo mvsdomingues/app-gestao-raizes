@@ -765,6 +765,15 @@ export function MemoriasCalculo() {
               'Total com frete (o frete alterado no pedido vale para o vendido); “sem frete” usa só os produtos, como a comissão',
             ],
             ['Em aberto', 'Hoje: orçamentos Enviados, sem pedido e sem recusa; a idade conta do envio ao cliente'],
+            [
+              'Funil',
+              'Orçamentos criados no período; cada etapa conta quem chegou nela ou além (pedido gerado sem envio formal conta como enviado). Passagem = etapa ÷ anterior; dias = média desde a etapa anterior',
+            ],
+            ['Evolução', 'Os mesmos números por dia/semana/mês; a comparação usa o intervalo de mesma posição no outro período'],
+            [
+              'Clientes novos / recorrentes',
+              'Clientes com pedido no intervalo cujo primeiro pedido (não cancelado) da vida caiu nele / já tinham comprado antes',
+            ],
           ]}
         />
         <Dica>

@@ -14,6 +14,8 @@ import { DashGeral } from '../features/dashboards/DashGeral';
 import { Equipes } from '../features/equipes/Equipes';
 import { RelAbertos } from '../features/relatorios/RelAbertos';
 import { RelDesempenho } from '../features/relatorios/RelDesempenho';
+import { RelEvolucao } from '../features/relatorios/RelEvolucao';
+import { RelFunil } from '../features/relatorios/RelFunil';
 import { Orcamentos } from '../features/orcamentos/Orcamentos';
 import { Parametros } from '../features/parametros/Parametros';
 import { Pedidos } from '../features/pedidos/Pedidos';
@@ -90,6 +92,8 @@ const TELAS: Record<IdTela, ReactNode> = {
   'dash-geral': <DashGeral />,
   'rel-desempenho': <RelDesempenho />,
   'rel-abertos': <RelAbertos />,
+  'rel-funil': <RelFunil />,
+  'rel-evolucao': <RelEvolucao />,
   equipes: <Equipes />,
   clientes: <Clientes />,
   'produtos-proprios': <ProdutosProprios />,

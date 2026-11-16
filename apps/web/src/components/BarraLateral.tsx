@@ -72,6 +72,8 @@ const GRUPOS: { titulo: string; icone: NomeIcone; itens: ItemMenu[] }[] = [
       { tela: 'dash-geral', rotulo: 'Visão geral', icone: 'dashboard', id: 'tab-dash-geral' },
       { tela: 'rel-desempenho', rotulo: 'Desempenho', icone: 'desempenho', id: 'tab-rel-desempenho' },
       { tela: 'rel-abertos', rotulo: 'Em aberto', icone: 'relogio', id: 'tab-rel-abertos' },
+      { tela: 'rel-funil', rotulo: 'Funil', icone: 'funil', id: 'tab-rel-funil' },
+      { tela: 'rel-evolucao', rotulo: 'Evolução', icone: 'evolucao', id: 'tab-rel-evolucao' },
     ],
   },
 ];

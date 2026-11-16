@@ -757,11 +757,28 @@ export function ManualOperacao() {
           (dias desde o envio), se o cliente abriu o link e a validade do link. Clique no número para abrir o orçamento.{' '}
           <Ir tela="rel-abertos">Abrir Em aberto</Ir>
         </p>
+        <h4>Funil de conversão</h4>
+        <p>
+          Dos orçamentos criados no período, quantos foram enviados ao cliente, viraram pedido, entraram em produção e foram
+          encerrados — com a porcentagem que passa de uma etapa para a outra e o tempo médio entre elas. Mostra também as
+          respostas no link e a lista das recusas com o comentário do cliente, e o mesmo funil por vendedor ou equipe.{' '}
+          <Ir tela="rel-funil">Abrir Funil</Ir>
+        </p>
+        <h4>Evolução de vendas</h4>
+        <p>
+          Orçado, vendido e conversão por dia, semana ou mês (<Bt>Agrupar</Bt>; automático pelo tamanho do período), com o período
+          de comparação em linha tracejada; vendido por equipe ou por carteira; e a tabela intervalo a intervalo com clientes
+          novos (primeiro pedido) e recorrentes. <Ir tela="rel-evolucao">Abrir Evolução</Ir>
+        </p>
+        <p>
+          No <b>Desempenho</b>, os links <Bt>orçamentos</Bt> e <Bt>pedidos</Bt> abaixo do nome do vendedor abrem as listas já
+          filtradas por ele e pelo período do relatório (na lista de orçamentos, o período vale pela data da última alteração).
+        </p>
         <h4>Filtros dos relatórios</h4>
         <p>
-          Os mesmos nos dois relatórios e guardados ao trocar de tela: período, comparação, equipe, vendedor, com ou sem frete e,
-          em <Bt>Mais filtros</Bt>, carteira, cliente, tipo (PF/PJ), UF, produto ou fornecedor e faixa de valor. Equipe e vendedor
-          aceitam vários ao mesmo tempo.
+          Os mesmos em todos os relatórios e guardados ao trocar de tela: período, comparação, equipe, vendedor, com ou sem frete
+          e, em <Bt>Mais filtros</Bt>, carteira, cliente, tipo (PF/PJ), UF, produto ou fornecedor e faixa de valor. Equipe e
+          vendedor aceitam vários ao mesmo tempo.
         </p>
         <h4>Equipes de vendas</h4>
         <p>

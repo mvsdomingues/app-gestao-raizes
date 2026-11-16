@@ -22,6 +22,7 @@ import { ClienteVinculado } from '../clientes/ClienteVinculado';
 import { SeletorCliente } from '../clientes/SeletorCliente';
 import { FiltroResponsavel } from '../../components/FiltroResponsavel';
 import { useAbrirOrcamento } from './abrirOrcamento';
+import { pegarFiltroPendente } from '../relatorios/irParaListas';
 import type { ClienteVinculado as Cliente } from '@raizes/shared';
 
 const POR_PAGINA = 20;
@@ -77,7 +78,19 @@ export function ListaOrcamentos() {
 
   // Recarrega sempre que a tela é aberta (ex.: depois de gerar/alterar um orçamento)
   useEffect(() => {
-    if (visitas.orcamentos > 0) void carregar(aplicados, pagina);
+    if (visitas.orcamentos === 0) return;
+    // Vindo de um relatório (ex.: vendedor no Desempenho): abre já filtrada por responsável e período
+    const pendente = pegarFiltroPendente('orcamentos');
+    if (pendente) {
+      const novos = { ...FILTROS_VAZIOS, ...pendente };
+      setClienteFiltro(null);
+      setFiltros(novos);
+      setAplicados(novos);
+      setPagina(1);
+      void carregar(novos, 1);
+      return;
+    }
+    void carregar(aplicados, pagina);
   }, [visitas.orcamentos]);
 
   // Atualiza as tags quando um pedido é gerado/movimentado/cancelado ou a situação muda

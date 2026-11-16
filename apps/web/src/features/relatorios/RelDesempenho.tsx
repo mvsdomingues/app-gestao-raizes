@@ -1,6 +1,8 @@
 import { useEffect, useRef, useState } from 'react';
 import type { LinhaMetricas, RelatorioDesempenho } from '@raizes/shared';
 import { useApp } from '../../app/contexto';
+import { useSessao } from '../../app/sessao';
+import { deixarFiltroPendente } from './irParaListas';
 import { api } from '../../lib/api';
 import { erroDe } from '../../lib/dialogo';
 import { COR } from '../dashboards/DashGeral';
@@ -31,13 +33,16 @@ type Visao = 'vendedor' | 'equipe';
 /** Linha da tabela/gráficos, por vendedor ou por equipe. */
 interface Linha extends LinhaMetricas {
   chave: string;
+  /** Vendedor (para abrir as listas filtradas) */
+  usuarioId?: number;
   nome: string;
   sub: string;
 }
 
 /** Dashboards › Desempenho da equipe: orçado, vendido, conversão e ticket por vendedor ou equipe. */
 export function RelDesempenho() {
-  const { tela, visitas } = useApp();
+  const { tela, visitas, irPara, setAbaOrcamentos, setAbaPedidos } = useApp();
+  const { pode } = useSessao();
   const { filtros } = useFiltrosRelatorio();
   const [d, setD] = useState<RelatorioDesempenho | null>(null);
   const [falha, setFalha] = useState<string | null>(null);
@@ -71,6 +76,20 @@ export function RelDesempenho() {
     }
   };
 
+  /** Abre a lista de orçamentos ou de pedidos já filtrada pelo vendedor e pelo período do relatório. */
+  const abrirLista = (lista: 'orcamentos' | 'pedidos', usuarioId: number) => {
+    if (!d) return;
+    deixarFiltroPendente(lista, { responsavel: String(usuarioId), de: d.de, ate: d.ate });
+    if (lista === 'orcamentos') {
+      setAbaOrcamentos('lista');
+      irPara('orcamentos');
+    } else {
+      setAbaPedidos('lista');
+      irPara('pedidos');
+    }
+  };
+  const podeListas = { orcamentos: pode('orcamentos'), pedidos: pode('pedidos') };
+
   const t = d?.totais;
   const c = d?.comparacao?.totais ?? null;
   const rotuloComp = d?.comparacao?.modo === 'ano' ? 'vs. ano anterior' : 'vs. período anterior';
@@ -83,6 +102,7 @@ export function RelDesempenho() {
       ? d.vendedores.map((v) => ({
           ...v,
           chave: `u${v.usuario?.id ?? 0}`,
+          usuarioId: v.usuario?.id,
           nome: v.usuario ? v.usuario.nome : 'Sem responsável',
           sub: [v.equipe, v.usuario?.inativo ? 'inativo' : ''].filter(Boolean).join(' · '),
         }))
@@ -262,7 +282,7 @@ export function RelDesempenho() {
                     </tr>
                   )}
                   {linhas.map((l) => (
-                    <LinhaTabela key={l.chave} l={l} />
+                    <LinhaTabela key={l.chave} l={l} abrir={abrirLista} pode={podeListas} />
                   ))}
                 </tbody>
                 {linhas.length > 0 && (
@@ -279,12 +299,34 @@ export function RelDesempenho() {
   );
 }
 
-function LinhaTabela({ l }: { l: Linha }) {
+function LinhaTabela({
+  l,
+  abrir,
+  pode,
+}: {
+  l: Linha;
+  abrir?: (lista: 'orcamentos' | 'pedidos', usuarioId: number) => void;
+  pode?: { orcamentos: boolean; pedidos: boolean };
+}) {
   return (
     <tr>
       <td>
         <span className="rel-nome">{l.nome}</span>
         {l.sub && <span className="rel-sub">{l.sub}</span>}
+        {abrir && l.usuarioId && (pode?.orcamentos || pode?.pedidos) && (
+          <span className="rel-links">
+            {pode.orcamentos && l.orcamentos > 0 && (
+              <button type="button" className="link-botao" onClick={() => abrir('orcamentos', l.usuarioId!)}>
+                orçamentos
+              </button>
+            )}
+            {pode.pedidos && l.pedidos > 0 && (
+              <button type="button" className="link-botao" onClick={() => abrir('pedidos', l.usuarioId!)}>
+                pedidos
+              </button>
+            )}
+          </span>
+        )}
       </td>
       <td className="num">{inteiro(l.orcamentos)}</td>
       <td className="num">{moeda(l.valor_orcado)}</td>

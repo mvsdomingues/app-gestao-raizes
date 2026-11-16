@@ -1,7 +1,15 @@
 import { Router, type Request } from 'express';
-import { FAIXAS_IDADE, idsDaLista, type FiltrosRelatorio, type LinhaMetricas, type OpcoesRelatorio } from '@raizes/shared';
+import {
+  ETAPAS_FUNIL,
+  FAIXAS_IDADE,
+  idsDaLista,
+  ROTULOS_AGRUPAMENTO,
+  type FiltrosRelatorio,
+  type LinhaMetricas,
+  type OpcoesRelatorio,
+} from '@raizes/shared';
 import type { Banco } from '../db/conexao';
-import { opcoesRelatorio, relatorioAbertos, relatorioDesempenho } from '../db/relatorios';
+import { opcoesRelatorio, relatorioAbertos, relatorioDesempenho, relatorioEvolucao, relatorioFunil } from '../db/relatorios';
 import { isoLocal } from '../lib/datas';
 import { gerarXlsx, type AbaPlanilha, type FormatoCelula } from '../lib/xlsx';
 
@@ -151,6 +159,147 @@ export function rotasRelatorios(db: Banco): Router {
       );
     }
     enviarXlsx(res, `desempenho-${d.de}-a-${d.ate}.xlsx`, abas);
+  });
+
+  r.get('/api/relatorios/funil', (req, res) => {
+    res.json(relatorioFunil(db, filtrosDa(req)));
+  });
+
+  r.get('/api/relatorios/funil/excel', (req, res) => {
+    const f = filtrosDa(req);
+    const d = relatorioFunil(db, f);
+    const topo = [['Funil de conversão'], ...descreverFiltros(f, opcoesRelatorio(db), true)];
+    const rotulo = Object.fromEntries(ETAPAS_FUNIL.map((e) => [e.id, e.rotulo]));
+    const etapas = d.etapas.map((e) => [rotulo[e.etapa]!, e.quantidade, e.valor, e.passagem, e.do_inicio, e.dias_medios]);
+    const abas = [
+      aba(
+        'Funil',
+        topo,
+        ['Etapa', 'Quantidade', 'Valor', 'Passaram da etapa anterior', 'Dos criados', 'Dias desde a etapa anterior'],
+        etapas,
+        ['texto', 'inteiro', 'moeda', 'percentual', 'percentual', 'decimal'],
+        [28, 12, 16, 16, 12, 16],
+        false,
+      ),
+    ];
+    const porGrupo = (nome: string, linhas: typeof d.vendedores, coluna: string) =>
+      aba(
+        nome,
+        topo,
+        [coluna, ...ETAPAS_FUNIL.map((e) => e.rotulo), 'Criados → pedido'],
+        linhas.map((l) => [
+          l.nome,
+          ...ETAPAS_FUNIL.map((e) => l.quantidades[e.id]),
+          l.quantidades.criados ? l.quantidades.pedidos / l.quantidades.criados : null,
+        ]),
+        ['texto', ...ETAPAS_FUNIL.map((): FormatoCelula => 'inteiro'), 'percentual'],
+        [28, ...ETAPAS_FUNIL.map(() => 14), 14],
+        false,
+      );
+    abas.push(porGrupo('Por vendedor', d.vendedores, 'Vendedor'), porGrupo('Por equipe', d.equipes, 'Equipe'));
+    abas.push(
+      aba(
+        'Recusas',
+        topo,
+        ['Orçamento', 'Cliente', 'Responsável', 'Valor', 'Recusado em', 'Comentário do cliente'],
+        d.recusas.map((x) => [x.numero, x.cliente, x.responsavel, x.valor, x.em ? dataBr(x.em) : '', x.comentario ?? '']),
+        ['texto', 'texto', 'texto', 'moeda', 'texto', 'texto'],
+        [12, 30, 20, 14, 12, 60],
+        false,
+      ),
+    );
+    enviarXlsx(res, `funil-${d.de}-a-${d.ate}.xlsx`, abas);
+  });
+
+  const opcoesEvolucao = (req: Request) => ({
+    agrupar: typeof req.query.agrupar === 'string' ? req.query.agrupar : undefined,
+    dimensao: typeof req.query.dimensao === 'string' ? req.query.dimensao : undefined,
+  });
+
+  r.get('/api/relatorios/evolucao', (req, res) => {
+    res.json(relatorioEvolucao(db, filtrosDa(req), opcoesEvolucao(req)));
+  });
+
+  r.get('/api/relatorios/evolucao/excel', (req, res) => {
+    const f = filtrosDa(req);
+    const d = relatorioEvolucao(db, f, opcoesEvolucao(req));
+    const topo = [
+      ['Evolução de vendas'],
+      ...descreverFiltros(f, opcoesRelatorio(db), true),
+      ['Agrupamento', ROTULOS_AGRUPAMENTO[d.agrupamento]],
+    ];
+    const comp = d.comparacao ? (d.comparacao.modo === 'ano' ? ' (ano anterior)' : ' (período anterior)') : '';
+    const cab = [
+      'Intervalo',
+      'Início',
+      'Orçamentos',
+      'Valor orçado',
+      'Convertidos',
+      'Conversão',
+      'Pedidos',
+      'Valor vendido',
+      'Ticket médio',
+      'Clientes novos',
+      'Clientes recorrentes',
+      ...(d.comparacao ? [`Orçado${comp}`, `Vendido${comp}`, `Conversão${comp}`] : []),
+    ];
+    const linhas: (string | number | null)[][] = d.pontos.map((p) => [
+      p.rotulo,
+      dataBr(p.inicio),
+      p.orcamentos,
+      p.valor_orcado,
+      p.convertidos,
+      p.conversao,
+      p.pedidos,
+      p.valor_vendido,
+      p.ticket,
+      p.clientes_novos,
+      p.clientes_recorrentes,
+      ...(d.comparacao ? [p.comp_valor_orcado, p.comp_valor_vendido, p.comp_conversao] : []),
+    ]);
+    const t = d.totais;
+    linhas.push([
+      'Total',
+      '',
+      t.orcamentos,
+      t.valor_orcado,
+      t.convertidos,
+      t.conversao,
+      t.pedidos,
+      t.valor_vendido,
+      t.ticket,
+      null,
+      null,
+    ]);
+    const formatos: FormatoCelula[] = [
+      'texto',
+      'texto',
+      'inteiro',
+      'moeda',
+      'inteiro',
+      'percentual',
+      'inteiro',
+      'moeda',
+      'moeda',
+      'inteiro',
+      'inteiro',
+      'moeda',
+      'moeda',
+      'percentual',
+    ];
+    const g = d.por_grupo;
+    enviarXlsx(res, `evolucao-${d.de}-a-${d.ate}.xlsx`, [
+      aba('Evolução', topo, cab, linhas, formatos, [12, 12, ...cab.slice(2).map(() => 15)], true),
+      aba(
+        g.dimensao === 'equipe' ? 'Vendido por equipe' : 'Vendido por carteira',
+        topo,
+        ['Intervalo', ...g.grupos.map((x) => x.nome)],
+        [...d.pontos.map((p, i) => [p.rotulo, ...g.valores[i]!]), ['Total', ...g.grupos.map((x) => x.total)]],
+        ['texto', ...g.grupos.map((): FormatoCelula => 'moeda')],
+        [12, ...g.grupos.map(() => 18)],
+        true,
+      ),
+    ]);
   });
 
   r.get('/api/relatorios/abertos', (req, res) => {

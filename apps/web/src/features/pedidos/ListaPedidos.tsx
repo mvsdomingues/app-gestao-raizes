@@ -15,6 +15,7 @@ import { api } from '../../lib/api';
 import { Paginacao } from '../catalogo/Paginacao';
 import { formatarDataHora, TagStatusPedido, useAcoesPedido } from './comum';
 import { ModalNovoPedido } from './ModalNovoPedido';
+import { pegarFiltroPendente } from '../relatorios/irParaListas';
 import { ClienteVinculado } from '../clientes/ClienteVinculado';
 import { SeletorCliente } from '../clientes/SeletorCliente';
 import { FiltroResponsavel } from '../../components/FiltroResponsavel';
@@ -65,7 +66,19 @@ export function ListaPedidos({ versao, aoAlterar }: Props) {
 
   // Recarrega ao abrir a tela e quando um pedido é criado/movimentado
   useEffect(() => {
-    if (visitas.pedidos > 0) void carregar(aplicados, pagina);
+    if (visitas.pedidos === 0) return;
+    // Vindo de um relatório (ex.: vendedor no Desempenho): abre já filtrada por responsável e período
+    const pendente = pegarFiltroPendente('pedidos');
+    if (pendente) {
+      const novos = { ...FILTROS_VAZIOS, ...pendente };
+      setClienteFiltro(null);
+      setFiltros(novos);
+      setAplicados(novos);
+      setPagina(1);
+      void carregar(novos, 1);
+      return;
+    }
+    void carregar(aplicados, pagina);
   }, [visitas.pedidos, pedidoAberto, versao]);
 
   const { avancar, processando } = useAcoesPedido((p) => {
