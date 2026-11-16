@@ -171,6 +171,12 @@ export function listarPedidos(
     wheres.push('p.usuario_id = ?');
     params.push(usuarioId);
   }
+  // Responsável: quem criou o pedido
+  const responsavel = (filtros.responsavel ?? '').replace(/\D/g, '');
+  if (responsavel) {
+    wheres.push('p.usuario_id = ?');
+    params.push(Number(responsavel));
+  }
   const digitos = (v: string) => v.replace(/\D/g, '');
 
   if (filtros.codigo?.trim()) {

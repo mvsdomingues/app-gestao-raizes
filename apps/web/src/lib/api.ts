@@ -1,4 +1,5 @@
 import type {
+  OpcaoResponsavel,
   StatusBackup,
   CarteiraComissao,
   CarteiraResumo,
@@ -180,6 +181,8 @@ export const api = {
   atualizarOrcamento: (id: number, dados: NovoOrcamento) => enviar<OrcamentoCriado>('PUT', `/api/orcamentos/${id}`, dados),
 
   /** Lista paginada de orçamentos com filtros. */
+  /** Usuários para o filtro "Responsável" de orçamentos e pedidos */
+  responsaveis: () => enviar<OpcaoResponsavel[]>('GET', '/api/usuarios/responsaveis'),
   orcamentos: (filtros: FiltrosOrcamentos, limit: number, offset: number) => {
     const qs = new URLSearchParams({ limit: String(limit), offset: String(offset) });
     for (const [k, v] of Object.entries(filtros)) if (v && String(v).trim()) qs.set(k, String(v).trim());

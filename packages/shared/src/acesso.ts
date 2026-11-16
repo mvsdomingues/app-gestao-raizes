@@ -80,6 +80,14 @@ export interface UsuarioResumo {
   login: string;
 }
 
+/** Opção do filtro "Responsável" nas listas de orçamentos e pedidos (GET /api/usuarios/responsaveis). */
+export interface OpcaoResponsavel {
+  id: number;
+  nome: string;
+  /** Usuário inativo (continua no filtro: é responsável por registros antigos) */
+  inativo: boolean;
+}
+
 /** Usuário logado (GET /api/auth/sessao). */
 export interface UsuarioSessao {
   id: number;

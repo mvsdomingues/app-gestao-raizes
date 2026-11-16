@@ -189,6 +189,12 @@ export function rotasOrcamentos(db: Banco, opcoes: OpcoesOrcamentos = {}): Route
       wheres.push('orcamentos.usuario_id = ?');
       params.push(exigirUsuario(res).id);
     }
+    // Responsável: quem criou o orçamento
+    const responsavel = q('responsavel').replace(/\D/g, '');
+    if (responsavel) {
+      wheres.push('orcamentos.usuario_id = ?');
+      params.push(Number(responsavel));
+    }
     // Cliente do cadastro
     const cliente = q('cliente').replace(/\D/g, '');
     if (cliente) {

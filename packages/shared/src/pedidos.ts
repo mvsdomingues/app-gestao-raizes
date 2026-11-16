@@ -188,6 +188,8 @@ export interface FiltrosPedidos {
   ate?: string;
   /** "1" = só os criados pelo usuário logado (filtro rápido) */
   meus?: string;
+  /** Id do usuário responsável (quem criou o pedido); vazio = todos */
+  responsavel?: string;
   /** Código do contato do Kommo */
   cliente?: string;
 }

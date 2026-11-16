@@ -17,15 +17,22 @@ import { formatarDataHora, TagStatusPedido, useAcoesPedido } from './comum';
 import { ModalNovoPedido } from './ModalNovoPedido';
 import { ClienteVinculado } from '../clientes/ClienteVinculado';
 import { SeletorCliente } from '../clientes/SeletorCliente';
+import { FiltroResponsavel } from '../../components/FiltroResponsavel';
 import type { ClienteVinculado as Cliente } from '@raizes/shared';
 
 const POR_PAGINA = 20;
-const FILTROS_VAZIOS: FiltrosPedidos = { codigo: '', orcamento: '', status: '', de: '', ate: '', meus: '', cliente: '' };
+const FILTROS_VAZIOS: FiltrosPedidos = {
+  codigo: '',
+  orcamento: '',
+  status: '',
+  de: '',
+  ate: '',
+  meus: '',
+  responsavel: '',
+  cliente: '',
+};
 
-type Estado =
-  | { tipo: 'carregando' }
-  | { tipo: 'erro' }
-  | { tipo: 'ok'; linhas: ResumoPedido[]; total: number };
+type Estado = { tipo: 'carregando' } | { tipo: 'erro' } | { tipo: 'ok'; linhas: ResumoPedido[]; total: number };
 
 /** Aba "Todos os pedidos": filtros, tabela paginada e avanço rápido de etapa. */
 interface Props {
@@ -95,6 +102,15 @@ export function ListaPedidos({ versao, aoAlterar }: Props) {
     void carregar(novos, 1);
   };
 
+  /** Filtro por responsável (quem criou): aplica na hora, como o cliente. */
+  const filtrarResponsavel = (responsavel: string) => {
+    setFiltros((f) => ({ ...f, responsavel }));
+    const novos = { ...aplicados, responsavel };
+    setAplicados(novos);
+    setPagina(1);
+    void carregar(novos, 1);
+  };
+
   const limparFiltros = () => {
     setClienteFiltro(null);
     setFiltros(FILTROS_VAZIOS);
@@ -150,10 +166,25 @@ export function ListaPedidos({ versao, aoAlterar }: Props) {
         </div>
         <div className="orc-filtro orc-filtro-cliente">
           <label htmlFor="filtro-cliente-ped">Cliente</label>
-          <SeletorCliente id="filtro-cliente-ped" compacto valor={clienteFiltro} aoMudar={filtrarCliente} placeholder="Nome, telefone ou código" />
+          <SeletorCliente
+            id="filtro-cliente-ped"
+            compacto
+            valor={clienteFiltro}
+            aoMudar={filtrarCliente}
+            placeholder="Nome, telefone ou código"
+          />
+        </div>
+        <div className="orc-filtro">
+          <label htmlFor="filtro-responsavel-ped">Responsável</label>
+          <FiltroResponsavel id="filtro-responsavel-ped" valor={filtros.responsavel ?? ''} aoMudar={filtrarResponsavel} />
         </div>
         <label className="filtro-meus" title="Mostra só os pedidos criados por você">
-          <input type="checkbox" id="filtro-meus-pedidos" checked={filtros.meus === '1'} onChange={(e) => alternarMeus(e.target.checked)} />
+          <input
+            type="checkbox"
+            id="filtro-meus-pedidos"
+            checked={filtros.meus === '1'}
+            onChange={(e) => alternarMeus(e.target.checked)}
+          />
           Somente os meus
         </label>
         <div className="orc-filtro-acoes">

@@ -1,5 +1,5 @@
 import { Router } from 'express';
-import { isIdTela, validarLogin, validarSenha, type IdTela } from '@raizes/shared';
+import { isIdTela, validarLogin, validarSenha, type IdTela, type OpcaoResponsavel } from '@raizes/shared';
 import type { Banco } from '../db/conexao';
 import {
   alterarUsuario,
@@ -33,6 +33,17 @@ function nomeValido(v: unknown): string {
 /** Cadastro de usuários (tela Usuários) e permissões por tela (tela Acessos). */
 export function rotasUsuarios(db: Banco): Router {
   const r = Router();
+
+  /** Opções do filtro "Responsável" (orçamentos e pedidos): só id, nome e se está inativo */
+  r.get('/api/usuarios/responsaveis', (_req, res) => {
+    const linhas = db.prepare('SELECT id, nome, inativo FROM usuarios ORDER BY inativo, nome COLLATE NOCASE').all() as {
+      id: number;
+      nome: string;
+      inativo: number;
+    }[];
+    const corpo: OpcaoResponsavel[] = linhas.map((u) => ({ id: u.id, nome: u.nome, inativo: !!u.inativo }));
+    res.json(corpo);
+  });
 
   r.get('/api/usuarios', (req, res) => {
     const inativos = req.query.inativos === '1' || req.query.inativos === 'true';

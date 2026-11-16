@@ -63,6 +63,7 @@ export function rotasPedidos(db: Banco, kommo: ServicoKommo | null = null): Rout
       de: q('de'),
       ate: q('ate'),
       meus: q('meus'),
+      responsavel: q('responsavel'),
       cliente: q('cliente'),
     };
     const limit = Math.min(200, Math.max(1, Number.parseInt(q('limit') || '20', 10) || 20));

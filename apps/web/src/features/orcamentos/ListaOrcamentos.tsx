@@ -1,5 +1,13 @@
 import { useCallback, useEffect, useRef, useState, type FormEvent } from 'react';
-import { STATUS_ORCAMENTO, formatBRL, motivoBloqueioAlteracao, podeGerarPedido, ROTULOS_STATUS_ORCAMENTO, type FiltrosOrcamentos, type ResumoOrcamento } from '@raizes/shared';
+import {
+  STATUS_ORCAMENTO,
+  formatBRL,
+  motivoBloqueioAlteracao,
+  podeGerarPedido,
+  ROTULOS_STATUS_ORCAMENTO,
+  type FiltrosOrcamentos,
+  type ResumoOrcamento,
+} from '@raizes/shared';
 import { useApp } from '../../app/contexto';
 import { NomeUsuario } from '../../components/NomeUsuario';
 import { useSessao } from '../../app/sessao';
@@ -12,15 +20,24 @@ import { TagStatusOrcamento, useSituacaoOrcamento } from './situacao';
 import { erro } from '../../lib/dialogo';
 import { ClienteVinculado } from '../clientes/ClienteVinculado';
 import { SeletorCliente } from '../clientes/SeletorCliente';
+import { FiltroResponsavel } from '../../components/FiltroResponsavel';
 import type { ClienteVinculado as Cliente } from '@raizes/shared';
 
 const POR_PAGINA = 20;
-const FILTROS_VAZIOS: FiltrosOrcamentos = { numero: '', produto: '', de: '', ate: '', min: '', max: '', status: '', meus: '', cliente: '' };
+const FILTROS_VAZIOS: FiltrosOrcamentos = {
+  numero: '',
+  produto: '',
+  de: '',
+  ate: '',
+  min: '',
+  max: '',
+  status: '',
+  meus: '',
+  responsavel: '',
+  cliente: '',
+};
 
-type Estado =
-  | { tipo: 'carregando' }
-  | { tipo: 'erro' }
-  | { tipo: 'ok'; linhas: ResumoOrcamento[]; total: number };
+type Estado = { tipo: 'carregando' } | { tipo: 'erro' } | { tipo: 'ok'; linhas: ResumoOrcamento[]; total: number };
 
 function formatarData(dataHora: string): string {
   const d = new Date(dataHora);
@@ -106,6 +123,15 @@ export function ListaOrcamentos() {
     void carregar(novos, 1);
   };
 
+  /** Filtro por responsável (quem criou): aplica na hora, como o cliente. */
+  const filtrarResponsavel = (responsavel: string) => {
+    setFiltros((f) => ({ ...f, responsavel }));
+    const novos = { ...aplicados, responsavel };
+    setAplicados(novos);
+    setPagina(1);
+    void carregar(novos, 1);
+  };
+
   const limparFiltros = () => {
     setClienteFiltro(null);
     setFiltros(FILTROS_VAZIOS);
@@ -175,14 +201,36 @@ export function ListaOrcamentos() {
         <div className="orc-filtro orc-filtro-valor">
           <label htmlFor="filtro-min">Total (R$)</label>
           <div className="orc-filtro-faixa">
-            <input id="filtro-min" className="custom-input" type="number" min="0" step="0.01" placeholder="mín." {...campo('min')} />
+            <input
+              id="filtro-min"
+              className="custom-input"
+              type="number"
+              min="0"
+              step="0.01"
+              placeholder="mín."
+              {...campo('min')}
+            />
             <span>a</span>
-            <input id="filtro-max" className="custom-input" type="number" min="0" step="0.01" placeholder="máx." {...campo('max')} />
+            <input
+              id="filtro-max"
+              className="custom-input"
+              type="number"
+              min="0"
+              step="0.01"
+              placeholder="máx."
+              {...campo('max')}
+            />
           </div>
         </div>
         <div className="orc-filtro orc-filtro-cliente">
           <label htmlFor="filtro-cliente-orc">Cliente</label>
-          <SeletorCliente id="filtro-cliente-orc" compacto valor={clienteFiltro} aoMudar={filtrarCliente} placeholder="Nome, telefone ou código" />
+          <SeletorCliente
+            id="filtro-cliente-orc"
+            compacto
+            valor={clienteFiltro}
+            aoMudar={filtrarCliente}
+            placeholder="Nome, telefone ou código"
+          />
         </div>
         <div className="orc-filtro">
           <label htmlFor="filtro-status-orc">Situação</label>
@@ -195,15 +243,29 @@ export function ListaOrcamentos() {
             ))}
           </select>
         </div>
+        <div className="orc-filtro">
+          <label htmlFor="filtro-responsavel-orc">Responsável</label>
+          <FiltroResponsavel id="filtro-responsavel-orc" valor={filtros.responsavel ?? ''} aoMudar={filtrarResponsavel} />
+        </div>
         <label className="filtro-meus" title="Mostra só os orçamentos criados por você">
-          <input type="checkbox" id="filtro-meus-orcamentos" checked={filtros.meus === '1'} onChange={(e) => alternarMeus(e.target.checked)} />
+          <input
+            type="checkbox"
+            id="filtro-meus-orcamentos"
+            checked={filtros.meus === '1'}
+            onChange={(e) => alternarMeus(e.target.checked)}
+          />
           Somente os meus
         </label>
         <div className="orc-filtro-acoes">
           <button type="submit" className="btn-novo" id="btn-filtrar">
             Filtrar
           </button>
-          <button type="button" className="btn-back" onClick={limparFiltros} disabled={!filtrosAtivos && !Object.values(filtros).some(Boolean)}>
+          <button
+            type="button"
+            className="btn-back"
+            onClick={limparFiltros}
+            disabled={!filtrosAtivos && !Object.values(filtros).some(Boolean)}
+          >
             Limpar
           </button>
         </div>
@@ -229,9 +291,7 @@ export function ListaOrcamentos() {
             <div className="orc-empty-icon">📄</div>
             <h2>{filtrosAtivos ? 'Nenhum orçamento encontrado' : 'Nenhum orçamento salvo ainda'}</h2>
             <p>
-              {filtrosAtivos
-                ? 'Ajuste ou limpe os filtros.'
-                : 'Os orçamentos gerados no Carrinho aparecem aqui automaticamente.'}
+              {filtrosAtivos ? 'Ajuste ou limpe os filtros.' : 'Os orçamentos gerados no Carrinho aparecem aqui automaticamente.'}
             </p>
           </div>
         ) : (
@@ -344,19 +404,17 @@ export function ListaOrcamentos() {
                       </button>
                     )}
                     {pode('carrinho') && (
-                    <button
-                      className="btn-editar-orc"
-                      title={
-                        motivoBloqueioAlteracao(r.numero, r.status, r.pedido?.codigo) ?? `Alterar ${r.numero} no carrinho`
-                      }
-                      disabled={carregando !== null || !!r.pedido || r.status === 'CANCELADO'}
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        void editar(r.id, r.numero);
-                      }}
-                    >
-                      {carregando === r.id ? 'Abrindo…' : '✎ Editar'}
-                    </button>
+                      <button
+                        className="btn-editar-orc"
+                        title={motivoBloqueioAlteracao(r.numero, r.status, r.pedido?.codigo) ?? `Alterar ${r.numero} no carrinho`}
+                        disabled={carregando !== null || !!r.pedido || r.status === 'CANCELADO'}
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          void editar(r.id, r.numero);
+                        }}
+                      >
+                        {carregando === r.id ? 'Abrindo…' : '✎ Editar'}
+                      </button>
                     )}
                   </td>
                 </tr>

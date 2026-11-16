@@ -422,7 +422,7 @@ export function ManualOperacao() {
           <li>Lista paginada (20 por página), do mais recente para o mais antigo.</li>
           <li>
             Filtros: número (<i>ORC-0005</i> ou <i>5</i>), produto (descrição ou código de qualquer item), cliente, período, faixa
-            de valor total, situação e <Bt>Somente os meus</Bt>.
+            de valor total, situação, responsável (quem criou) e <Bt>Somente os meus</Bt>.
           </li>
           <li>Clique na linha para abrir os detalhes. Na própria linha há atalhos para editar e enviar.</li>
         </ul>
@@ -597,7 +597,7 @@ export function ManualOperacao() {
           linhas={[
             [
               'Todos os pedidos',
-              'Lista paginada com filtros por código, orçamento, cliente, situação (inclui “Em andamento”), período e Somente os meus.',
+              'Lista paginada com filtros por código, orçamento, cliente, situação (inclui “Em andamento”), período, responsável e Somente os meus.',
             ],
             ['Quadro', 'Kanban por etapa, para mover os pedidos no dia a dia.'],
             ['Calendário', 'Entregas previstas por semana ou mês (só consulta).'],
@@ -1017,7 +1017,8 @@ export function ManualOperacao() {
           </li>
         </ul>
         <Dica>
-          Todos os usuários veem todos os orçamentos e pedidos. O filtro <Bt>Somente os meus</Bt> mostra só os criados por você.
+          Todos os usuários veem todos os orçamentos e pedidos. O filtro <Bt>Somente os meus</Bt> mostra só os criados por você; o
+          filtro <b>Responsável</b> (listas de orçamentos e de pedidos) mostra os de um usuário escolhido, inclusive inativos.
         </Dica>
       </Secao>
 

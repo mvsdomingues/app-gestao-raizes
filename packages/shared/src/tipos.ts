@@ -116,6 +116,8 @@ export interface FiltrosOrcamentos {
   pedido?: string;
   /** "1" = só os criados pelo usuário logado (filtro rápido) */
   meus?: string;
+  /** Id do usuário responsável (quem criou o orçamento); vazio = todos */
+  responsavel?: string;
   /** ABERTO, ENVIADO ou PEDIDO_GERADO; vazio = todas */
   status?: string;
   /** Código do contato do Kommo */

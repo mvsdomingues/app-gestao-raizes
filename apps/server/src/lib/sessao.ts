@@ -82,6 +82,8 @@ const REGRAS: Regra[] = [
   { metodos: 'TODOS', caminho: /^\/api\/auth\/(login|sessao|logout)$/, telas: null },
   // Página do cliente (link do orçamento): sem login, protegida pelo código aleatório
   { metodos: 'TODOS', caminho: /^\/api\/publico\//, telas: null },
+  // Filtro "Responsável" das listas de orçamentos e pedidos (só id e nome)
+  { metodos: 'GET', caminho: /^\/api\/usuarios\/responsaveis$/, telas: ['orcamentos', 'pedidos', 'usuarios'] },
   { metodos: 'TODOS', caminho: /^\/api\/usuarios(\/|$)/, telas: ['usuarios'] },
   { metodos: 'TODOS', caminho: /^\/api\/acessos(\/|$)/, telas: ['acessos'] },
   { metodos: 'TODOS', caminho: /^\/api\/atualizar(\/|$)/, telas: ['status'] },
