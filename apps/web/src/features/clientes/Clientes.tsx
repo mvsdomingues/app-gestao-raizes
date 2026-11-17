@@ -841,7 +841,7 @@ function Ficha({ id, voltar, abrir }: { id: number; voltar: () => void; abrir: (
           </form>
         </section>
 
-        <aside className="clientes-lateral">
+        <section className="clientes-lateral">
           <div className="clientes-totais">
             <div>
               <b>{ficha.totais.orcamentos}</b>
@@ -860,52 +860,60 @@ function Ficha({ id, voltar, abrir }: { id: number; voltar: () => void; abrir: (
             <p className="fat-dica">Último pedido em {formatarDataHora(ficha.totais.ultimo_pedido)}</p>
           )}
 
-          <div className="clientes-secao-titulo">Pedidos</div>
-          {ficha.pedidos.length === 0 && <p className="fat-dica">Nenhum pedido.</p>}
-          <ul className="clientes-lista-mini">
-            {ficha.pedidos.map((p) => (
-              <li key={p.codigo}>
-                {pode('pedidos') ? (
-                  <button className="link-botao" onClick={() => void abrirPedido(p.codigo)}>
-                    {p.codigo}
-                  </button>
-                ) : (
-                  p.codigo
-                )}{' '}
-                <span className="opcao-meta">
-                  {formatarDataHora(p.criado)} · {ROTULOS_STATUS_PEDIDO[p.status as StatusPedido] ?? p.status} ·{' '}
-                  {formatBRL(p.total)}
-                </span>
-              </li>
-            ))}
-          </ul>
+          <div className="clientes-relacionados">
+            <div>
+              <div className="clientes-secao-titulo">Pedidos</div>
+              {ficha.pedidos.length === 0 && <p className="fat-dica">Nenhum pedido.</p>}
+              <ul className="clientes-lista-mini">
+                {ficha.pedidos.map((p) => (
+                  <li key={p.codigo}>
+                    {pode('pedidos') ? (
+                      <button className="link-botao" onClick={() => void abrirPedido(p.codigo)}>
+                        {p.codigo}
+                      </button>
+                    ) : (
+                      p.codigo
+                    )}{' '}
+                    <span className="opcao-meta">
+                      {formatarDataHora(p.criado)} · {ROTULOS_STATUS_PEDIDO[p.status as StatusPedido] ?? p.status} ·{' '}
+                      {formatBRL(p.total)}
+                    </span>
+                  </li>
+                ))}
+              </ul>
+            </div>
 
-          <div className="clientes-secao-titulo">Orçamentos</div>
-          {ficha.orcamentos.length === 0 && <p className="fat-dica">Nenhum orçamento.</p>}
-          <ul className="clientes-lista-mini">
-            {ficha.orcamentos.map((o) => (
-              <li key={o.id}>
-                {o.numero}{' '}
-                <span className="opcao-meta">
-                  {formatarDataHora(o.data_hora)} · {ROTULOS_STATUS_ORCAMENTO[o.status as StatusOrcamento] ?? o.status} ·{' '}
-                  {formatBRL(o.total)}
-                </span>
-              </li>
-            ))}
-          </ul>
+            <div>
+              <div className="clientes-secao-titulo">Orçamentos</div>
+              {ficha.orcamentos.length === 0 && <p className="fat-dica">Nenhum orçamento.</p>}
+              <ul className="clientes-lista-mini">
+                {ficha.orcamentos.map((o) => (
+                  <li key={o.id}>
+                    {o.numero}{' '}
+                    <span className="opcao-meta">
+                      {formatarDataHora(o.data_hora)} · {ROTULOS_STATUS_ORCAMENTO[o.status as StatusOrcamento] ?? o.status} ·{' '}
+                      {formatBRL(o.total)}
+                    </span>
+                  </li>
+                ))}
+              </ul>
+            </div>
 
-          <div className="clientes-secao-titulo">Histórico do cadastro</div>
-          <ul className="clientes-historico" id="cliente-historico">
-            {ficha.historico.map((h, i) => (
-              <li key={i}>
-                <div className="opcao-meta">
-                  {formatarDataHora(h.data_hora)} · {h.origem} · {h.autor}
-                </div>
-                <div className="clientes-historico-texto">{h.texto}</div>
-              </li>
-            ))}
-          </ul>
-        </aside>
+            <div>
+              <div className="clientes-secao-titulo">Histórico do cadastro</div>
+              <ul className="clientes-historico" id="cliente-historico">
+                {ficha.historico.map((h, i) => (
+                  <li key={i}>
+                    <div className="opcao-meta">
+                      {formatarDataHora(h.data_hora)} · {h.origem} · {h.autor}
+                    </div>
+                    <div className="clientes-historico-texto">{h.texto}</div>
+                  </li>
+                ))}
+              </ul>
+            </div>
+          </div>
+        </section>
       </div>
 
       {transformar && (
