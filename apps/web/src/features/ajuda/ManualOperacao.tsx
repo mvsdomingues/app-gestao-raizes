@@ -684,6 +684,15 @@ export function ManualOperacao() {
               </span>,
             ],
             [
+              'Responsável',
+              <span key="rp">
+                Ao lado da data de criação. É o vendedor da venda (comissão, painéis e relatórios). Quem tem acesso às telas de
+                Comissões vê <Bt>✎ trocar</Bt>: escolhe outro usuário ativo e informa o motivo (vira observação: “Responsável
+                alterado: antes → depois”). Com o pedido já contado num mês de comissão fechado aparece 🔒 e a troca não é
+                possível.
+              </span>,
+            ],
+            [
               'Frete',
               <span key="fr">
                 Abaixo do total. De <b>Criado até Produzido</b>, <Bt>✎ alterar</Bt> muda o frete do pedido, com motivo
@@ -914,6 +923,11 @@ export function ManualOperacao() {
           Todo cliente está numa <b>carteira</b>; o pedido recebe a carteira do cliente quando é criado e a comissão usa a tabela
           dessa carteira. Não há regra geral: cada carteira tem as suas faixas. Cliente sem carteira escolhida entra na carteira
           marcada como <b>Carteira Geral</b> (sempre uma).
+        </Dica>
+        <Dica tipo="regra">
+          A venda é do <b>responsável pelo pedido</b> — a mesma pessoa na comissão, na Visão geral, nos relatórios e na lista de
+          pedidos. Ele é escolhido ao gerar o pedido (o responsável do orçamento ou quem gera) e pode ser trocado nos detalhes do
+          pedido por quem tem acesso às telas de Comissões, com motivo, enquanto o pedido não contar num mês já fechado.
         </Dica>
         <h4>1. Parâmetros de comissão (carteiras)</h4>
         <ul>

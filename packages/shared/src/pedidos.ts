@@ -141,6 +141,8 @@ export interface Pedido extends ResumoPedido {
   faturamento: import('./faturamento').DadosFaturamento | null;
   /** Checklist de fechamento (copiado do cadastro quando o pedido entra em "Em Fechamento") */
   checklist: ItemChecklistPedido[];
+  /** Mês de comissão já fechado em que o pedido conta (AAAA-MM): bloqueia a troca do responsável */
+  comissao_fechada?: string | null;
 }
 
 export interface RespostaPedidos {
@@ -193,6 +195,10 @@ export interface FiltrosPedidos {
   /** Código do contato do Kommo */
   cliente?: string;
 }
+
+/** Telas que podem trocar o responsável (vendedor) de um pedido já criado. */
+export const TELAS_TROCA_RESPONSAVEL = ['comissoes-apuracao', 'comissoes-carteiras', 'comissoes-parametros'] as const;
+export const LIMITE_MOTIVO_RESPONSAVEL = 300;
 
 /** Última etapa em que o frete do pedido ainda pode ser alterado (inclusive). */
 export const ETAPA_LIMITE_FRETE: EtapaPedido = 'PRODUZIDO';

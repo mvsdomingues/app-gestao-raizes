@@ -811,7 +811,7 @@ export function MemoriasCalculo() {
           tabela de faixas (um percentual fixo é uma faixa só). No mês, a comissão é calculada <b>carteira por carteira</b>: as
           vendas do vendedor em cada carteira passam pelas faixas daquela carteira. Entram os pedidos que chegaram à etapa{' '}
           <b>Em Produção</b> no mês (pela primeira vez), não cancelados; a base é o valor dos produtos, sem o frete; o vendedor é
-          o responsável pelo orçamento.
+          o responsável pelo pedido (escolhido ao gerar o pedido e trocável enquanto o mês estiver aberto).
         </p>
         <Formula
           titulo="Fórmula"

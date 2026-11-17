@@ -17,6 +17,7 @@ import {
   cancelarPedido,
   alterarFaturamentoPedido,
   alterarFretePedido,
+  trocarResponsavelDoPedido,
   trocarContatoDoPedido,
   vincularClienteAoPedido,
   criarPedido,
@@ -25,6 +26,7 @@ import {
   calendarioPedidos,
   retrocederPedido,
 } from '../db/repositorio-pedidos';
+import { competenciaFechadaDoPedido } from '../db/repositorio-comissoes';
 import { corpoJson, ErroHttp } from '../lib/http';
 import { marcarItemChecklist } from '../db/repositorio-checklist';
 import { exigirUsuario } from '../lib/sessao';
@@ -51,7 +53,7 @@ export function rotasPedidos(db: Banco, kommo: ServicoKommo | null = null): Rout
     if (!p) throw new ErroHttp(404, 'Pedido não encontrado');
     const orcamento = lerOrcamento(db, p.orcamento_id);
     if (!orcamento) throw new ErroHttp(404, `Orçamento ${numeroOrcamento(p.orcamento_id)} não encontrado`);
-    return { ...p, orcamento };
+    return { ...p, orcamento, comissao_fechada: competenciaFechadaDoPedido(db, p.id) };
   };
 
   r.get('/api/pedidos', (req, res) => {
@@ -103,8 +105,10 @@ export function rotasPedidos(db: Banco, kommo: ServicoKommo | null = null): Rout
       throw new ErroHttp(400, 'Informe o orçamento do pedido');
     }
     const eu = exigirUsuario(res);
-    const responsavelId = corpo.responsavel_id === undefined || corpo.responsavel_id === null ? null : Number(corpo.responsavel_id);
-    if (responsavelId !== null && (!Number.isInteger(responsavelId) || responsavelId <= 0)) throw new ErroHttp(400, 'Responsável inválido');
+    const responsavelId =
+      corpo.responsavel_id === undefined || corpo.responsavel_id === null ? null : Number(corpo.responsavel_id);
+    if (responsavelId !== null && (!Number.isInteger(responsavelId) || responsavelId <= 0))
+      throw new ErroHttp(400, 'Responsável inválido');
     const codigo = criarPedido(db, orcamentoId, textoOpcional(corpo.observacao), eu.id, { responsavelId });
     const p = detalhe(codigo);
     // Fase 4 da integração: nota no contato do Kommo (enviada em segundo plano, com nova tentativa)
@@ -151,6 +155,13 @@ export function rotasPedidos(db: Banco, kommo: ServicoKommo | null = null): Rout
     const data = v === null || v === '' ? null : dataValida(v) ? v : undefined;
     if (data === undefined) throw new ErroHttp(400, 'Data prevista de entrega inválida (use AAAA-MM-DD)');
     alterarEntregaPedido(db, String(req.params.codigo), data, exigirUsuario(res).id);
+    res.json(detalhe(String(req.params.codigo)));
+  });
+
+  /** Troca o responsável (vendedor) do pedido: { usuario_id, motivo } — só quem tem tela de comissões */
+  r.put('/api/pedidos/:codigo/responsavel', (req, res) => {
+    const corpo = corpoJson(req);
+    trocarResponsavelDoPedido(db, String(req.params.codigo), corpo.usuario_id, corpo.motivo, exigirUsuario(res).id);
     res.json(detalhe(String(req.params.codigo)));
   });
 

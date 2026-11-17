@@ -1,5 +1,5 @@
 import type { NextFunction, Request, Response } from 'express';
-import type { IdTela, UsuarioSessao } from '@raizes/shared';
+import { TELAS_TROCA_RESPONSAVEL, type IdTela, type UsuarioSessao } from '@raizes/shared';
 import type { Banco } from '../db/conexao';
 import { DURACAO_SESSAO_MS, usuarioDaSessao, validarSessao } from '../db/repositorio-usuarios';
 import { ErroHttp } from './http';
@@ -104,7 +104,11 @@ const REGRAS: Regra[] = [
   { metodos: 'ESCRITA', caminho: /^\/api\/produtos-proprios(\/|$)/, telas: ['produtos-proprios'] },
   { metodos: 'TODOS', caminho: /^\/api\/dashboards(\/|$)/, telas: ['dash-geral'] },
   // Relatórios de vendas: opções dos filtros para quem tem algum relatório; cada relatório, a sua tela
-  { metodos: 'GET', caminho: /^\/api\/relatorios\/opcoes$/, telas: ['rel-desempenho', 'rel-abertos', 'rel-funil', 'rel-evolucao'] },
+  {
+    metodos: 'GET',
+    caminho: /^\/api\/relatorios\/opcoes$/,
+    telas: ['rel-desempenho', 'rel-abertos', 'rel-funil', 'rel-evolucao'],
+  },
   { metodos: 'GET', caminho: /^\/api\/relatorios\/desempenho(\/excel)?$/, telas: ['rel-desempenho'] },
   { metodos: 'GET', caminho: /^\/api\/relatorios\/abertos(\/excel)?$/, telas: ['rel-abertos'] },
   { metodos: 'GET', caminho: /^\/api\/relatorios\/funil(\/excel)?$/, telas: ['rel-funil'] },
@@ -128,6 +132,8 @@ const REGRAS: Regra[] = [
   { metodos: 'GET', caminho: /^\/api\/orcamentos(\/|$)/, telas: ['orcamentos', 'pedidos', 'mockup'] },
   { metodos: 'ESCRITA', caminho: /^\/api\/orcamentos\/\d+\/(status|link)$/, telas: ['orcamentos'] },
   { metodos: 'ESCRITA', caminho: /^\/api\/orcamentos(\/|$)/, telas: ['carrinho'] },
+  // Trocar o responsável (vendedor) do pedido mexe na comissão: só quem tem alguma tela de comissões
+  { metodos: 'ESCRITA', caminho: /^\/api\/pedidos\/[^/]+\/responsavel$/, telas: [...TELAS_TROCA_RESPONSAVEL] },
   { metodos: 'TODOS', caminho: /^\/api\/pedidos(\/|$)/, telas: ['pedidos'] },
 ];
 

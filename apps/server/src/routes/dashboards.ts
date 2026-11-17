@@ -81,10 +81,10 @@ export function rotasDashboards(db: Banco): Router {
   const pedidosDoPeriodo = (de: string, ate: string, usuario: number | null): LinhaPed[] =>
     db
       .prepare(
-        `SELECT p.id, p.status, p.criado, (orcamentos.total + COALESCE(p.frete - orcamentos.frete, 0)) AS total, orcamentos.itens_json, orcamentos.usuario_id,
+        `SELECT p.id, p.status, p.criado, (orcamentos.total + COALESCE(p.frete - orcamentos.frete, 0)) AS total, orcamentos.itens_json, p.usuario_id,
                 ${SQL_CRIACAO_ORC} AS orc_criado
            FROM pedidos p JOIN orcamentos ON orcamentos.id = p.orcamento_id
-          WHERE substr(p.criado, 1, 10) BETWEEN ? AND ? AND (? IS NULL OR orcamentos.usuario_id = ?)`,
+          WHERE substr(p.criado, 1, 10) BETWEEN ? AND ? AND (? IS NULL OR p.usuario_id = ?)`,
       )
       .all(de, ate, usuario, usuario) as LinhaPed[];
 
@@ -223,7 +223,7 @@ export function rotasDashboards(db: Banco): Router {
           .prepare(
             `SELECT COUNT(*) AS c FROM pedidos p JOIN orcamentos ON orcamentos.id = p.orcamento_id
               WHERE p.status NOT IN ('CANCELADO', 'ENVIADO', 'ENCERRADO') AND p.entrega_prevista IS NOT NULL
-                AND (? IS NULL OR orcamentos.usuario_id = ?) AND ${sql}`,
+                AND (? IS NULL OR p.usuario_id = ?) AND ${sql}`,
           )
           .get(usuario, usuario, ...params) as { c: number }
       ).c;

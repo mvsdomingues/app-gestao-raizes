@@ -11,6 +11,8 @@ import {
   LIMITE_MOTIVO_FRETE,
   valorFreteValido,
   podeCancelar,
+  LIMITE_MOTIVO_RESPONSAVEL,
+  TELAS_TROCA_RESPONSAVEL,
   proximoStatus,
   ROTULOS_STATUS_PEDIDO,
   type Pedido,
@@ -135,8 +137,9 @@ export function DetalhePedido() {
           <div>
             <div className="pedido-codigo">{p.codigo}</div>
             <div className="pedido-sub">
-              Criado em {formatarDataHora(p.criado)} por <NomeUsuario usuario={p.responsavel} /> · orçamento{' '}
-              <b>{p.orcamento_numero}</b> · {p.qtd_itens} {p.qtd_itens === 1 ? 'item' : 'itens'}
+              Criado em {formatarDataHora(p.criado)} · responsável <NomeUsuario usuario={p.responsavel} />
+              <TrocarResponsavel pedido={p} aoSalvar={atualizarPedidoAberto} /> · orçamento <b>{p.orcamento_numero}</b> ·{' '}
+              {p.qtd_itens} {p.qtd_itens === 1 ? 'item' : 'itens'}
             </div>
           </div>
           <div className="pedido-card-dir">
@@ -248,6 +251,129 @@ export function DetalhePedido() {
         />
       </div>
     </>
+  );
+}
+
+/**
+ * Troca do responsável (vendedor) do pedido: só para quem tem alguma tela de comissões, com motivo,
+ * enquanto o pedido não conta num mês de comissão fechado. Vale para comissões, painéis e relatórios.
+ */
+function TrocarResponsavel({ pedido: p, aoSalvar }: { pedido: Pedido; aoSalvar: (p: Pedido) => void }) {
+  const { pode } = useSessao();
+  const [aberto, setAberto] = useState(false);
+  if (!TELAS_TROCA_RESPONSAVEL.some((t) => pode(t)) || p.status === 'CANCELADO') return null;
+  if (p.comissao_fechada) {
+    const [a, m] = p.comissao_fechada.split('-');
+    return (
+      <span className="pedido-resp-bloqueado" title={`Conta na comissão de ${m}/${a}, que já está fechada`}>
+        {' '}
+        🔒
+      </span>
+    );
+  }
+  return (
+    <>
+      <button type="button" className="link-botao pedido-trocar-resp" id="btn-trocar-responsavel" onClick={() => setAberto(true)}>
+        ✎ trocar
+      </button>
+      {aberto && (
+        <ModalResponsavel
+          pedido={p}
+          fechar={() => setAberto(false)}
+          salvo={(novo) => {
+            setAberto(false);
+            aoSalvar(novo);
+          }}
+        />
+      )}
+    </>
+  );
+}
+
+function ModalResponsavel({ pedido: p, fechar, salvo }: { pedido: Pedido; fechar: () => void; salvo: (p: Pedido) => void }) {
+  const [usuarios, setUsuarios] = useState<{ id: number; nome: string }[]>([]);
+  const [novo, setNovo] = useState('');
+  const [motivo, setMotivo] = useState('');
+  const [erro, setErro] = useState('');
+  const [salvando, setSalvando] = useState(false);
+  useEffect(() => {
+    api.responsaveis().then(
+      (l) => setUsuarios(l.filter((u) => !u.inativo && u.id !== p.responsavel?.id)),
+      () => setUsuarios([]),
+    );
+  }, [p.responsavel?.id]);
+
+  const salvar = async () => {
+    if (!novo) return setErro('Escolha o novo responsável.');
+    if (!motivo.trim()) return setErro('Informe o motivo.');
+    setSalvando(true);
+    setErro('');
+    try {
+      salvo(await api.trocarResponsavelPedido(p.codigo, Number(novo), motivo.trim()));
+    } catch (e) {
+      setErro(e instanceof Error ? e.message : String(e));
+    } finally {
+      setSalvando(false);
+    }
+  };
+
+  return (
+    <div className="custom-modal-backdrop open" id="modal-responsavel" onClick={(e) => e.target === e.currentTarget && fechar()}>
+      <form
+        className="custom-modal-card novo-cliente-modal"
+        role="dialog"
+        aria-label="Trocar responsável do pedido"
+        onSubmit={(e) => {
+          e.preventDefault();
+          void salvar();
+        }}
+      >
+        <div className="custom-modal-header">
+          <h3 className="custom-modal-title">Trocar responsável · {p.codigo}</h3>
+          <button type="button" className="custom-modal-close" onClick={fechar} aria-label="Fechar">
+            ✕
+          </button>
+        </div>
+        <p className="custom-modal-sub">
+          Hoje: <b>{p.responsavel?.nome ?? 'sem responsável'}</b>. O novo responsável passa a receber a venda na comissão, nos
+          painéis e nos relatórios. O orçamento continua de quem o criou. A troca fica registrada nas observações.
+        </p>
+        <div className="novo-cliente-campos">
+          <label>
+            Novo responsável
+            <select className="custom-input" id="resp-novo" value={novo} onChange={(e) => setNovo(e.target.value)} autoFocus>
+              <option value="">— escolha —</option>
+              {usuarios.map((u) => (
+                <option key={u.id} value={u.id}>
+                  {u.nome}
+                </option>
+              ))}
+            </select>
+          </label>
+          <label>
+            Motivo
+            <textarea
+              className="custom-input"
+              id="resp-motivo"
+              rows={2}
+              maxLength={LIMITE_MOTIVO_RESPONSAVEL}
+              placeholder="Ex.: a venda era dela, erro ao gerar o pedido"
+              value={motivo}
+              onChange={(e) => setMotivo(e.target.value)}
+            />
+          </label>
+        </div>
+        {erro && <div className="form-mensagem erro">{erro}</div>}
+        <div className="custom-modal-actions">
+          <button type="button" className="btn-secondary" onClick={fechar}>
+            Cancelar
+          </button>
+          <button type="submit" className="btn-primary" id="btn-salvar-responsavel" disabled={salvando}>
+            {salvando ? 'Salvando…' : 'Trocar responsável'}
+          </button>
+        </div>
+      </form>
+    </div>
   );
 }
 

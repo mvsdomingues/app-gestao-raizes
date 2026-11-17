@@ -285,6 +285,9 @@ export const api = {
       atualizar_cadastro: atualizarCadastro,
     }),
 
+  /** Troca o responsável (vendedor) do pedido (só com tela de comissões; motivo obrigatório) */
+  trocarResponsavelPedido: (codigo: string, usuarioId: number, motivo: string) =>
+    enviar<Pedido>('PUT', `/api/pedidos/${encodeURIComponent(codigo)}/responsavel`, { usuario_id: usuarioId, motivo }),
   /** Frete do pedido (de Criado até Produzido; motivo obrigatório; a mudança vira uma observação) */
   alterarFretePedido: (codigo: string, frete: number, motivo: string) =>
     enviar<Pedido>('PUT', `/api/pedidos/${encodeURIComponent(codigo)}/frete`, { frete, motivo }),

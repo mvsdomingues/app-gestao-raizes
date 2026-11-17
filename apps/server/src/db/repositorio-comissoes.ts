@@ -56,6 +56,16 @@ function exigirCompetencia(c: string): string {
   return c;
 }
 
+/**
+ * Mês de comissão fechado em que o pedido já conta (AAAA-MM), ou null. Enquanto for null, o que muda a
+ * comissão do pedido (ex.: o responsável) ainda pode ser alterado.
+ */
+export function competenciaFechadaDoPedido(db: Banco, pedidoId: number): string | null {
+  const l = db.prepare(`${SELECT_PEDIDOS} WHERE p.id = ?`).get(pedidoId) as LinhaPedido | undefined;
+  const comp = l ? competenciaDoPedido(l) : null;
+  return comp && competenciaFechada(db, comp) ? comp : null;
+}
+
 /** Mês fechado? (nada que mude o cálculo dele pode ser alterado) */
 export function competenciaFechada(db: Banco, competencia: string): boolean {
   return !!db.prepare('SELECT 1 FROM comissao_fechamentos WHERE competencia = ?').get(competencia);
@@ -362,12 +372,12 @@ interface LinhaPedido {
 
 const SELECT_PEDIDOS = `
   SELECT p.id, p.codigo, p.orcamento_id, p.status, p.criado, p.cliente_id, COALESCE(cl.nome, o.cliente_nome) AS cliente_nome, o.subtotal,
-         o.usuario_id AS vendedor_id, u.nome AS vendedor, p.carteira_id, c.nome AS carteira,
+         p.usuario_id AS vendedor_id, u.nome AS vendedor, p.carteira_id, c.nome AS carteira,
          ${SQL_CONCLUSAO} AS conclusao
     FROM pedidos p
     JOIN orcamentos o ON o.id = p.orcamento_id
     LEFT JOIN clientes cl ON cl.id = p.cliente_id
-    LEFT JOIN usuarios u ON u.id = o.usuario_id
+    LEFT JOIN usuarios u ON u.id = p.usuario_id
     LEFT JOIN carteiras c ON c.id = p.carteira_id`;
 
 /** Cliente do pedido nos relatórios: o nome atual do cadastro com o código (não a cópia gravada no orçamento). */
@@ -411,7 +421,7 @@ export function listarPedidosCarteira(db: Banco, f: FiltroPedidosCarteira): { to
     args.push(Number(f.carteira));
   }
   if (f.vendedor && /^\d+$/.test(f.vendedor)) {
-    cond.push('o.usuario_id = ?');
+    cond.push('p.usuario_id = ?');
     args.push(Number(f.vendedor));
   }
   const where = `WHERE ${cond.join(' AND ')}`;

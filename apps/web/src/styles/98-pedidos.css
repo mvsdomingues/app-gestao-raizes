@@ -484,3 +484,5 @@
 .pedido-responsavel legend { padding: 0 4px; }
 .pedido-responsavel-dica { margin: 0 0 2px; font-size: .82rem; color: var(--muted); }
 .pedido-responsavel .com-check { display: flex; align-items: center; gap: 8px; font-size: .86rem; cursor: pointer; }
+.pedido-trocar-resp { margin-left: 6px; font-size: .74rem; }
+.pedido-resp-bloqueado { font-size: .74rem; cursor: help; }

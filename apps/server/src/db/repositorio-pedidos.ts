@@ -23,6 +23,7 @@ import {
   diferencasFaturamento,
   podeAlterarFaturamento,
   podeAlterarFrete,
+  LIMITE_MOTIVO_RESPONSAVEL,
   valorFreteValido,
   formatBRL,
   LIMITE_MOTIVO_FRETE,
@@ -34,7 +35,7 @@ import { registrarMovimentoOrcamento } from './repositorio-orcamentos';
 import { colunasResponsavel, extrairResponsavel } from './repositorio-usuarios';
 import { isoLocal } from '../lib/datas';
 import { faturamentoDoBanco } from '../lib/faturamento';
-import { carteiraParaPedido } from './repositorio-comissoes';
+import { carteiraParaPedido, competenciaFechadaDoPedido } from './repositorio-comissoes';
 import { obterClienteCadastro, registrarHistorico, vincularOrcamentoECliente } from './repositorio-cadastro-clientes';
 import { garantirPrincipal } from './repositorio-pessoas-contato';
 import type { Banco } from './conexao';
@@ -309,7 +310,9 @@ export function criarPedido(
   const quemMovimenta = origem === 'CLIENTE' ? null : usuarioId;
   return db.transaction(() => {
     const existe = db
-      .prepare('SELECT status, entrega_prevista, faturamento_json, cliente_id, contato_id, usuario_id FROM orcamentos WHERE id = ?')
+      .prepare(
+        'SELECT status, entrega_prevista, faturamento_json, cliente_id, contato_id, usuario_id FROM orcamentos WHERE id = ?',
+      )
       .get(orcamentoId) as
       | {
           usuario_id: number | null;
@@ -583,6 +586,50 @@ export function alterarFretePedido(
       'USUARIO',
     );
     return true;
+  })();
+}
+
+/**
+ * Troca o responsável (vendedor) do pedido: vale para comissões, painéis e relatórios. Bloqueada com o pedido
+ * cancelado ou já contado num mês de comissão fechado. Motivo obrigatório; a troca vira observação.
+ */
+export function trocarResponsavelDoPedido(db: Banco, codigo: string, novo: unknown, motivo: unknown, autorId: number): void {
+  const novoId = Number(novo);
+  if (!Number.isInteger(novoId) || novoId <= 0) throw new ErroHttp(400, 'Escolha o novo responsável.');
+  const porque = typeof motivo === 'string' ? motivo.trim() : '';
+  if (!porque) throw new ErroHttp(400, 'Informe o motivo da troca do responsável.');
+  if (porque.length > LIMITE_MOTIVO_RESPONSAVEL)
+    throw new ErroHttp(400, `O motivo pode ter no máximo ${LIMITE_MOTIVO_RESPONSAVEL} caracteres.`);
+  db.transaction(() => {
+    const p = db
+      .prepare(
+        `SELECT p.id, p.status, p.usuario_id, u.nome AS atual FROM pedidos p LEFT JOIN usuarios u ON u.id = p.usuario_id
+          WHERE p.codigo = ? COLLATE NOCASE`,
+      )
+      .get(codigo) as { id: number; status: StatusPedido; usuario_id: number | null; atual: string | null } | undefined;
+    if (!p) throw new ErroHttp(404, 'Pedido não encontrado');
+    if (p.status === 'CANCELADO') throw new ErroHttp(409, 'Pedido cancelado não troca de responsável.');
+    const fechado = competenciaFechadaDoPedido(db, p.id);
+    if (fechado)
+      throw new ErroHttp(
+        409,
+        `O pedido já conta na comissão de ${fechado.slice(5)}/${fechado.slice(0, 4)}, que está fechada: o responsável não pode mais ser trocado.`,
+      );
+    const u = db.prepare('SELECT nome, inativo FROM usuarios WHERE id = ?').get(novoId) as
+      { nome: string; inativo: number } | undefined;
+    if (!u) throw new ErroHttp(400, 'Usuário não encontrado.');
+    if (u.inativo) throw new ErroHttp(400, 'Escolha um usuário ativo.');
+    if (p.usuario_id === novoId) throw new ErroHttp(400, `${u.nome} já é o responsável deste pedido.`);
+    const agora = isoLocal();
+    db.prepare('UPDATE pedidos SET usuario_id = ?, atualizado = ? WHERE id = ?').run(novoId, agora, p.id);
+    inserirObservacao(
+      db,
+      p.id,
+      `Responsável alterado: ${p.atual ?? 'sem responsável'} → ${u.nome}.\nMotivo: ${porque}`,
+      agora,
+      autorId,
+      'USUARIO',
+    );
   })();
 }
 

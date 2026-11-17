@@ -9,7 +9,7 @@
 //   passa pelas faixas daquela carteira; o total do vendedor é a soma.
 // - Pedido conta no mês em que entrou pela 1ª vez na etapa "Em Produção"
 //   (e não foi cancelado nem voltou para antes dela). Base: produtos, sem frete.
-// - Vendedor: responsável pelo orçamento. Vigência: o último dia do mês.
+// - Vendedor: responsável pelo pedido (escolhido ao gerar; trocável com o mês aberto). Vigência: o último dia do mês.
 // ══════════════════════════════════════════════════════════
 
 export const LIMITE_NOME_CARTEIRA = 80;
