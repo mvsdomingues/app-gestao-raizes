@@ -13,7 +13,8 @@
   --lavanda:    #99A3E8;   /* Lavanda — criatividade */
 
   /* Funcionais */
-  --bg:         var(--creme);
+  --fundo-tela: #EFEBF3;   /* Lavanda suave — fundo das telas internas (diferente dos campos, em creme) */
+  --bg:         var(--fundo-tela);
   --surface:    #fff;
   --surface2:   var(--creme2);
   --border:     #DDD8CF;

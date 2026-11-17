@@ -1,7 +1,7 @@
 /* ══════════════════════════════════
    VIEW STATUS
 ══════════════════════════════════ */
-#view-status { display: none; flex: 1; padding: 40px 32px; overflow-y: auto; background: var(--creme); }
+#view-status { display: none; flex: 1; padding: 40px 32px; overflow-y: auto; background: var(--fundo-tela); }
 .status-page-title {
   font-family: var(--font-display);
   font-size: 1.8rem;
@@ -39,7 +39,7 @@
    VIEW HISTÓRICO
 ══════════════════════════════════ */
 .hist-row { cursor: pointer; transition: background .15s; }
-.hist-row:hover { background: var(--creme2); }
+.hist-row:hover td { background: #F7F4FA; }
 .orc-num-badge {
   font-family: var(--font-display);
   font-weight: 600;
@@ -121,7 +121,11 @@ table.orc-table { width: 100%; border-collapse: collapse; margin-bottom: 28px; f
 }
 .orc-table th:first-child { border-radius: 5px 0 0 5px; }
 .orc-table th:last-child  { border-radius: 0 5px 5px 0; }
-.orc-table td { padding: 11px 12px; border-bottom: 1px solid #F0EDE7; color: var(--text); vertical-align: middle; }
+.orc-table td { padding: 11px 12px; border-bottom: 1px solid #F0EDE7; color: var(--text); vertical-align: middle; background: #fff; }
+/* Listas direto sobre o fundo da tela: linhas brancas, como um card */
+table.hist-table, table.cadastro-table { box-shadow: var(--shadow-sm); border-radius: 6px; }
+.hist-table tr:last-child td:first-child, .cadastro-table tr:last-child td:first-child { border-radius: 0 0 0 6px; }
+.hist-table tr:last-child td:last-child, .cadastro-table tr:last-child td:last-child { border-radius: 0 0 6px 0; }
 .orc-table tr:last-child td { border-bottom: none; }
 .orc-table .num { text-align: right; font-variant-numeric: tabular-nums; }
 .orc-table .total-row td {

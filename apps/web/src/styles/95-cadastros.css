@@ -4,7 +4,7 @@
 .view-cadastro {
   flex: 1;
   overflow-y: auto;
-  background: var(--creme);
+  background: var(--fundo-tela);
   padding: 28px 32px 60px;
 }
 .cadastro-wrap {
