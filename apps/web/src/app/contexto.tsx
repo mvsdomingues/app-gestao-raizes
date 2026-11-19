@@ -9,22 +9,58 @@ import {
   type ReactNode,
   type RefObject,
 } from 'react';
-import type { ItemOrcamento, StatusFornecedor } from '@raizes/shared';
+import {
+  CALC_DEFAULTS,
+  IDS_TELAS,
+  type IdTela,
+  type ItemOrcamento,
+  type ParametrosCalculo,
+  type Pedido,
+  type PedidoDoOrcamento,
+  type StatusFornecedor,
+  type StatusOrcamento,
+  type UsuarioResumo,
+  type ClienteVinculado,
+  type TecnicaComValores,
+} from '@raizes/shared';
 import { api } from '../lib/api';
+import { useSessao } from './sessao';
+import { avisar, erroDe } from '../lib/dialogo';
 
-export type Tela = 'catalogo' | 'carrinho' | 'orcamento' | 'mockup' | 'historico' | 'status';
+/** Telas do sistema (cada uma também é uma permissão — ver TELAS_SISTEMA). */
+export type Tela = IdTela;
+
+/** Abas das telas Orçamentos e Pedidos */
+export type AbaOrcamentos = 'lista' | 'detalhe';
+export type AbaPedidos = 'lista' | 'quadro' | 'calendario' | 'detalhe';
 
 export interface FolhaOrcamento {
+  /** id do orçamento salvo (ausente se não foi possível gravar) */
+  id?: number;
   numero: string;
   dataHora: string;
   itens: ItemOrcamento[];
   subtotal: number;
   frete: number;
   total: number;
+  /** Pedido ativo do orçamento (null = sem pedido) */
+  pedido?: PedidoDoOrcamento | null;
+  /** Situação (Aberto, Enviado, Pedido gerado) */
+  status?: StatusOrcamento;
+  /** Observações livres do orçamento */
+  observacao?: string | null;
+  /** Quem criou / alterou por último (null = registro anterior ao controle de acesso) */
+  responsavel?: UsuarioResumo | null;
+  alteradoPor?: UsuarioResumo | null;
+  /** Cliente do cadastro vinculado (null = sem cliente) */
+  cliente?: ClienteVinculado | null;
+  /** Data prevista de entrega (AAAA-MM-DD) */
+  entregaPrevista?: string | null;
 }
 
 interface ContextoApp {
-  tela: Tela;
+  /** null = usuário sem nenhuma tela liberada */
+  tela: Tela | null;
   /** Quantas vezes cada tela foi aberta (as telas recarregam dados a cada abertura). */
   visitas: Record<Tela, number>;
   irPara: (t: Tela) => void;
@@ -38,44 +74,96 @@ interface ContextoApp {
   abrirImagem: (url: string) => void;
   fecharImagem: () => void;
 
-  /** Modal de produto avulso: null = fechado; 'novo' ou id do item em edição. */
-  modalAvulso: 'novo' | number | null;
-  abrirModalAvulso: (idEditar?: number) => void;
-  fecharModalAvulso: () => void;
+  /** Parâmetros cadastrados da calculadora (usados nos itens novos do carrinho). */
+  parametros: ParametrosCalculo;
+  parametrosAtualizado: string | null;
+  carregarParametros: () => Promise<void>;
+  /** Técnicas com material e mão de obra (Parâmetros › Tabelas gerais); null = carregando */
+  tecnicas: TecnicaComValores[] | null;
+  definirParametros: (valores: ParametrosCalculo, atualizado: string | null) => void;
+
+  /** Incrementado quando produtos próprios mudam (o catálogo recarrega). */
+  versaoCatalogo: number;
+  avisarCatalogoAlterado: () => void;
 
   folha: FolhaOrcamento | null;
+  /** Mostra o orçamento na aba "Detalhes" da tela Orçamentos. */
   mostrarOrcamento: (f: FolhaOrcamento) => void;
+  abaOrcamentos: AbaOrcamentos;
+  setAbaOrcamentos: (a: AbaOrcamentos) => void;
+  /** Avisa que a situação de um orçamento mudou (lista e detalhes recarregam). */
+  versaoOrcamentos: number;
+  avisarOrcamentosAlterados: () => void;
+  /** Atualiza a tag de pedido da folha aberta (após gerar/cancelar um pedido). */
+  definirPedidoDaFolha: (orcamentoId: number, pedido: PedidoDoOrcamento | null) => void;
 
-  /** Produto pedido pelo botão "🎨 Mockup" de um item do carrinho. */
-  mockupSolicitado: RefObject<number | string | null>;
-  abrirMockupParaProduto: (id: number) => void;
+  /** Cliente aberto na ficha da tela Clientes (aberto a partir de orçamentos e pedidos). */
+  clienteAberto: number | null;
+  abrirCliente: (id: number | null) => void;
+
+  /** Usuário escolhido na tela Acessos (aberto a partir da tela Usuários). */
+  usuarioAcessos: number | null;
+  abrirAcessos: (usuarioId: number | null) => void;
+
+  /** Pedido aberto na aba "Detalhes" da tela Pedidos. */
+  pedidoAberto: Pedido | null;
+  mostrarPedido: (p: Pedido) => void;
+  /** Atualiza o pedido aberto nos detalhes (se for o mesmo), sem trocar de tela. */
+  atualizarPedidoAberto: (p: Pedido) => void;
+  /** Busca o pedido pelo código e abre os detalhes. */
+  abrirPedido: (codigo: string) => Promise<void>;
+  abaPedidos: AbaPedidos;
+  setAbaPedidos: (a: AbaPedidos) => void;
+
+  /** Orçamento pedido pelo botão "🎨 Mockups" dos detalhes do orçamento. */
+  mockupSolicitado: RefObject<number | null>;
+  abrirMockups: (orcamentoId: number) => void;
 }
 
 const Ctx = createContext<ContextoApp | null>(null);
 
-const VISITAS_INICIAIS: Record<Tela, number> = {
-  catalogo: 0,
-  carrinho: 0,
-  orcamento: 0,
-  mockup: 0,
-  historico: 0,
-  status: 0,
-};
+const VISITAS_INICIAIS = Object.fromEntries(IDS_TELAS.map((t) => [t, 0])) as Record<Tela, number>;
 
 export function ProvedorApp({ children }: { children: ReactNode }) {
-  const [tela, setTela] = useState<Tela>('catalogo');
-  const [visitas, setVisitas] = useState(VISITAS_INICIAIS);
+  const { usuario } = useSessao();
+  const permitidas = usuario?.permissoes ?? [];
+  // Abre na primeira tela liberada para o usuário (na ordem do menu)
+  const [tela, setTela] = useState<Tela | null>(() => permitidas[0] ?? null);
+  const [visitas, setVisitas] = useState(() =>
+    permitidas[0] ? { ...VISITAS_INICIAIS, [permitidas[0]]: 1 } : VISITAS_INICIAIS,
+  );
+  const permitidasRef = useRef(permitidas);
+  permitidasRef.current = permitidas;
   const [fornecedores, setFornecedores] = useState<string[]>([]);
   const [status, setStatus] = useState<StatusFornecedor[] | null>(null);
   const [imagemAmpliada, setImagemAmpliada] = useState<string | null>(null);
-  const [modalAvulso, setModalAvulso] = useState<'novo' | number | null>(null);
+  const [parametros, setParametros] = useState<ParametrosCalculo>({ ...CALC_DEFAULTS });
+  const [parametrosAtualizado, setParametrosAtualizado] = useState<string | null>(null);
+  const [tecnicas, setTecnicas] = useState<TecnicaComValores[] | null>(null);
+  const [versaoCatalogo, setVersaoCatalogo] = useState(0);
   const [folha, setFolha] = useState<FolhaOrcamento | null>(null);
-  const mockupSolicitado = useRef<number | string | null>(null);
+  const [abaOrcamentos, setAbaOrcamentos] = useState<AbaOrcamentos>('lista');
+  const [pedidoAberto, setPedidoAberto] = useState<Pedido | null>(null);
+  const [abaPedidos, setAbaPedidos] = useState<AbaPedidos>('lista');
+  const [usuarioAcessos, setUsuarioAcessos] = useState<number | null>(null);
+  const [clienteAberto, setClienteAberto] = useState<number | null>(null);
+  const [versaoOrcamentos, setVersaoOrcamentos] = useState(0);
+  const mockupSolicitado = useRef<number | null>(null);
 
   const irPara = useCallback((t: Tela) => {
+    if (!permitidasRef.current.includes(t)) {
+      void avisar('Você não tem acesso a esta tela. Peça a liberação a quem administra os acessos.', {
+        tipo: 'aviso',
+        titulo: 'Acesso não liberado',
+      });
+      return;
+    }
     setTela(t);
     setVisitas((v) => ({ ...v, [t]: v[t] + 1 }));
-    if (t !== 'orcamento' && t !== 'mockup') window.scrollTo(0, 0);
+    if (t !== 'orcamentos' && t !== 'pedidos' && t !== 'mockup') {
+      window.scrollTo(0, 0);
+      document.querySelector('.app-views')?.scrollTo(0, 0);
+    }
   }, []);
 
   const carregarFornecedores = useCallback(async () => {
@@ -94,6 +182,25 @@ export function ProvedorApp({ children }: { children: ReactNode }) {
     }
   }, []);
 
+  const carregarParametros = useCallback(async () => {
+    try {
+      const r = await api.parametros();
+      setParametros(r.valores);
+      setParametrosAtualizado(r.atualizado);
+    } catch {
+      /* mantém os valores atuais */
+    }
+    try {
+      setTecnicas(await api.tecnicasPersonalizacao());
+    } catch {
+      /* mantém as atuais */
+    }
+  }, []);
+
+  useEffect(() => {
+    void carregarParametros();
+  }, [carregarParametros]);
+
   // A aba "Atualização" recarrega o status sempre que é aberta
   useEffect(() => {
     if (visitas.status > 0) void carregarStatus();
@@ -111,21 +218,70 @@ export function ProvedorApp({ children }: { children: ReactNode }) {
       imagemAmpliada,
       abrirImagem: (url) => setImagemAmpliada(url),
       fecharImagem: () => setImagemAmpliada(null),
-      modalAvulso,
-      abrirModalAvulso: (id) => setModalAvulso(id ?? 'novo'),
-      fecharModalAvulso: () => setModalAvulso(null),
+      parametros,
+      parametrosAtualizado,
+      carregarParametros,
+      tecnicas,
+      definirParametros: (valores, atualizado) => {
+        setParametros(valores);
+        setParametrosAtualizado(atualizado);
+      },
+      versaoCatalogo,
+      avisarCatalogoAlterado: () => setVersaoCatalogo((v) => v + 1),
       folha,
       mostrarOrcamento: (f) => {
         setFolha(f);
-        irPara('orcamento');
+        setAbaOrcamentos('detalhe');
+        irPara('orcamentos');
+        document.querySelector('.app-views')?.scrollTo(0, 0);
       },
+      abaOrcamentos,
+      setAbaOrcamentos,
+      versaoOrcamentos,
+      avisarOrcamentosAlterados: () => setVersaoOrcamentos((v) => v + 1),
+      definirPedidoDaFolha: (orcamentoId, pedido) =>
+        setFolha((f) => (f && f.id === orcamentoId ? { ...f, pedido } : f)),
+      clienteAberto,
+      abrirCliente: (id) => {
+        setClienteAberto(id);
+        if (id !== null) {
+          irPara('clientes');
+          document.querySelector('.app-views')?.scrollTo(0, 0);
+        }
+      },
+      usuarioAcessos,
+      abrirAcessos: (id) => {
+        setUsuarioAcessos(id);
+        irPara('acessos');
+      },
+      pedidoAberto,
+      mostrarPedido: (p) => {
+        setPedidoAberto(p);
+        setAbaPedidos('detalhe');
+        irPara('pedidos');
+        document.querySelector('.app-views')?.scrollTo(0, 0);
+      },
+      atualizarPedidoAberto: (p) => setPedidoAberto((a) => (a && a.codigo === p.codigo ? p : a)),
+      abrirPedido: async (codigo) => {
+        try {
+          const p = await api.pedido(codigo);
+          setPedidoAberto(p);
+          setAbaPedidos('detalhe');
+          irPara('pedidos');
+          document.querySelector('.app-views')?.scrollTo(0, 0);
+        } catch (e) {
+          void erroDe('Não foi possível abrir o pedido.', e);
+        }
+      },
+      abaPedidos,
+      setAbaPedidos,
       mockupSolicitado,
-      abrirMockupParaProduto: (id) => {
-        mockupSolicitado.current = id;
+      abrirMockups: (orcamentoId) => {
+        mockupSolicitado.current = orcamentoId;
         irPara('mockup');
       },
     }),
-    [tela, visitas, irPara, fornecedores, carregarFornecedores, status, carregarStatus, imagemAmpliada, modalAvulso, folha],
+    [tela, visitas, irPara, fornecedores, carregarFornecedores, status, carregarStatus, imagemAmpliada, parametros, parametrosAtualizado, carregarParametros, tecnicas, versaoCatalogo, folha, abaOrcamentos, pedidoAberto, abaPedidos, usuarioAcessos, versaoOrcamentos, clienteAberto],
   );
 
   return <Ctx.Provider value={valor}>{children}</Ctx.Provider>;

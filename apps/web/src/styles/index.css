@@ -1,15 +1,32 @@
 /* Estilos da aplicação — mesma identidade visual da versão anterior.
    A ordem dos arquivos importa (cascata). */
 @import './00-tokens-base.css';
-@import './10-cabecalho-layout.css';
+@import './10-barra-lateral-layout.css';
 @import './20-catalogo.css';
 @import './30-carrinho-itens.css';
 @import './40-comum.css';
 @import './50-atualizacao-historico.css';
 @import './60-orcamento.css';
 @import './70-carrinho-calculadora.css';
-@import './80-produto-avulso.css';
+@import './80-formularios.css';
 @import './90-mockups.css';
+@import './95-cadastros.css';
+@import './96-edicao-orcamento.css';
+@import './97-orcamentos.css';
+@import './98-pedidos.css';
+@import './99-acesso.css';
+@import './99b-dialogos.css';
+@import './99c-clientes.css';
+@import './99d-link-publico.css';
+@import './99e-detalhe-produto.css';
+@import './99f-estudio-mockup.css';
+@import './99g-dashboards.css';
+@import './99h-faturamento.css';
+@import './99i-ajuda.css';
+@import './99j-comissoes.css';
+@import './99k-visualizador.css';
+@import './99l-backup.css';
+@import './99m-relatorios.css';
 
 /* O React monta a aplicação dentro de #root; "display: contents" mantém
    header, telas e rodapé como filhos diretos do layout flex do <body>. */

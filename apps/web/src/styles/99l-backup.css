@@ -1,0 +1,19 @@
+/* ── Sistema › Atualização: cartão "Backup da base" ── */
+.painel-backup { margin-top: 20px; }
+.painel-backup.alerta { border-color: var(--danger); box-shadow: inset 4px 0 0 var(--danger); }
+.painel-backup .update-panel-header .status-pill { flex-shrink: 0; margin-top: 0; }
+.painel-backup-aviso { margin-top: 12px; padding: 10px 12px; border-radius: 6px; background: #FBEDEB; color: var(--danger); font-size: .84rem; font-weight: 500; }
+.painel-backup-erro { margin-top: 4px; font-size: .76rem; font-weight: 400; word-break: break-word; }
+.painel-backup-info { display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 12px 20px; margin-top: 14px; }
+.painel-backup-info > div { display: flex; flex-direction: column; gap: 2px; font-size: .84rem; }
+.painel-backup-info span:first-child { font-size: .66rem; font-weight: 600; letter-spacing: 1px; text-transform: uppercase; color: var(--muted); }
+.painel-backup-info .link-botao { margin-left: 8px; font-size: .76rem; font-weight: 500; }
+.painel-backup-lista { list-style: none; margin: 12px 0 0; padding: 0; border-top: 1px solid var(--border); }
+.painel-backup-lista li { display: grid; grid-template-columns: 130px 1fr auto; gap: 12px; padding: 6px 0; border-bottom: 1px solid var(--border); font-size: .8rem; align-items: center; }
+.painel-backup-lista code { justify-self: start; }
+.painel-backup-lista code, .painel-backup-pasta code { font-size: .76rem; background: var(--creme2); padding: 0 4px; border-radius: 3px; overflow-wrap: anywhere; }
+.painel-backup-pasta { margin: 12px 0 0; font-size: .76rem; color: var(--muted); }
+@media (max-width: 560px) {
+  .painel-backup-lista li { grid-template-columns: 1fr auto; }
+  .painel-backup-lista li code { grid-column: 1 / -1; grid-row: 2; }
+}

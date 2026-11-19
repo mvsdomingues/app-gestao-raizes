@@ -17,6 +17,9 @@ data/*
 *.db-wal
 *.db-shm
 
+# Backups da base (npm run backup; no Windows ficam em backups/)
+backups/
+
 # Logs
 logs/
 *.log
@@ -31,3 +34,12 @@ desktop.ini
 
 # Configurações locais do Claude Code
 .claude/settings.local.json
+
+# Chaves SSH (nunca versionar)
+ssh_*
+*.pem
+id_rsa*
+id_ed25519*
+
+# Saída do scripts/analise-fornecedores.mjs (dados de fornecedores)
+analise-fornecedores/

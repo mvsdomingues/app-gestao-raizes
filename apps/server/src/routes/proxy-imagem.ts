@@ -15,7 +15,8 @@ export function rotaProxyImagem(): Router {
     }
     try {
       const resp = await fetch(url, {
-        headers: { 'User-Agent': 'Mozilla/5.0' },
+        // Referer do próprio site: alguns fornecedores bloqueiam imagens "de fora"
+        headers: { 'User-Agent': 'Mozilla/5.0', Referer: new URL(url).origin + '/' },
         signal: AbortSignal.timeout(12_000),
       });
       if (resp.status !== 200) {

@@ -1,0 +1,46 @@
+/** Ícones de linha (traço na cor do texto) usados no menu lateral. */
+const CAMINHOS = {
+  catalogo: 'M4 5h7v7H4zM13 5h7v7h-7zM4 14h7v6H4zM13 14h7v6h-7z',
+  carrinho: 'M3 4h2l2.4 11.2a1 1 0 0 0 1 .8h9.2a1 1 0 0 0 1-.8L20 8H6.2M9 20.5h.01M17 20.5h.01',
+  orcamento: 'M7 3h7l5 5v13H7zM14 3v5h5M10 13h6M10 17h6',
+  mockup: 'M12 3a9 9 0 1 0 0 18c1.1 0 1.6-.7 1.6-1.5 0-1.2-1-1.5-1-2.6 0-.9.7-1.4 1.6-1.4H17a4 4 0 0 0 4-4c0-4.7-4-8.5-9-8.5zM7.5 11h.01M10 7.5h.01M14.5 7.5h.01',
+  pedidos: 'M9 4h6a1 1 0 0 1 1 1v1H8V5a1 1 0 0 1 1-1zM8 5H6a1 1 0 0 0-1 1v14a1 1 0 0 0 1 1h12a1 1 0 0 0 1-1V6a1 1 0 0 0-1-1h-2M9 14l2 2 4-4',
+  produtos: 'M12 3l8 4.5v9L12 21l-8-4.5v-9zM4 7.5l8 4.5 8-4.5M12 12v9',
+  parametros: 'M4 6h9M17 6h3M4 12h3M11 12h9M4 18h11M19 18h1M15 4v4M9 10v4M17 16v4',
+  atualizacao: 'M20 11a8 8 0 0 0-14.5-4.5L4 8M4 4v4h4M4 13a8 8 0 0 0 14.5 4.5L20 16M20 20v-4h-4',
+  clientes: 'M9 11a3.5 3.5 0 1 0 0-7 3.5 3.5 0 0 0 0 7zM3 20v-1a5 5 0 0 1 5-5h2M15 14h6M15 17.5h6M15 21h4',
+  usuarios: 'M16 20v-1.5a3.5 3.5 0 0 0-3.5-3.5h-5A3.5 3.5 0 0 0 4 18.5V20M10 11a3.5 3.5 0 1 0 0-7 3.5 3.5 0 0 0 0 7zM20 20v-1.5a3.5 3.5 0 0 0-2.5-3.35M15.5 4.2a3.5 3.5 0 0 1 0 6.6',
+  dashboard: 'M4 20h16M6 16v-4M10 16V8M14 16v-6M18 16V5',
+  acessos: 'M7 11V7.5a5 5 0 0 1 10 0V11M5 11h14v10H5zM12 15v2.5',
+  calculo: 'M6 3h12v18H6zM8.5 6.5h7v3h-7zM9 13h.01M12 13h.01M15 13h.01M9 16.5h.01M12 16.5h.01M15 16.5h.01',
+  manual: 'M5 4.5A1.5 1.5 0 0 1 6.5 3H19v15H6.5A1.5 1.5 0 0 0 5 19.5zM5 19.5A1.5 1.5 0 0 0 6.5 21H19v-3M9 7h6M9 10.5h6',
+  comissao: 'M12 3v18M16.5 7.5c0-1.7-2-3-4.5-3s-4.5 1.3-4.5 3 2 2.6 4.5 3.2 4.5 1.5 4.5 3.3-2 3-4.5 3-4.5-1.3-4.5-3',
+  carteira: 'M4 7h16v12H4zM8 7V5h8v2M4 12h16M11 12v2h2v-2',
+  desempenho: 'M4 20h16M4 16l5-5 4 3 7-8M15 6h5v5',
+  relogio: 'M12 21a9 9 0 1 0 0-18 9 9 0 0 0 0 18zM12 7v5l3 2',
+  equipes: 'M8 11a3 3 0 1 0 0-6 3 3 0 0 0 0 6zM16 11a3 3 0 1 0 0-6 3 3 0 0 0 0 6zM2.5 20v-1a4 4 0 0 1 4-4h3a4 4 0 0 1 4 4v1M14.5 15h3a4 4 0 0 1 4 4v1',
+  funil: 'M3 5h18l-7 8v6l-4 2v-8z',
+  evolucao: 'M4 20h16M4 17l4-5 4 2 4-6 4 3M4 12.5V20',
+  recolher: 'M15 6l-6 6 6 6',
+  expandir: 'M9 6l6 6-6 6',
+} as const;
+
+export type NomeIcone = keyof typeof CAMINHOS;
+
+export function Icone({ nome, tamanho = 18 }: { nome: NomeIcone; tamanho?: number }) {
+  return (
+    <svg
+      width={tamanho}
+      height={tamanho}
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth={1.7}
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      aria-hidden="true"
+    >
+      <path d={CAMINHOS[nome]} />
+    </svg>
+  );
+}

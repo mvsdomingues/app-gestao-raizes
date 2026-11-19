@@ -1,3 +1,4 @@
+import { resumoDescricao } from './catalogo';
 // ══════════════════════════════════════════════════════════
 // CALCULADORA DE PREÇO — lógica da planilha Simulador_2026
 // Custo do produto (com imposto de compra opcional) → entra na fórmula:
@@ -5,7 +6,8 @@
 // Custo Total = (Produto*(1+ICompra?)) + Mat.Pers. + MO.Pers. + (Fixos ÷ Qtd)
 // ══════════════════════════════════════════════════════════
 import { formatBRL } from './formatacao';
-import type { ItemOrcamento } from './tipos';
+import type { ItemOrcamento, OrigemProduto } from './tipos';
+import type { PersonalizacaoCalculada, ResultadoPersonalizacao } from './personalizacao';
 
 export interface ParametrosCalculo {
   /** R$/un — tinta, papel, adesivo, embalagem */
@@ -131,21 +133,45 @@ export function montarComposicao(
   return partes.join(' + ').replace(/\+ margem/, '· margem');
 }
 
+/**
+ * Parâmetros que NÃO são ajustáveis por item no carrinho: valem sempre os
+ * valores cadastrados na tela Parâmetros.
+ */
+export const CAMPOS_SOMENTE_PARAMETROS = ['imposto_compra', 'imposto_compra_ativo', 'imposto', 'margem'] as const;
+
+/** Parâmetros efetivos de um item: ajustes do item + campos fixos dos parâmetros cadastrados. */
+export function calcComParametros(item: ParametrosCalculo, cadastrados: ParametrosCalculo): ParametrosCalculo {
+  return {
+    ...item,
+    imposto_compra: cadastrados.imposto_compra,
+    imposto_compra_ativo: cadastrados.imposto_compra_ativo,
+    imposto: cadastrados.imposto,
+    margem: cadastrados.margem,
+  };
+}
+
 /** Dados mínimos de um produto para virar item de orçamento. */
 export interface ProdutoCalculavel {
+  id?: number;
   nome: string | null;
   codigo: string | null;
   fornecedor: string;
   imagem_url: string | null;
   preco: number | null;
+  origem?: OrigemProduto;
+  descricao?: string | null;
+  medidas?: string | null;
+  material?: string | null;
 }
 
 /** Gera o snapshot de um item do carrinho, como salvo no histórico. */
 export function montarItemOrcamento(
   p: ProdutoCalculavel,
   qty: number,
-  calc: ParametrosCalculo,
+  calcBase: ParametrosCalculo,
+  personalizacao?: ResultadoPersonalizacao | PersonalizacaoCalculada,
 ): ItemOrcamento {
+  const calc = personalizacao ? calcComPersonalizacao(calcBase, personalizacao) : calcBase;
   const res = calcPreco(p.preco as number, qty, calc);
   return {
     nome: p.nome as string,
@@ -155,5 +181,77 @@ export function montarItemOrcamento(
     qty,
     preco: res.preco,
     composicao: montarComposicao(p.preco as number, calc, res),
+    origem: p.origem ?? 'fornecedor',
+    produto_id: p.id,
+    custo: p.preco as number,
+    calc: { ...calc },
+    ...resumoProdutoItem(p),
+    // Várias aplicações (formato atual) ou uma técnica só (formato anterior)
+    ...(personalizacao ? ('aplicacoes' in personalizacao ? { personalizacoes: personalizacao } : { personalizacao }) : {}),
   };
+}
+
+/**
+ * Parâmetros do item com o custo de personalização vindo das tabelas
+ * (material e mão de obra por unidade).
+ */
+export function calcComPersonalizacao(
+  calc: ParametrosCalculo,
+  r: Pick<ResultadoPersonalizacao, 'material_unit' | 'mao_obra_unit'>,
+): ParametrosCalculo {
+  return { ...calc, mat_personalizacao: r.material_unit, mo_personalizacao: r.mao_obra_unit };
+}
+
+/** Resumo do produto guardado no item (descrição curta, medidas e material), sem campos vazios. */
+export function resumoProdutoItem(p: Pick<ProdutoCalculavel, 'descricao' | 'medidas' | 'material'>): {
+  descricao?: string;
+  medidas?: string;
+  material?: string;
+} {
+  const r: { descricao?: string; medidas?: string; material?: string } = {};
+  const descricao = resumoDescricao(p.descricao);
+  if (descricao) r.descricao = descricao;
+  const medidas = p.medidas?.trim();
+  if (medidas) r.medidas = medidas.slice(0, 120);
+  const material = p.material?.trim();
+  if (material) r.material = material.slice(0, 120);
+  return r;
+}
+
+/** Rótulos e unidades dos parâmetros (usados na tela de cadastro e nas mensagens). */
+export const CAMPOS_PARAMETROS: readonly { campo: CampoNumerico; rotulo: string; percentual: boolean }[] = [
+  { campo: 'mat_personalizacao', rotulo: 'Material de personalização', percentual: false },
+  { campo: 'mo_personalizacao', rotulo: 'Mão de obra / serviço', percentual: false },
+  { campo: 'imposto_compra', rotulo: 'Imposto de compra', percentual: true },
+  { campo: 'designer_total', rotulo: 'Designer / mockup', percentual: false },
+  { campo: 'logistica_total', rotulo: 'Logística / frete compra', percentual: false },
+  { campo: 'imposto', rotulo: 'Imposto sobre venda', percentual: true },
+  { campo: 'margem', rotulo: 'Margem desejada', percentual: true },
+];
+
+/**
+ * Valida um conjunto completo de parâmetros.
+ * Retorna a lista de erros (vazia quando está tudo certo).
+ */
+export function validarParametros(p: Partial<Record<keyof ParametrosCalculo, unknown>>): string[] {
+  const erros: string[] = [];
+  for (const { campo, rotulo, percentual } of CAMPOS_PARAMETROS) {
+    const v = p[campo];
+    if (typeof v !== 'number' || !Number.isFinite(v)) {
+      erros.push(`${rotulo}: informe um número`);
+    } else if (v < 0) {
+      erros.push(`${rotulo}: não pode ser negativo`);
+    } else if (percentual && v >= 1) {
+      erros.push(`${rotulo}: deve ser menor que 100%`);
+    }
+  }
+  if (typeof p.imposto_compra_ativo !== 'boolean') {
+    erros.push('Aplicar imposto de compra: informe sim ou não');
+  }
+  const imposto = p.imposto as number;
+  const margem = p.margem as number;
+  if (!erros.length && imposto + margem >= 1) {
+    erros.push('Imposto sobre venda + margem devem somar menos de 100%');
+  }
+  return erros;
 }

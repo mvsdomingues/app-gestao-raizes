@@ -59,3 +59,27 @@ describe('formatação', () => {
     expect(formatBRL(null)).toBe('R$ 0,00');
   });
 });
+
+describe('parâmetros fixos (não ajustáveis por item)', () => {
+  it('imposto de compra, imposto sobre venda e margem vêm sempre dos parâmetros cadastrados', async () => {
+    const { calcComParametros } = await import('../src');
+    const item = { ...CALC_DEFAULTS, mat_personalizacao: 2, margem: 0.1, imposto: 0.2, imposto_compra_ativo: true };
+    const cadastrados = { ...CALC_DEFAULTS, margem: 0.4, imposto: 0.06, imposto_compra: 0.1, imposto_compra_ativo: false };
+    expect(calcComParametros(item, cadastrados)).toEqual({
+      ...item,
+      margem: 0.4,
+      imposto: 0.06,
+      imposto_compra: 0.1,
+      imposto_compra_ativo: false,
+    });
+  });
+
+  it('o item do orçamento guarda custo, id do produto e parâmetros usados', () => {
+    const item = montarItemOrcamento(
+      { id: 7, nome: 'x', codigo: 'c', fornecedor: 'ASIA', imagem_url: '', preco: 10 },
+      5,
+      CALC_DEFAULTS,
+    );
+    expect(item).toMatchObject({ produto_id: 7, custo: 10, calc: CALC_DEFAULTS, origem: 'fornecedor' });
+  });
+});

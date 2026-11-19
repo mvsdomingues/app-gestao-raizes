@@ -1,0 +1,232 @@
+// ══════════════════════════════════════════════════════════
+// PEDIDOS — sempre gerados a partir de um orçamento (1 orçamento → 1 pedido ativo)
+// ══════════════════════════════════════════════════════════
+import type { UsuarioResumo } from './acesso';
+import type { ClienteVinculado } from './clientes';
+import type { Orcamento } from './tipos';
+
+/** Etapas do fluxo, na ordem. */
+export const FLUXO_PEDIDO = ['CRIADO', 'EM_FECHAMENTO', 'EM_PRODUCAO', 'PRODUZIDO', 'FATURADO', 'ENVIADO', 'ENCERRADO'] as const;
+export type EtapaPedido = (typeof FLUXO_PEDIDO)[number];
+/** Situação do pedido: uma etapa do fluxo ou cancelado. */
+export type StatusPedido = EtapaPedido | 'CANCELADO';
+
+export const ROTULOS_STATUS_PEDIDO: Record<StatusPedido, string> = {
+  CRIADO: 'Criado',
+  EM_FECHAMENTO: 'Em Fechamento',
+  EM_PRODUCAO: 'Em Produção',
+  PRODUZIDO: 'Produzido',
+  FATURADO: 'Faturado',
+  ENVIADO: 'Enviado',
+  ENCERRADO: 'Encerrado',
+  CANCELADO: 'Cancelado',
+};
+
+export function isStatusPedido(v: unknown): v is StatusPedido {
+  return typeof v === 'string' && Object.hasOwn(ROTULOS_STATUS_PEDIDO, v);
+}
+
+/** Próxima etapa do fluxo (null quando encerrado ou cancelado). */
+export function proximoStatus(s: StatusPedido): EtapaPedido | null {
+  if (s === 'CANCELADO') return null;
+  const i = FLUXO_PEDIDO.indexOf(s);
+  return i >= 0 && i < FLUXO_PEDIDO.length - 1 ? FLUXO_PEDIDO[i + 1]! : null;
+}
+
+/** Etapa anterior do fluxo (null quando criado, cancelado ou fora do fluxo). */
+export function statusAnterior(s: StatusPedido): EtapaPedido | null {
+  if (s === 'CANCELADO') return null;
+  const i = FLUXO_PEDIDO.indexOf(s);
+  return i > 0 ? FLUXO_PEDIDO[i - 1]! : null;
+}
+
+/** Pode ser cancelado enquanto não estiver encerrado (nem já cancelado). */
+export function podeCancelar(s: StatusPedido): boolean {
+  return s !== 'ENCERRADO' && s !== 'CANCELADO';
+}
+
+/** Pedido "ativo" = qualquer situação diferente de cancelado (trava o orçamento). */
+export function pedidoAtivo(s: StatusPedido): boolean {
+  return s !== 'CANCELADO';
+}
+
+/** Código do pedido: PED-000001 */
+export function codigoPedido(sequencial: number): string {
+  return `PED-${String(sequencial).padStart(6, '0')}`;
+}
+
+/** Referência resumida do pedido ativo de um orçamento. */
+export interface PedidoDoOrcamento {
+  codigo: string;
+  status: StatusPedido;
+}
+
+/** Linha da lista de pedidos. */
+export interface ResumoPedido {
+  id: number;
+  codigo: string;
+  status: StatusPedido;
+  orcamento_id: number;
+  orcamento_numero: string;
+  /** Total do pedido: o do orçamento com o frete do pedido (quando alterado) */
+  total: number;
+  /** Frete do pedido: o do orçamento, ou o alterado no pedido (alterarFretePedido) */
+  frete: number;
+  /** Frete do orçamento aceito (diferente de `frete` quando foi alterado no pedido) */
+  frete_orcamento: number;
+  qtd_itens: number;
+  criado: string;
+  atualizado: string;
+  /** Usuário que criou o pedido (null nos pedidos anteriores ao controle de acesso). */
+  responsavel: UsuarioResumo | null;
+  /** Cliente do orçamento de origem */
+  cliente: ClienteVinculado | null;
+  /** Carteira do pedido (comissões): a do cliente quando o pedido foi criado */
+  carteira?: string | null;
+  /** Data prevista de entrega (AAAA-MM-DD), vinda do orçamento; alterável na etapa Criado */
+  entrega_prevista: string | null;
+  /** Checklist de fechamento: itens marcados / total (0/0 = sem checklist) */
+  checklist_feitos?: number;
+  checklist_total?: number;
+}
+
+/** Movimentação do fluxo (base para o controle de SLA). */
+export interface MovimentoPedido {
+  status_anterior: StatusPedido | null;
+  status_novo: StatusPedido;
+  data_hora: string;
+  observacao: string | null;
+  /** Quem fez a movimentação */
+  usuario: UsuarioResumo | null;
+  /** CLIENTE = pedido criado pelo aceite do cliente no link */
+  origem?: import('./orcamentos').OrigemMovimento;
+}
+
+/** Item do checklist de fechamento gravado no pedido. */
+export interface ItemChecklistPedido {
+  /** id do item no cadastro (Parâmetros › Checklist de fechamento) */
+  id: number;
+  texto: string;
+  feito: boolean;
+  /** Quando e quem marcou (null = não marcado) */
+  feito_em: string | null;
+  usuario: UsuarioResumo | null;
+}
+
+/** Observação do pedido (histórico: só inclusão, nunca alteração). */
+export interface ObservacaoPedido {
+  id: number;
+  texto: string;
+  data_hora: string;
+  usuario: UsuarioResumo | null;
+  /** CLIENTE = escrita pelo cliente ao aceitar o orçamento pelo link */
+  origem: import('./orcamentos').OrigemMovimento;
+}
+
+/** Etapa em que a data prevista de entrega do pedido pode ser alterada. */
+export const ETAPA_ALTERA_ENTREGA: EtapaPedido = 'CRIADO';
+
+/** Etapa em que o checklist pode ser marcado. */
+export const ETAPA_CHECKLIST: EtapaPedido = 'EM_FECHAMENTO';
+
+/** Pedido completo, com o histórico de movimentações e o orçamento de referência. */
+export interface Pedido extends ResumoPedido {
+  /** Última observação incluída (null = nenhuma) */
+  observacao: string | null;
+  /** Histórico de observações, da mais recente para a mais antiga */
+  observacoes: ObservacaoPedido[];
+  movimentos: MovimentoPedido[];
+  orcamento: Orcamento;
+  /** Dados de faturamento e entrega (alteráveis enquanto o pedido está em andamento) */
+  faturamento: import('./faturamento').DadosFaturamento | null;
+  /** Checklist de fechamento (copiado do cadastro quando o pedido entra em "Em Fechamento") */
+  checklist: ItemChecklistPedido[];
+  /** Mês de comissão já fechado em que o pedido conta (AAAA-MM): bloqueia a troca do responsável */
+  comissao_fechada?: string | null;
+}
+
+export interface RespostaPedidos {
+  total: number;
+  pedidos: ResumoPedido[];
+}
+
+/** Cartão do quadro (kanban): pedido + quando entrou na etapa atual. */
+export interface CartaoPedido extends ResumoPedido {
+  observacao: string | null;
+  /** Data/hora da movimentação para a etapa atual */
+  entrada: string;
+}
+
+/** Coluna do quadro: uma etapa do fluxo, com no máximo `limite` cartões. */
+export interface ColunaQuadro {
+  status: EtapaPedido;
+  /** Total de pedidos na etapa (pode ser maior que a quantidade de cartões) */
+  total: number;
+  pedidos: CartaoPedido[];
+}
+
+/** Resposta de GET /api/pedidos/calendario: pedidos não encerrados pela data prevista de entrega. */
+export interface RespostaCalendarioPedidos {
+  de: string;
+  ate: string;
+  /** Com entrega prevista entre `de` e `ate` (inclusive), por data */
+  pedidos: ResumoPedido[];
+  /** Sem data prevista de entrega */
+  sem_data: ResumoPedido[];
+}
+
+/** Resposta de GET /api/pedidos/quadro */
+export interface RespostaQuadroPedidos {
+  limite: number;
+  colunas: ColunaQuadro[];
+}
+
+export interface FiltrosPedidos {
+  codigo?: string;
+  orcamento?: string;
+  /** status específico, "EM_ANDAMENTO" (nem encerrado nem cancelado) ou vazio (todos) */
+  status?: string;
+  de?: string;
+  ate?: string;
+  /** "1" = só os criados pelo usuário logado (filtro rápido) */
+  meus?: string;
+  /** Id do usuário responsável (quem criou o pedido); vazio = todos */
+  responsavel?: string;
+  /** Código do contato do Kommo */
+  cliente?: string;
+}
+
+/** Telas que podem trocar o responsável (vendedor) de um pedido já criado. */
+export const TELAS_TROCA_RESPONSAVEL = ['comissoes-apuracao', 'comissoes-carteiras', 'comissoes-parametros'] as const;
+export const LIMITE_MOTIVO_RESPONSAVEL = 300;
+
+/** Última etapa em que o frete do pedido ainda pode ser alterado (inclusive). */
+export const ETAPA_LIMITE_FRETE: EtapaPedido = 'PRODUZIDO';
+/** Tamanho máximo do motivo da alteração do frete */
+export const LIMITE_MOTIVO_FRETE = 300;
+
+/** O frete do pedido pode ser alterado de Criado até Produzido (não depois de faturado nem cancelado). */
+export function podeAlterarFrete(status: StatusPedido): boolean {
+  const i = FLUXO_PEDIDO.indexOf(status as EtapaPedido);
+  return i >= 0 && i <= FLUXO_PEDIDO.indexOf(ETAPA_LIMITE_FRETE);
+}
+
+/** Valor de frete válido: número ≥ 0, arredondado a centavos; null se inválido. */
+export function valorFreteValido(v: unknown): number | null {
+  const n = typeof v === 'string' ? Number(v.trim().replace(',', '.')) : Number(v);
+  if (
+    v === null ||
+    (typeof v === 'string' && !v.trim()) ||
+    typeof v === 'boolean' ||
+    !Number.isFinite(n) ||
+    n < 0 ||
+    n > 10_000_000
+  )
+    return null;
+  return Math.round(n * 100) / 100;
+}
+
+/** O pedido em andamento (não encerrado nem cancelado) aceita alterar os dados de faturamento. */
+export function podeAlterarFaturamento(status: StatusPedido): boolean {
+  return status !== 'ENCERRADO' && status !== 'CANCELADO';
+}

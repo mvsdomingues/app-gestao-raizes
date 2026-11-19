@@ -1,6 +1,13 @@
-/** Produto como armazenado na tabela `produtos`. */
+/** Origem de um produto do catálogo. */
+export type OrigemProduto = 'fornecedor' | 'proprio';
+
+/**
+ * Produto do catálogo (visão `catalogo`): produtos dos fornecedores integrados
+ * e produtos próprios (estes com id negativo e origem "proprio").
+ */
 export interface Produto {
   id: number;
+  origem?: OrigemProduto;
   fornecedor: string;
   codigo: string | null;
   nome: string | null;
@@ -8,7 +15,16 @@ export interface Produto {
   qtd_estoque: number | null;
   atualizado: string | null;
   imagem_url: string | null;
+  /** Dados extras (presentes na listagem do catálogo; null = não informado). */
+  descricao?: string | null;
+  material?: string | null;
+  medidas?: string | null;
+  cor?: string | null;
+  categoria?: string | null;
 }
+
+/** Produto com todos os detalhes (GET /api/produto/:id). */
+export type ProdutoDetalhado = Produto & import('./catalogo').DetalhesProduto;
 
 /** Resposta de GET /api/produtos */
 export interface RespostaProdutos {
@@ -33,6 +49,24 @@ export interface ItemOrcamento {
   qty: number;
   preco: number;
   composicao: string;
+  /** Presente nos orçamentos novos; "proprio" para produtos próprios. */
+  origem?: OrigemProduto;
+  /** Dados para reabrir o orçamento no carrinho (orçamentos gravados a partir da edição). */
+  produto_id?: number;
+  /** Custo unitário do produto no momento do orçamento. */
+  custo?: number;
+  /** Parâmetros da calculadora usados no item. */
+  calc?: import('./calculadora').ParametrosCalculo;
+  /** Observação específica deste produto (cor, gravação, posição do logo…). */
+  observacao?: string;
+  /** Custo de personalização calculado pelas tabelas (uso interno; nunca vai para o cliente) */
+  personalizacao?: import('./personalizacao').ResultadoPersonalizacao;
+  /** Personalizações do item (várias aplicações; formato atual — uso interno) */
+  personalizacoes?: import('./personalizacao').PersonalizacaoCalculada;
+  /** Resumo da descrição (até ~200 caracteres), mostrado na folha e na página do cliente. */
+  descricao?: string;
+  medidas?: string;
+  material?: string;
 }
 
 /** Linha do histórico (GET /api/orcamentos). */
@@ -44,11 +78,67 @@ export interface ResumoOrcamento {
   frete: number;
   total: number;
   qtd_itens: number;
+  /** Situação: Aberto, Enviado ou Pedido gerado (este enquanto houver pedido ativo). */
+  status: import('./orcamentos').StatusOrcamento;
+  /** Pedido ativo gerado a partir do orçamento (null = sem pedido; o orçamento pode ser alterado). */
+  pedido?: import('./pedidos').PedidoDoOrcamento | null;
+  /** Usuário que criou o orçamento (null nos orçamentos anteriores ao controle de acesso). */
+  responsavel?: import('./acesso').UsuarioResumo | null;
+  /** Usuário da última alteração (null se nunca foi alterado). */
+  alterado_por?: import('./acesso').UsuarioResumo | null;
+  /** Cliente do Kommo vinculado (null = sem cliente) */
+  cliente?: import('./clientes').ClienteVinculado | null;
+  /** Resposta do cliente pelo link (null = sem resposta) */
+  resposta?: import('./orcamentos').RespostaCliente | null;
+  /** Data prevista de entrega (AAAA-MM-DD; null = não informada) */
+  entrega_prevista?: string | null;
+  /** O cliente já abriu o link */
+  visto?: boolean;
+}
+
+/** Resposta paginada de GET /api/orcamentos */
+export interface RespostaOrcamentos {
+  total: number;
+  orcamentos: ResumoOrcamento[];
+}
+
+/** Filtros da consulta de orçamentos. */
+export interface FiltrosOrcamentos {
+  numero?: string;
+  produto?: string;
+  /** AAAA-MM-DD */
+  de?: string;
+  /** AAAA-MM-DD */
+  ate?: string;
+  min?: string;
+  max?: string;
+  /** "com" = com pedido ativo, "sem" = sem pedido, vazio = todos */
+  pedido?: string;
+  /** "1" = só os criados pelo usuário logado (filtro rápido) */
+  meus?: string;
+  /** Id do usuário responsável (quem criou o orçamento); vazio = todos */
+  responsavel?: string;
+  /** ABERTO, ENVIADO ou PEDIDO_GERADO; vazio = todas */
+  status?: string;
+  /** Código do contato do Kommo */
+  cliente?: string;
 }
 
 /** Orçamento completo (GET /api/orcamentos/:id). */
 export interface Orcamento extends ResumoOrcamento {
   itens: ItemOrcamento[];
+  /** Observações livres digitadas no carrinho */
+  observacao?: string | null;
+  /** Histórico de situações (mais antigo primeiro) */
+  movimentos?: import('./orcamentos').MovimentoOrcamento[];
+  /** Link público enviado ao cliente (null = ainda não enviado) */
+  link?: import('./orcamentos').LinkOrcamento | null;
+  /** Resposta do cliente pelo link (da rodada de envio atual) */
+  resposta_cliente?: import('./orcamentos').RespostaDoCliente | null;
+  /** Mockups dos produtos (opcionais), na ordem dos itens */
+  mockups?: import('./orcamentos').MockupOrcamento[];
+  /** Dados de faturamento e entrega do cliente (null = não informados) */
+  faturamento?: import('./faturamento').DadosFaturamento | null;
 }
 
 /** Corpo de POST /api/orcamentos */
@@ -57,6 +147,18 @@ export interface NovoOrcamento {
   subtotal: number;
   frete: number;
   total: number;
+  /** Observações livres (texto) */
+  observacao?: string;
+  /** Código do contato do Kommo (null = sem cliente) */
+  cliente_kommo_id?: number | null;
+  /** Cliente do cadastro (obrigatório) */
+  cliente_id?: number | null;
+  /** Pessoa de contato do cliente (sem informar: a principal) */
+  contato_id?: number | null;
+  /** Data prevista de entrega (AAAA-MM-DD); null/vazio = sem data */
+  entrega_prevista?: string | null;
+  /** Dados de faturamento (opcionais no orçamento; undefined = mantém, null = limpa) */
+  faturamento?: import('./faturamento').DadosFaturamento | null;
 }
 
 /** Resposta de POST /api/orcamentos */
@@ -86,4 +188,107 @@ export interface RespostaAtualizar {
 
 export interface RespostaErro {
   erro: string;
+}
+
+/** Produto próprio (tabela `produtos_proprios`). Código no formato PDP-000001. */
+export interface ProdutoProprio {
+  id: number;
+  codigo: string;
+  fornecedor: string;
+  nome: string;
+  preco: number;
+  qtd_estoque: number;
+  imagem_url: string | null;
+  criado: string;
+  atualizado: string;
+  descricao: string | null;
+  material: string | null;
+  medidas: string | null;
+  peso: string | null;
+  capacidade: string | null;
+  cor: string | null;
+  categoria: string | null;
+  personalizacao: string | null;
+  video: string | null;
+}
+
+/** Campos de detalhe editáveis no cadastro de produtos próprios (rótulo e limite). */
+export const DETALHES_PRODUTO_PROPRIO = {
+  descricao: { rotulo: 'Descrição detalhada', max: 2000 },
+  material: { rotulo: 'Material', max: 200 },
+  medidas: { rotulo: 'Medidas', max: 200 },
+  peso: { rotulo: 'Peso', max: 60 },
+  capacidade: { rotulo: 'Capacidade', max: 60 },
+  cor: { rotulo: 'Cor', max: 60 },
+  categoria: { rotulo: 'Categoria', max: 200 },
+  personalizacao: { rotulo: 'Personalização', max: 300 },
+  video: { rotulo: 'Vídeo (link do YouTube ou Vimeo)', max: 300 },
+} as const;
+export type CampoDetalheProprio = keyof typeof DETALHES_PRODUTO_PROPRIO;
+
+/**
+ * Dados enviados ao criar/alterar um produto próprio.
+ * `imagem_upload` (data URL) substitui `imagem_url` quando enviado.
+ */
+export type DadosProdutoProprio = {
+  fornecedor?: string;
+  nome?: string;
+  preco?: number;
+  qtd_estoque?: number;
+  imagem_url?: string | null;
+  imagem_upload?: string;
+} & { [K in CampoDetalheProprio]?: string | null };
+
+/** Resposta de GET/PUT /api/parametros */
+export interface RespostaParametros {
+  valores: import('./calculadora').ParametrosCalculo;
+  /** Data/hora da última alteração (null = valores padrão de fábrica). */
+  atualizado: string | null;
+}
+
+/** Parâmetros de sistema (aba "Sistema" da tela Parâmetros). */
+export interface ParametrosSistema {
+  /** Envia as notas para o contato no Kommo (orçamento enviado, aceite, recusa, pedido gerado) */
+  kommo_notas_ativo: boolean;
+}
+
+export const SISTEMA_DEFAULTS: ParametrosSistema = {
+  kommo_notas_ativo: true,
+};
+
+/** Textos da impressão do orçamento (aba "Impressão" da tela Parâmetros). */
+export interface ParametrosImpressao {
+  /** Seção "Instruções especiais", só na versão impressa (vazio = não aparece) */
+  instrucoes_especiais: string;
+  /** Rodapé do documento (vazio = só o rodapé padrão) */
+  rodape: string;
+}
+
+export const IMPRESSAO_DEFAULTS: ParametrosImpressao = { instrucoes_especiais: '', rodape: '' };
+export const LIMITES_IMPRESSAO: Record<keyof ParametrosImpressao, number> = { instrucoes_especiais: 4000, rodape: 600 };
+
+/** GET/PUT /api/parametros/impressao */
+export interface RespostaParametrosImpressao {
+  valores: ParametrosImpressao;
+  atualizado: string | null;
+}
+
+/** Item do cadastro do checklist de fechamento (Parâmetros › Checklist de fechamento). */
+export interface ItemChecklist {
+  /** Gerado pelo servidor; itens novos vão sem id */
+  id?: number;
+  texto: string;
+}
+
+/** GET/PUT /api/parametros/checklist */
+export interface RespostaChecklist {
+  itens: (ItemChecklist & { id: number })[];
+  atualizado: string | null;
+}
+
+/** GET/PUT /api/parametros/sistema */
+export interface RespostaParametrosSistema {
+  valores: ParametrosSistema;
+  /** Data/hora da última alteração (null = valores padrão). */
+  atualizado: string | null;
 }

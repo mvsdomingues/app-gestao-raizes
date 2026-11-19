@@ -2,12 +2,13 @@ import type { LinhaFornecedor } from '../fornecedores/tipos';
 import { falsyPython, floatPython, isNA, strPython } from '../lib/conversao';
 import { dataHoraLocal } from '../lib/datas';
 import type { Banco } from './conexao';
+import { CAMPOS_DETALHE } from '@raizes/shared';
 
 /**
  * Coluna "numérica" no sentido do pandas: todos os valores não nulos são números.
  * Nesse caso None vira NaN (e é gravado como NULL), como acontecia na versão anterior.
  */
-function colunaNumerica(linhas: LinhaFornecedor[], campo: keyof LinhaFornecedor): boolean {
+function colunaNumerica(linhas: LinhaFornecedor[], campo: Exclude<keyof LinhaFornecedor, 'detalhes'>): boolean {
   let algum = false;
   for (const l of linhas) {
     const v = l[campo];
@@ -36,6 +37,17 @@ function paraTextoOuNulo(v: unknown, numerica: boolean): string | null {
   return paraTexto(v, numerica) || null;
 }
 
+/** Valores das colunas de detalhe, na ordem de CAMPOS_DETALHE + fotos, ficha, faixas_preco. */
+function valoresDetalhe(l: LinhaFornecedor): (string | null)[] {
+  const d = l.detalhes;
+  return [
+    ...CAMPOS_DETALHE.map((c) => d?.[c] ?? null),
+    JSON.stringify(d?.fotos ?? []),
+    JSON.stringify(d?.ficha ?? []),
+    JSON.stringify(d?.faixas_preco ?? []),
+  ];
+}
+
 /** Apaga os registros antigos do fornecedor e insere os novos (em uma transação). */
 export function substituirProdutosFornecedor(
   db: Banco,
@@ -60,11 +72,13 @@ export function substituirProdutosFornecedor(
     paraReal(l.qtd_estoque, num.qtd_estoque),
     paraTextoOuNulo(l.imagem_url, num.imagem_url),
     agora,
+    ...valoresDetalhe(l),
   ]);
 
+  const colunasDetalhe = [...CAMPOS_DETALHE, 'fotos', 'ficha', 'faixas_preco'];
   const inserir = db.prepare(
-    `INSERT INTO produtos (fornecedor, codigo, nome, preco, qtd_estoque, imagem_url, atualizado)
-     VALUES (?, ?, ?, ?, ?, ?, ?)`,
+    `INSERT INTO produtos (fornecedor, codigo, nome, preco, qtd_estoque, imagem_url, atualizado, ${colunasDetalhe.join(', ')})
+     VALUES (${Array(7 + colunasDetalhe.length).fill('?').join(', ')})`,
   );
   db.transaction(() => {
     db.prepare('DELETE FROM produtos WHERE fornecedor = ?').run(fornecedor);

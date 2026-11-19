@@ -1,59 +1,199 @@
-import { useEffect, useState } from 'react';
-import { formatBRL, montarItemOrcamento } from '@raizes/shared';
+import { useEffect, useRef, useState } from 'react';
+import {
+  calcComParametros,
+  diferencasFaturamento,
+  faturamentoPreenchido,
+  faturamentoVazio,
+  formatBRL,
+  montarItemOrcamento,
+  type ClienteVinculado,
+} from '@raizes/shared';
+import { ResumoFaturamento } from '../clientes/FormularioFaturamento';
+import { ModalFaturamento } from '../clientes/ModalFaturamento';
 import { useApp } from '../../app/contexto';
-import { api } from '../../lib/api';
-import { subtotalCarrinho, useCarrinho } from '../../state/carrinho';
+import { useSessao } from '../../app/sessao';
+import { api, ErroApi } from '../../lib/api';
+import { precosDoCarrinho, subtotalCarrinho, useCarrinho } from '../../state/carrinho';
 import { ItemCarrinho } from './ItemCarrinho';
+import { avisar, confirmar, erro } from '../../lib/dialogo';
+import { SeletorCliente } from '../clientes/SeletorCliente';
 
 export function Carrinho() {
-  const { tela, visitas, irPara, abrirModalAvulso, mostrarOrcamento } = useApp();
-  const { estado, limpar, redesenhar } = useCarrinho();
-  const [frete, setFrete] = useState('0');
+  const { tela, visitas, irPara, mostrarOrcamento, parametros, tecnicas, carregarParametros } = useApp();
+  const { pode, usuario } = useSessao();
+  const {
+    estado,
+    limpar,
+    redesenhar,
+    definirFrete,
+    definirObservacao,
+    definirCliente,
+    definirEntregaPrevista,
+    definirFaturamento,
+  } = useCarrinho();
+  const { frete, edicao, observacao, cliente, entregaPrevista, faturamento } = estado;
+  const [editandoFaturamento, setEditandoFaturamento] = useState(false);
+  const temFaturamento = faturamentoPreenchido(faturamento);
   const [gerando, setGerando] = useState(false);
+
+  // Último cliente/contato e faturamento escolhidos (a resposta do cadastro pode chegar depois da escolha do contato)
+  const atual = useRef({ cliente, faturamento });
+  atual.current = { cliente, faturamento };
+
+  /**
+   * Cliente escolhido: o faturamento do cadastro preenche o do carrinho (pergunta antes de trocar o já digitado).
+   * Só o contato mudou: a "Pessoa de contato" do faturamento passa a ser a dele.
+   */
+  const escolherCliente = async (c: ClienteVinculado | null) => {
+    const anterior = atual.current.cliente;
+    definirCliente(c);
+    if (!c) return;
+    if (anterior && anterior.id === c.id) {
+      const f = atual.current.faturamento;
+      const nome = c.contato?.nome;
+      if (nome && faturamentoPreenchido(f) && (!f.contato || f.contato === anterior.contato?.nome))
+        definirFaturamento({ ...f, contato: nome });
+      return;
+    }
+    try {
+      const r = await api.faturamentoCliente(c.id);
+      // Pessoa de contato do faturamento: a escolhida no carrinho (ou a do cadastro)
+      const contato = atual.current.cliente?.id === c.id ? atual.current.cliente.contato?.nome : c.contato?.nome;
+      if (contato && faturamentoPreenchido(r.faturamento)) r.faturamento = { ...r.faturamento, contato };
+      if (!faturamentoPreenchido(r.faturamento) || diferencasFaturamento(faturamento, r.faturamento).length === 0) return;
+      if (
+        temFaturamento &&
+        !(await confirmar('O carrinho já tem dados de faturamento. Trocar pelos dados do cadastro deste cliente?', {
+          titulo: 'Dados de faturamento',
+          ok: 'Usar os do cadastro',
+          cancelar: 'Manter os do carrinho',
+        }))
+      )
+        return;
+      definirFaturamento(r.faturamento);
+    } catch {
+      /* sem os dados do cadastro: o carrinho continua como está */
+    }
+  };
 
   // Abrir a aba redesenha a lista (reinicia campos e fecha os painéis)
   useEffect(() => {
-    if (visitas.carrinho > 0) redesenhar();
+    if (visitas.carrinho > 0) {
+      redesenhar();
+      // Tabelas de material e mão de obra atualizadas a cada abertura do carrinho
+      void carregarParametros();
+    }
   }, [visitas.carrinho]);
 
   const itens = Object.values(estado.itens);
   const count = itens.length;
-  const subtotal = subtotalCarrinho(estado.itens);
+  const subtotal = subtotalCarrinho(estado.itens, parametros, tecnicas);
   const valorFrete = Math.max(0, Number.parseFloat(frete) || 0);
   const total = subtotal + valorFrete;
   const unidades = itens.reduce((s, i) => s + i.qty, 0);
 
-  const limparTudo = () => {
-    if (!count) return;
-    if (!confirm('Limpar todos os itens do orçamento?')) return;
+  const limparTudo = async () => {
+    if (!count && !edicao) return;
+    const msg = edicao
+      ? `Limpar o carrinho e sair da alteração do ${edicao.numero}?\n\nO orçamento salvo não é modificado.`
+      : 'Limpar todos os itens do orçamento?';
+    if (!(await confirmar(msg, { titulo: 'Limpar carrinho', ok: 'Limpar', perigo: true }))) return;
     limpar();
   };
 
+  const precos = precosDoCarrinho(estado.itens, parametros, tecnicas);
   const gerarOrcamento = async () => {
     if (!itens.length) {
-      alert('Adicione produtos ao carrinho antes de gerar o orçamento.');
+      void avisar('Adicione produtos ao carrinho antes de gerar o orçamento.', { tipo: 'aviso', titulo: 'Carrinho vazio' });
       return;
     }
-    const snapshot = itens.map(({ produto, qty, calc }) => montarItemOrcamento(produto, qty, calc));
+    // Cliente obrigatório: todo orçamento nasce ligado a um cliente do cadastro (carteira e comissões)
+    if (!cliente) {
+      await avisar('Escolha ou inclua o cliente do orçamento.', { tipo: 'aviso', titulo: 'Cliente obrigatório' });
+      document.querySelector<HTMLInputElement>('#campo-cliente')?.focus();
+      return;
+    }
+    // Custo de personalização pelas tabelas: cadastro incompleto ou arte sem medidas impedem gerar
+    const pendencias = itens
+      .map((i) => ({ nome: i.produto.nome ?? i.produto.codigo ?? 'Produto', erro: precos.get(i)!.personalizacao.erro }))
+      .filter((x) => x.erro);
+    if (pendencias.length) {
+      void avisar(
+        `Corrija a personalização antes de gerar o orçamento:\n\n${pendencias.map((x) => `• ${x.nome}: ${x.erro}`).join('\n')}`,
+        { tipo: 'aviso', titulo: 'Personalização incompleta' },
+      );
+      return;
+    }
+    // Imposto de compra, imposto sobre venda e margem: sempre os Parâmetros cadastrados
+    const snapshot = itens.map((itemCarrinho) => {
+      const { produto, qty, observacao: obsItem } = itemCarrinho;
+      const { personalizacao } = precos.get(itemCarrinho)!;
+      const item = montarItemOrcamento(produto, qty, calcComParametros(itemCarrinho.calc, parametros), personalizacao);
+      // Observação de cada produto vai junto com o item do orçamento
+      const obs = obsItem?.trim();
+      return obs ? { ...item, observacao: obs } : item;
+    });
     const sub = snapshot.reduce((s, i) => s + i.preco * i.qty, 0);
     const tot = sub + valorFrete;
 
     setGerando(true);
     let numero = '—';
+    let id: number | undefined;
     let dataHora = new Date().toISOString();
+    const dados = {
+      itens: snapshot,
+      subtotal: sub,
+      frete: valorFrete,
+      total: tot,
+      observacao: observacao.trim(),
+      cliente_id: cliente?.id ?? null,
+      contato_id: cliente?.contato?.id ?? null,
+      entrega_prevista: entregaPrevista || null,
+      faturamento: temFaturamento ? faturamento : null,
+    };
     try {
-      const criado = await api.criarOrcamento({ itens: snapshot, subtotal: sub, frete: valorFrete, total: tot });
-      numero = criado.numero;
-      dataHora = criado.data_hora;
+      // Alteração de orçamento salvo: mesmo número, data atualizada
+      const salvo = edicao ? await api.atualizarOrcamento(edicao.id, dados) : await api.criarOrcamento(dados);
+      numero = salvo.numero;
+      id = salvo.id;
+      dataHora = salvo.data_hora;
+      // Orçamento gravado (novo ou alterado): o carrinho é esvaziado
+      limpar();
+      definirFrete('0');
     } catch (e) {
+      // Recusado pelo servidor (orçamento enviado, com pedido ou cliente inválido): mostra o motivo e mantém o carrinho
+      if (e instanceof ErroApi && (edicao || e.status === 400)) {
+        setGerando(false);
+        void avisar(e.message + '\n\nOs itens continuam no carrinho.', { tipo: 'aviso', titulo: 'Alteração não salva' });
+        return;
+      }
       console.error('Não foi possível salvar o orçamento no histórico:', e);
-      alert(
-        'Não foi possível salvar o orçamento no histórico (verifique a conexão com o servidor). O orçamento será exibido, mas não ficará registrado.',
+      void erro(
+        'Não foi possível salvar o orçamento no histórico (verifique a conexão com o servidor). O orçamento será exibido, mas não ficará registrado; os itens continuam no carrinho para tentar de novo.',
       );
     } finally {
       setGerando(false);
     }
-    mostrarOrcamento({ numero, dataHora, itens: snapshot, subtotal: sub, frete: valorFrete, total: tot });
+    // Sem acesso à tela Orçamentos: só confirma que o orçamento foi gravado
+    if (!pode('orcamentos')) {
+      if (id !== undefined) void avisar(`Orçamento ${numero} gravado.`, { tipo: 'sucesso' });
+      return;
+    }
+    const eu = usuario ? { id: usuario.id, nome: usuario.nome, login: usuario.login } : null;
+    mostrarOrcamento({
+      id,
+      numero,
+      dataHora,
+      itens: snapshot,
+      subtotal: sub,
+      frete: valorFrete,
+      total: tot,
+      observacao: observacao.trim() || null,
+      cliente,
+      entregaPrevista: entregaPrevista || null,
+      // Alteração: o criador original aparece ao reabrir o orçamento pela lista
+      ...(edicao ? { alteradoPor: eu } : { responsavel: eu, alteradoPor: null }),
+    });
   };
 
   return (
@@ -64,21 +204,33 @@ export function Carrinho() {
             <h2 className="carrinho-page-title">Carrinho de Orçamento</h2>
             <p className="carrinho-page-sub">
               <span id="cart-items-label">
-                {count === 0
-                  ? 'Nenhum item adicionado'
-                  : `${count} item${count > 1 ? 's' : ''} · ${unidades} unid.`}
+                {count === 0 ? 'Nenhum item adicionado' : `${count} item${count > 1 ? 's' : ''} · ${unidades} unid.`}
               </span>
             </p>
           </div>
           <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
-            <button className="btn-add-custom" onClick={() => abrirModalAvulso()}>
-              + Produto avulso
-            </button>
             <button className="btn-back" onClick={() => irPara('catalogo')}>
               ← Voltar ao catálogo
             </button>
           </div>
         </div>
+
+        {edicao && (
+          <div className="edicao-banner" id="edicao-banner">
+            <div>
+              <div className="edicao-banner-titulo">
+                Alterando o orçamento <span className="orc-num-badge">{edicao.numero}</span>
+              </div>
+              <div className="edicao-banner-sub">
+                Ao salvar, o {edicao.numero} é atualizado (mesmo número, com a data de hoje).
+                {edicao.aviso && <span className="edicao-banner-aviso"> {edicao.aviso}</span>}
+              </div>
+            </div>
+            <button className="btn-back" onClick={limparTudo}>
+              Cancelar alteração
+            </button>
+          </div>
+        )}
 
         <div className="carrinho-grid">
           {/* Coluna esquerda: itens */}
@@ -104,6 +256,16 @@ export function Carrinho() {
             <div className="carrinho-resumo">
               <div className="carrinho-resumo-title">Resumo</div>
 
+              <div className="cart-cliente" id="cart-cliente">
+                <label className="cart-field-label" htmlFor="campo-cliente">
+                  <span>
+                    Cliente <span className="obrigatorio">*</span>
+                  </span>
+                  <span className="cart-cliente-dica">{cliente ? cliente.codigo : 'obrigatório'}</span>
+                </label>
+                <SeletorCliente id="campo-cliente" comContato valor={cliente} aoMudar={(c) => void escolherCliente(c)} />
+              </div>
+
               <div className="cart-extra-fields">
                 <div className="cart-field-row">
                   <span className="cart-field-label">Frete</span>
@@ -119,9 +281,57 @@ export function Carrinho() {
                       step="0.01"
                       placeholder="0,00"
                       value={frete}
-                      onChange={(e) => setFrete(e.target.value)}
+                      onChange={(e) => definirFrete(e.target.value)}
                     />
                   </div>
+                </div>
+                <div className="cart-field-row">
+                  <label className="cart-field-label" htmlFor="campo-entrega">
+                    Previsão de entrega
+                  </label>
+                  <div className="cart-field-input-wrap">
+                    <input
+                      className="cart-field-input cart-field-data"
+                      id="campo-entrega"
+                      type="date"
+                      value={entregaPrevista}
+                      onChange={(e) => definirEntregaPrevista(e.target.value)}
+                    />
+                  </div>
+                </div>
+                <div className="cart-faturamento" id="cart-faturamento">
+                  <div className="cart-faturamento-topo">
+                    <span className="cart-field-label">Faturamento e entrega</span>
+                    <button
+                      type="button"
+                      className="link-botao"
+                      id="btn-faturamento-carrinho"
+                      onClick={() => setEditandoFaturamento(true)}
+                    >
+                      {temFaturamento ? 'Alterar' : '+ Informar'}
+                    </button>
+                  </div>
+                  {temFaturamento ? (
+                    <ResumoFaturamento dados={faturamento} />
+                  ) : (
+                    <span className="cart-faturamento-vazio">
+                      Opcional — o cliente confirma ou preenche ao aprovar o orçamento.
+                    </span>
+                  )}
+                </div>
+                <div className="cart-observacao">
+                  <label className="cart-field-label" htmlFor="campo-observacao">
+                    Observações
+                  </label>
+                  <textarea
+                    id="campo-observacao"
+                    className="custom-input cart-observacao-input"
+                    rows={3}
+                    maxLength={2000}
+                    placeholder="Prazo de entrega, condições de pagamento, detalhes da personalização…"
+                    value={observacao}
+                    onChange={(e) => definirObservacao(e.target.value)}
+                  />
                 </div>
               </div>
 
@@ -147,12 +357,27 @@ export function Carrinho() {
                 </span>
               </div>
 
-              <button className="btn-primary" id="btn-gerar" onClick={() => void gerarOrcamento()} disabled={count === 0 || gerando}>
-                Gerar Orçamento
+              <button
+                className="btn-primary"
+                id="btn-gerar"
+                onClick={() => void gerarOrcamento()}
+                disabled={count === 0 || gerando}
+              >
+                {edicao ? `Salvar ${edicao.numero}` : 'Gerar Orçamento'}
               </button>
-              <button className="btn-secondary" onClick={limparTudo}>
+              <button className="btn-secondary" onClick={() => void limparTudo()}>
                 Limpar tudo
               </button>
+              <ModalFaturamento
+                aberto={editandoFaturamento}
+                titulo="Dados de faturamento e entrega"
+                subtitulo="Opcional no orçamento. Ao aprovar pelo link, o cliente confirma e completa estes dados (lá eles são obrigatórios)."
+                inicial={faturamento}
+                completo={false}
+                textoSalvar="Usar no orçamento"
+                fechar={() => setEditandoFaturamento(false)}
+                salvar={(d) => definirFaturamento(d ?? faturamentoVazio(faturamento.tipo_pessoa))}
+              />
             </div>
           </aside>
         </div>

@@ -1,37 +1,55 @@
 import { createContext, useContext, useMemo, useReducer, type ReactNode } from 'react';
 import {
-  CALC_DEFAULTS,
+  calcComParametros,
   calcPreco,
   type CampoNumerico,
+  type ClienteVinculado,
+  type OrigemProduto,
   type ParametrosCalculo,
   type Produto,
+  faturamentoVazio,
+  calcComPersonalizacao,
+  calcularPersonalizacoesOrcamento,
+  entradaVazia,
+  type DadosFaturamento,
+  type EntradaPersonalizacao,
+  type ResultadoCalculo,
+  type PersonalizacaoCalculada,
+  type TecnicaComValores,
 } from '@raizes/shared';
 
-/** Produto no carrinho: do catálogo ou avulso (id negativo, is_custom). */
+/** Produto no carrinho (do catálogo: fornecedor integrado ou produto próprio, id negativo). */
 export interface ProdutoCarrinho {
   id: number;
+  origem?: OrigemProduto;
   nome: string | null;
   fornecedor: string;
   preco: number | null;
   codigo: string | null;
   imagem_url: string | null;
-  is_custom?: boolean;
   qtd_estoque?: number | null;
   atualizado?: string | null;
+  /** Detalhes (quando vieram do catálogo ou do orçamento salvo) */
+  descricao?: string | null;
+  medidas?: string | null;
+  material?: string | null;
+  fotos?: string[];
 }
 
 export interface ItemCarrinho {
   produto: ProdutoCarrinho;
   qty: number;
   calc: ParametrosCalculo;
-  /** Imagem do mockup vinculada ao item ("Salvar no Orçamento"). */
-  mockup_img?: string;
+  /** Observação deste produto, gravada no item do orçamento. */
+  observacao?: string;
+  /** Técnica, medidas da arte e ajustes de material / mão de obra */
+  personalizacao: EntradaPersonalizacao;
 }
 
 /**
  * Itens indexados pelo id do produto (como string). A ordem de iteração segue a
- * regra dos objetos JS — ids positivos em ordem crescente, depois os avulsos na
- * ordem de inclusão — exatamente como na versão anterior.
+ * regra dos objetos JS — ids positivos em ordem crescente, depois os produtos
+ * próprios (ids negativos) na ordem de inclusão.
  */
 export type Itens = Record<string, ItemCarrinho>;
 
@@ -43,41 +61,58 @@ export interface EstadoCarrinho {
    * reinicia os campos digitados e fecha os painéis de ajuste, como antes.
    */
   versao: number;
+  /** Valor digitado no campo Frete (R$). */
+  frete: string;
+  /** Observações livres do orçamento (gravadas junto com ele). */
+  observacao: string;
+  /** Orçamento salvo que está sendo alterado (null = orçamento novo). */
+  edicao: EdicaoOrcamento | null;
+  /** Cliente do Kommo vinculado ao orçamento (opcional ao gerar; obrigatório ao enviar). */
+  cliente: ClienteVinculado | null;
+  /** Data prevista de entrega (AAAA-MM-DD; '' = sem data) */
+  entregaPrevista: string;
+  /** Dados de faturamento e entrega (opcionais no orçamento) */
+  faturamento: DadosFaturamento;
 }
 
-export interface DadosAvulso {
-  nome: string;
-  fornecedor: string;
-  preco: number;
-  codigo: string;
-  imagem_url: string | null;
+/** Orçamento do histórico carregado no carrinho para alteração. */
+export interface EdicaoOrcamento {
+  id: number;
+  numero: string;
+  /** Aviso exibido no carrinho (ex.: orçamento antigo sem os ajustes por item). */
+  aviso?: string;
 }
 
 type Acao =
-  | { tipo: 'adicionar'; produto: Produto }
+  | { tipo: 'adicionar'; produto: Produto; calc: ParametrosCalculo }
   | { tipo: 'remover'; id: string }
   | { tipo: 'limpar' }
   | { tipo: 'qtd'; id: string; qty: number; redesenhar: boolean }
   | { tipo: 'calc'; id: string; campo: CampoNumerico; valor: number }
-  | { tipo: 'calcBool'; id: string; valor: boolean }
-  | { tipo: 'salvarAvulso'; editarId: string | null; dados: DadosAvulso }
-  | { tipo: 'mockup'; id: string; imagem: string }
-  | { tipo: 'redesenhar' };
+  | { tipo: 'observacaoItem'; id: string; valor: string }
+  | { tipo: 'personalizacao'; id: string; valor: EntradaPersonalizacao }
+  | { tipo: 'redesenhar' }
+  | { tipo: 'frete'; valor: string }
+  | { tipo: 'observacao'; valor: string }
+  | {
+      tipo: 'carregarOrcamento';
+      itens: Itens;
+      frete: string;
+      observacao: string;
+      edicao: EdicaoOrcamento;
+      cliente: ClienteVinculado | null;
+      entregaPrevista: string;
+      faturamento: DadosFaturamento;
+    }
+  | { tipo: 'entregaPrevista'; valor: string }
+  | { tipo: 'faturamento'; valor: DadosFaturamento }
+  | { tipo: 'cliente'; cliente: ClienteVinculado | null }
+  | { tipo: 'edicao'; edicao: EdicaoOrcamento | null };
 
 function semItem(itens: Itens, id: string): Itens {
   const novo = { ...itens };
   delete novo[id];
   return novo;
-}
-
-function proximoIdAvulso(itens: Itens): number {
-  // IDs negativos identificam itens avulsos (não conflitam com IDs do banco)
-  let min = 0;
-  for (const id of Object.keys(itens)) {
-    const n = Number.parseInt(id, 10);
-    if (n < min) min = n;
-  }
-  return min - 1;
 }
 
 function redutor(estado: EstadoCarrinho, acao: Acao): EstadoCarrinho {
@@ -86,118 +121,150 @@ function redutor(estado: EstadoCarrinho, acao: Acao): EstadoCarrinho {
   switch (acao.tipo) {
     case 'adicionar':
       return {
+        ...estado,
         ...redesenho,
-        itens: { ...itens, [acao.produto.id]: { produto: acao.produto, qty: 1, calc: { ...CALC_DEFAULTS } } },
+        // Os ajustes de custo e margem começam com os parâmetros cadastrados
+        itens: {
+          ...itens,
+          [acao.produto.id]: { produto: acao.produto, qty: 1, calc: { ...acao.calc }, personalizacao: entradaVazia() },
+        },
       };
     case 'remover':
-      return { ...redesenho, itens: semItem(itens, acao.id) };
+      return { ...estado, ...redesenho, itens: semItem(itens, acao.id) };
     case 'limpar':
-      return { ...redesenho, itens: {} };
+      // Esvaziar o carrinho também encerra a alteração de um orçamento salvo
+      return {
+        ...estado,
+        ...redesenho,
+        itens: {},
+        edicao: null,
+        observacao: '',
+        cliente: null,
+        entregaPrevista: '',
+        faturamento: faturamentoVazio(),
+      };
     case 'qtd': {
       const item = itens[acao.id];
       if (!item) return estado;
       return {
+        ...estado,
         versao: acao.redesenhar ? estado.versao + 1 : estado.versao,
         itens: { ...itens, [acao.id]: { ...item, qty: acao.qty } },
       };
     }
-    case 'calc':
-    case 'calcBool': {
+    case 'calc': {
       const item = itens[acao.id];
       if (!item) return estado;
-      const calc =
-        acao.tipo === 'calc'
-          ? { ...item.calc, [acao.campo]: acao.valor }
-          : { ...item.calc, imposto_compra_ativo: acao.valor };
+      const calc = { ...item.calc, [acao.campo]: acao.valor };
       return { ...estado, itens: { ...itens, [acao.id]: { ...item, calc } } };
     }
-    case 'salvarAvulso': {
-      const { dados, editarId } = acao;
-      const fornecedor = dados.fornecedor.toUpperCase().slice(0, 20);
-      const existente = editarId ? itens[editarId] : undefined;
-      if (editarId && existente) {
-        // Edição: preserva qty e calc, só atualiza o produto
-        return {
-          ...redesenho,
-          itens: {
-            ...itens,
-            [editarId]: {
-              ...existente,
-              produto: {
-                ...existente.produto,
-                nome: dados.nome,
-                fornecedor,
-                preco: dados.preco,
-                codigo: dados.codigo,
-                // foto nova substitui; sem foto nova, preserva a anterior
-                imagem_url:
-                  dados.imagem_url !== null ? dados.imagem_url : existente.produto.imagem_url || '',
-              },
-            },
-          },
-        };
-      }
-      const id = proximoIdAvulso(itens);
-      return {
-        ...redesenho,
-        itens: {
-          ...itens,
-          [id]: {
-            produto: {
-              id,
-              nome: dados.nome,
-              fornecedor,
-              preco: dados.preco,
-              codigo: dados.codigo,
-              imagem_url: dados.imagem_url || '',
-              is_custom: true,
-            },
-            qty: 1,
-            calc: { ...CALC_DEFAULTS },
-          },
-        },
-      };
-    }
-    case 'mockup': {
+    case 'observacaoItem': {
       const item = itens[acao.id];
       if (!item) return estado;
-      return { ...estado, itens: { ...itens, [acao.id]: { ...item, mockup_img: acao.imagem } } };
+      return { ...estado, itens: { ...itens, [acao.id]: { ...item, observacao: acao.valor } } };
+    }
+    case 'personalizacao': {
+      const item = itens[acao.id];
+      if (!item) return estado;
+      return { ...estado, itens: { ...itens, [acao.id]: { ...item, personalizacao: acao.valor } } };
     }
     case 'redesenhar':
       return { ...estado, ...redesenho };
+    case 'frete':
+      return { ...estado, frete: acao.valor };
+    case 'observacao':
+      return { ...estado, observacao: acao.valor };
+    case 'carregarOrcamento':
+      return {
+        ...redesenho,
+        itens: acao.itens,
+        frete: acao.frete,
+        observacao: acao.observacao,
+        edicao: acao.edicao,
+        cliente: acao.cliente,
+        entregaPrevista: acao.entregaPrevista,
+        faturamento: acao.faturamento,
+      };
+    case 'entregaPrevista':
+      return { ...estado, entregaPrevista: acao.valor };
+    case 'faturamento':
+      return { ...estado, faturamento: acao.valor };
+    case 'cliente':
+      return { ...estado, cliente: acao.cliente };
+    case 'edicao':
+      return { ...estado, edicao: acao.edicao };
   }
 }
 
 interface ContextoCarrinho {
   estado: EstadoCarrinho;
-  adicionar: (produto: Produto) => void;
+  adicionar: (produto: Produto, calc: ParametrosCalculo) => void;
   remover: (id: number | string) => void;
   limpar: () => void;
   definirQtd: (id: number | string, qty: number, redesenhar: boolean) => void;
   definirCalc: (id: number | string, campo: CampoNumerico, valor: number) => void;
-  definirCalcBool: (id: number | string, valor: boolean) => void;
-  salvarAvulso: (editarId: number | string | null, dados: DadosAvulso) => void;
-  vincularMockup: (id: number | string, imagem: string) => void;
+  definirObservacaoItem: (id: number | string, valor: string) => void;
+  definirPersonalizacao: (id: number | string, valor: EntradaPersonalizacao) => void;
   redesenhar: () => void;
+  definirFrete: (valor: string) => void;
+  definirObservacao: (valor: string) => void;
+  /** Substitui o carrinho pelos itens de um orçamento salvo (modo de alteração). */
+  carregarOrcamento: (
+    itens: Itens,
+    frete: string,
+    edicao: EdicaoOrcamento,
+    observacao?: string,
+    cliente?: ClienteVinculado | null,
+    entregaPrevista?: string | null,
+    faturamento?: DadosFaturamento | null,
+  ) => void;
+  definirCliente: (cliente: ClienteVinculado | null) => void;
+  definirFaturamento: (valor: DadosFaturamento) => void;
+  definirEntregaPrevista: (valor: string) => void;
+  definirEdicao: (edicao: EdicaoOrcamento | null) => void;
 }
 
 const Ctx = createContext<ContextoCarrinho | null>(null);
 
 export function ProvedorCarrinho({ children }: { children: ReactNode }) {
-  const [estado, despachar] = useReducer(redutor, { itens: {}, versao: 0 });
+  const [estado, despachar] = useReducer(redutor, {
+    itens: {},
+    versao: 0,
+    frete: '0',
+    observacao: '',
+    edicao: null,
+    cliente: null,
+    entregaPrevista: '',
+    faturamento: faturamentoVazio(),
+  });
   const valor = useMemo<ContextoCarrinho>(
     () => ({
       estado,
-      adicionar: (produto) => despachar({ tipo: 'adicionar', produto }),
+      adicionar: (produto, calc) => despachar({ tipo: 'adicionar', produto, calc }),
       remover: (id) => despachar({ tipo: 'remover', id: String(id) }),
       limpar: () => despachar({ tipo: 'limpar' }),
       definirQtd: (id, qty, redesenhar) => despachar({ tipo: 'qtd', id: String(id), qty, redesenhar }),
       definirCalc: (id, campo, v) => despachar({ tipo: 'calc', id: String(id), campo, valor: v }),
-      definirCalcBool: (id, v) => despachar({ tipo: 'calcBool', id: String(id), valor: v }),
-      salvarAvulso: (editarId, dados) =>
-        despachar({ tipo: 'salvarAvulso', editarId: editarId === null ? null : String(editarId), dados }),
-      vincularMockup: (id, imagem) => despachar({ tipo: 'mockup', id: String(id), imagem }),
+      definirObservacaoItem: (id, valor) => despachar({ tipo: 'observacaoItem', id: String(id), valor }),
+      definirPersonalizacao: (id, valor) => despachar({ tipo: 'personalizacao', id: String(id), valor }),
       redesenhar: () => despachar({ tipo: 'redesenhar' }),
+      definirFrete: (valor) => despachar({ tipo: 'frete', valor }),
+      definirObservacao: (valor) => despachar({ tipo: 'observacao', valor }),
+      carregarOrcamento: (itens, frete, edicao, observacao = '', cliente = null, entregaPrevista = null, faturamento = null) =>
+        despachar({
+          tipo: 'carregarOrcamento',
+          itens,
+          frete,
+          observacao,
+          edicao,
+          cliente,
+          entregaPrevista: entregaPrevista ?? '',
+          faturamento: faturamento ?? faturamentoVazio(),
+        }),
+      definirFaturamento: (valor) => despachar({ tipo: 'faturamento', valor }),
+      definirEntregaPrevista: (valor) => despachar({ tipo: 'entregaPrevista', valor }),
+      definirCliente: (cliente) => despachar({ tipo: 'cliente', cliente }),
+      definirEdicao: (edicao) => despachar({ tipo: 'edicao', edicao }),
     }),
     [estado],
   );
@@ -210,10 +277,38 @@ export function useCarrinho(): ContextoCarrinho {
   return c;
 }
 
-/** Subtotal dos preços calculados (sem frete). */
-export function subtotalCarrinho(itens: Itens): number {
-  return Object.values(itens).reduce(
-    (s, { produto: p, qty, calc }) => s + calcPreco(p.preco as number, qty, calc).preco * qty,
-    0,
-  );
+/** Subtotal dos preços calculados (sem frete), com os parâmetros cadastrados. */
+export function subtotalCarrinho(itens: Itens, parametros: ParametrosCalculo, tecnicas: TecnicaComValores[] | null): number {
+  const precos = precosDoCarrinho(itens, parametros, tecnicas);
+  return Object.values(itens).reduce((s, item) => s + precos.get(item)!.res.preco * item.qty, 0);
 }
+
+export type PrecoItem = { personalizacao: PersonalizacaoCalculada; calc: ParametrosCalculo; res: ResultadoCalculo };
+
+/**
+ * Preço de cada item do carrinho: parâmetros cadastrados (impostos e margem), ajustes
+ * do item e o custo de personalização. O material é calculado em conjunto por técnica
+ * (área somada, arredondada uma vez e rateada) — por isso depende do carrinho inteiro.
+ */
+export function precosDoCarrinho(
+  itens: Itens,
+  parametros: ParametrosCalculo,
+  tecnicas: TecnicaComValores[] | null,
+): Map<ItemCarrinho, PrecoItem> {
+  const lista = Object.values(itens);
+  // Sem técnica: material e mão de obra padrão de Parâmetros › Precificação (como no cálculo anterior)
+  const pers = calcularPersonalizacoesOrcamento(
+    lista.map((item) => ({ chave: item, entrada: item.personalizacao, qty: item.qty })),
+    tecnicas,
+    { material_unit: parametros.mat_personalizacao, mao_obra_unit: parametros.mo_personalizacao },
+  );
+  const precos = new Map<ItemCarrinho, PrecoItem>();
+  for (const item of lista) {
+    const personalizacao = pers.get(item)!;
+    const calc = calcComPersonalizacao(calcComParametros(item.calc, parametros), personalizacao);
+    precos.set(item, { personalizacao, calc, res: calcPreco(item.produto.preco as number, item.qty, calc) });
+  }
+  return precos;
+}
+
+

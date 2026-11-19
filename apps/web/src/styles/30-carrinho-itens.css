@@ -206,3 +206,6 @@
 .cart-subtotal-row.destaque { color: var(--text); font-weight: 500; }
 .cart-subtotal-val { font-variant-numeric: tabular-nums; }
 
+
+/* Previsão de entrega no resumo do carrinho */
+.cart-field-input.cart-field-data { width: 150px; text-align: left; }

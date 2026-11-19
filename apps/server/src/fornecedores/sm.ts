@@ -3,11 +3,16 @@ import { falsyPython, reprPython } from '../lib/conversao';
 import { comTimeout, lerJson, verificarStatus } from './http';
 import { primeiraUrl } from './primeira-url';
 import { colunasDataFrame } from './tabela';
+import { detalhesVazios, juntarCategorias, limparTexto, montarFicha, numeroPositivo, urlsUnicas } from './texto';
 import type { Coletor, LinhaFornecedor } from './tipos';
+import type { DetalhesProduto, FaixaPrecoFornecedor } from '@raizes/shared';
 
 const URL_API = 'https://www.somarcas.com.br/api-lista-preco-revenda-v1-0-0.php?estado=SP';
 
-type Alvo = keyof LinhaFornecedor;
+type Alvo = Exclude<keyof LinhaFornecedor, 'detalhes'>;
+
+/** O título é o nome do produto; quando existe, "descricao" vira a descrição. */
+const COLUNAS_TITULO = ['titulo', 'Titulo', 'TITULO'];
 
 const MAPA_EXATO: Record<string, Alvo> = {
   codigo: 'codigo', Codigo: 'codigo', CODIGO: 'codigo',
@@ -53,7 +58,13 @@ const HEURISTICA: [Alvo, string[]][] = [
 export function mapearColunasSM(colunas: string[]): Map<string, Alvo> {
   const mapa = new Map<string, Alvo>();
   const usados = new Set<Alvo>();
+  const titulo = colunas.find((c) => COLUNAS_TITULO.includes(c));
+  if (titulo) {
+    mapa.set(titulo, 'nome');
+    usados.add('nome');
+  }
   for (const col of colunas) {
+    if (mapa.has(col)) continue;
     const alvo = Object.hasOwn(MAPA_EXATO, col) ? MAPA_EXATO[col] : undefined;
     if (alvo && !usados.has(alvo)) {
       mapa.set(col, alvo);
@@ -72,6 +83,43 @@ export function mapearColunasSM(colunas: string[]): Map<string, Alvo> {
     }
   }
   return mapa;
+}
+
+const lista = (v: unknown): string[] =>
+  typeof v === 'string' ? v.split('|').map((x) => x.trim()).filter(Boolean) : [];
+
+/**
+ * Detalhes de um registro da SM. `colunasUsadas` são as já mapeadas para os campos
+ * básicos (a "descricao" só vira descrição quando o nome veio do título).
+ */
+export function detalhesSM(r: Record<string, unknown>, colunasUsadas: Set<string>, colPreco?: string): DetalhesProduto {
+  const d = detalhesVazios();
+  const v = (c: string) => (Object.hasOwn(r, c) ? r[c] : null);
+  if (!colunasUsadas.has('descricao')) d.descricao = limparTexto(v('descricao'), true);
+  d.medidas = limparTexto(v('dimensoes_do_produto'));
+  d.personalizacao = limparTexto(v('tipo_gravacao'));
+  d.categoria = juntarCategorias(lista(v('matriz_de_categorias')));
+  d.fotos = urlsUnicas([v('url_foto'), ...lista(v('matriz_de_fotos_adicionais'))]);
+  d.ficha = montarFicha([
+    ['Embalagem', v('embalagem_do_produto')],
+    ['Dimensões da embalagem', v('dimensoes_da_embalagem')],
+    ['Peso da embalagem', v('peso_da_embalagem')],
+    ['Garantia', v('garantia_do_produto')],
+    ['Quantidade mínima sugerida', v('quantidade_minima_sugerida')],
+    ['NCM', v('ncm')],
+  ]);
+  // Preço por quantidade, no mesmo tipo do preço usado (ex.: preco_sem_gravacao_sem_impostos)
+  const tipo = colPreco?.startsWith('preco_') ? colPreco.slice('preco_'.length) : null;
+  if (tipo) {
+    const faixas: FaixaPrecoFornecedor[] = [];
+    for (let i = 1; i <= 10; i++) {
+      const qtd = numeroPositivo(v(`grade_preco_qtd${i}`));
+      const preco = numeroPositivo(v(`grade_preco_${tipo}_qtd${i}`));
+      if (qtd && preco) faixas.push({ qtd, preco });
+    }
+    d.faixas_preco = faixas;
+  }
+  return d;
 }
 
 export const sm: Coletor = {
@@ -117,12 +165,18 @@ export const sm: Coletor = {
       if (col === undefined) return null;
       return Object.hasOwn(r, col) ? r[col] : NaN;
     };
-    return linhas.map((r) => ({
-      codigo: valor(r, 'codigo'),
-      nome: valor(r, 'nome'),
-      preco: valor(r, 'preco'),
-      qtd_estoque: valor(r, 'qtd_estoque'),
-      imagem_url: primeiraUrl(valor(r, 'imagem_url')),
-    }));
+    const usadas = new Set(mapa.keys());
+    const veioDoTitulo = COLUNAS_TITULO.includes(origem.get('nome') ?? '');
+    return linhas.map((r) => {
+      const nome = valor(r, 'nome');
+      return {
+        codigo: valor(r, 'codigo'),
+        nome: veioDoTitulo ? (limparTexto(nome) ?? nome) : nome,
+        preco: valor(r, 'preco'),
+        qtd_estoque: valor(r, 'qtd_estoque'),
+        imagem_url: primeiraUrl(valor(r, 'imagem_url')),
+        detalhes: detalhesSM(r, usadas, origem.get('preco')),
+      };
+    });
   },
 };

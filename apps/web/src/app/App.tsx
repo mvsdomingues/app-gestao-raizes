@@ -1,36 +1,131 @@
+import { Fragment, lazy, Suspense, type ReactNode } from 'react';
+import type { IdTela } from '@raizes/shared';
+import { BarraLateral } from '../components/BarraLateral';
 import { BarraStatus } from '../components/BarraStatus';
-import { Cabecalho } from '../components/Cabecalho';
 import { Lightbox } from '../components/Lightbox';
+import { MenuUsuario } from '../components/MenuUsuario';
+import { Acessos } from '../features/acessos/Acessos';
 import { Atualizacao } from '../features/atualizacao/Atualizacao';
 import { Carrinho } from '../features/carrinho/Carrinho';
-import { ModalProdutoAvulso } from '../features/carrinho/ModalProdutoAvulso';
 import { Catalogo } from '../features/catalogo/Catalogo';
-import { Historico } from '../features/historico/Historico';
-import { EstudioMockup } from '../features/mockup/EstudioMockup';
-import { Orcamento } from '../features/orcamento/Orcamento';
+import { Clientes } from '../features/clientes/Clientes';
+import { TelaLogin } from '../features/login/TelaLogin';
+import { DashGeral } from '../features/dashboards/DashGeral';
+import { Equipes } from '../features/equipes/Equipes';
+import { RelAbertos } from '../features/relatorios/RelAbertos';
+import { RelDesempenho } from '../features/relatorios/RelDesempenho';
+import { RelEvolucao } from '../features/relatorios/RelEvolucao';
+import { RelFunil } from '../features/relatorios/RelFunil';
+import { Orcamentos } from '../features/orcamentos/Orcamentos';
+import { Parametros } from '../features/parametros/Parametros';
+import { Pedidos } from '../features/pedidos/Pedidos';
+import { ProdutosProprios } from '../features/produtos-proprios/ProdutosProprios';
+import { Usuarios } from '../features/usuarios/Usuarios';
 import { ProvedorCarrinho } from '../state/carrinho';
-import { ProvedorApp } from './contexto';
+import { ProvedorApp, useApp } from './contexto';
+import { ProvedorSessao, useSessao } from './sessao';
+import { Dialogos } from '../components/Dialogos';
+import { MemoriasCalculo } from '../features/ajuda/MemoriasCalculo';
+import { ApuracaoComissoes } from '../features/comissoes/ApuracaoComissoes';
+import { CarteirasPedidos } from '../features/comissoes/CarteirasPedidos';
+import { ParametrosComissao } from '../features/comissoes/ParametrosComissao';
+import { ManualOperacao } from '../features/ajuda/ManualOperacao';
+
+// O estúdio de mockups (Konva) é carregado só na primeira vez que a tela é aberta
+const EstudioMockup = lazy(() => import('../features/mockup/EstudioMockup').then((m) => ({ default: m.EstudioMockup })));
+
+function MockupSobDemanda() {
+  const { visitas, tela } = useApp();
+  if (visitas.mockup === 0) return null;
+  return (
+    <Suspense fallback={tela === 'mockup' ? <div className="mk-carregando">Carregando o estúdio…</div> : null}>
+      <EstudioMockup />
+    </Suspense>
+  );
+}
 
 /**
- * Aplicação de página única. Todas as telas ficam montadas e apenas a ativa
- * é exibida — assim o estado de cada uma (busca, mockup, log…) é preservado
- * ao trocar de aba, como na versão anterior.
+ * Aplicação de página única: login → menu lateral + área de telas + rodapé de status.
+ * Só são montadas as telas liberadas para o usuário; a ativa é exibida e as demais
+ * ficam ocultas (o estado de cada uma é preservado ao trocar de tela).
+ * Novas telas: crie em features/, registre aqui, em TELAS_SISTEMA (shared) e no menu (BarraLateral).
  */
 export function App() {
   return (
-    <ProvedorApp>
+    <ProvedorSessao>
+      <Portao />
+      <Dialogos />
+    </ProvedorSessao>
+  );
+}
+
+function Portao() {
+  const { usuario } = useSessao();
+  if (usuario === undefined) return <div className="login-fundo" aria-busy="true" />;
+  if (!usuario) return <TelaLogin />;
+  // key: troca de usuário recomeça a aplicação do zero (carrinho, telas abertas…)
+  return (
+    <ProvedorApp key={usuario.id}>
       <ProvedorCarrinho>
-        <Cabecalho />
-        <Catalogo />
-        <Carrinho />
-        <Atualizacao />
-        <Orcamento />
-        <EstudioMockup />
-        <Historico />
-        <BarraStatus />
+        <div className="app-shell">
+          <BarraLateral />
+          <div className="app-main">
+            <MenuUsuario />
+            <main className="app-views">
+              <Telas />
+            </main>
+            <BarraStatus />
+          </div>
+        </div>
         <Lightbox />
-        <ModalProdutoAvulso />
       </ProvedorCarrinho>
     </ProvedorApp>
+  );
+}
+
+const TELAS: Record<IdTela, ReactNode> = {
+  catalogo: <Catalogo />,
+  carrinho: <Carrinho />,
+  orcamentos: <Orcamentos />,
+  pedidos: <Pedidos />,
+  mockup: <MockupSobDemanda />,
+  'dash-geral': <DashGeral />,
+  'rel-desempenho': <RelDesempenho />,
+  'rel-abertos': <RelAbertos />,
+  'rel-funil': <RelFunil />,
+  'rel-evolucao': <RelEvolucao />,
+  equipes: <Equipes />,
+  clientes: <Clientes />,
+  'produtos-proprios': <ProdutosProprios />,
+  parametros: <Parametros />,
+  usuarios: <Usuarios />,
+  acessos: <Acessos />,
+  status: <Atualizacao />,
+  'comissoes-apuracao': <ApuracaoComissoes />,
+  'comissoes-carteiras': <CarteirasPedidos />,
+  'comissoes-parametros': <ParametrosComissao />,
+  'ajuda-calculos': <MemoriasCalculo />,
+  'ajuda-manual': <ManualOperacao />,
+};
+
+function Telas() {
+  const { pode } = useSessao();
+  const { tela } = useApp();
+  const liberadas = (Object.keys(TELAS) as IdTela[]).filter(pode);
+  if (!tela || !liberadas.length) {
+    return (
+      <div className="orc-empty-state sem-acesso" id="sem-acesso">
+        <div className="orc-empty-icon">🔒</div>
+        <h2>Nenhuma tela liberada</h2>
+        <p>Seu usuário ainda não tem acesso a nenhuma funcionalidade. Peça a liberação a quem administra os acessos.</p>
+      </div>
+    );
+  }
+  return (
+    <>
+      {liberadas.map((t) => (
+        <Fragment key={t}>{TELAS[t]}</Fragment>
+      ))}
+    </>
   );
 }

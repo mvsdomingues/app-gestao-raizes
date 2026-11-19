@@ -46,7 +46,44 @@ export const config = {
   imagensDir: caminho(process.env.IMAGENS_DIR, 'data/imagens'),
   /** Build do front-end servido pelo Express em produção. */
   webDist: resolve(RAIZ, 'apps/web/dist'),
+  /** Endereço público dos links enviados aos clientes (sem barra no fim); null = o endereço de acesso. */
+  urlPublica: process.env.APP_URL_PUBLICA?.trim().replace(/\/+$/, '') || null,
+  /** Integração com o Kommo (desligada sem KOMMO_ATIVO=1, KOMMO_SUBDOMINIO e KOMMO_TOKEN). */
+  kommo: configKommo(),
+  /** Backup diário da base (npm run backup) */
+  backup: {
+    /** Fora do projeto: no servidor, /var/backups/raizes; no Windows, a pasta backups/ do projeto (fora do Git) */
+    pasta: caminho(process.env.BACKUP_DIR, process.platform === 'win32' ? 'backups' : '/var/backups/raizes'),
+    dias: Math.max(1, Math.floor(Number(process.env.BACKUP_DIAS)) || 7),
+    /** Remoto do rclone (ex.: gdrive:raizes-backups); vazio = sem cópia fora do servidor */
+    destinoExterno: process.env.BACKUP_RCLONE_DESTINO?.trim() || null,
+  },
+  /** Logs dos comandos agendados (backup) */
+  logsDir: resolve(RAIZ, 'logs'),
 };
+
+/** Configuração do Kommo; null quando não há token ou subdomínio. */
+export interface ConfigKommo {
+  subdominio: string;
+  token: string;
+  /** Endereço da API (padrão: https://<subdominio>.kommo.com) */
+  baseUrl: string;
+  /** Intervalo da sincronização incremental, em minutos */
+  syncMinutos: number;
+}
+
+function configKommo(): ConfigKommo | null {
+  const subdominio = process.env.KOMMO_SUBDOMINIO?.trim() ?? '';
+  const token = process.env.KOMMO_TOKEN?.trim() ?? '';
+  // Desligada por padrão: o cadastro de clientes é do próprio sistema; KOMMO_ATIVO=1 religa
+  if (process.env.KOMMO_ATIVO?.trim() !== '1' || !subdominio || !token) return null;
+  return {
+    subdominio,
+    token,
+    baseUrl: process.env.KOMMO_BASE_URL?.trim() || `https://${subdominio}.kommo.com`,
+    syncMinutos: Math.max(1, Number(process.env.KOMMO_SYNC_MINUTOS) || 10),
+  };
+}
 
 /** Lê uma variável obrigatória (credenciais de fornecedores). */
 export function exigirEnv(nome: string): string {

@@ -6,6 +6,8 @@ export default defineConfig({
     index: 'src/index.ts',
     'cli/atualizar-produtos': 'src/cli/atualizar-produtos.ts',
     'cli/baixar-imagens-spot': 'src/cli/baixar-imagens-spot.ts',
+    'cli/backup-base': 'src/cli/backup-base.ts',
+    'cli/restaurar-base': 'src/cli/restaurar-base.ts',
   },
   format: ['esm'],
   platform: 'node',

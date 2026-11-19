@@ -1,0 +1,49 @@
+/* ══════════════════════════════════
+   ALTERAÇÃO DE ORÇAMENTO SALVO
+   ══════════════════════════════════ */
+/* Faixa no topo do carrinho enquanto um orçamento salvo está sendo alterado */
+.edicao-banner {
+  max-width: 1200px;
+  margin: 0 auto 18px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  padding: 14px 18px;
+  background: linear-gradient(135deg, #FBF9FD, #F3EEF8);
+  border: 1.5px solid #C5B3D8;
+  border-left: 4px solid var(--uva);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-sm);
+}
+.edicao-banner-titulo {
+  font-family: var(--font-display);
+  font-size: 1.15rem;
+  font-weight: 600;
+  color: var(--berinjela);
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.edicao-banner-sub { font-size: .8rem; color: var(--muted); margin-top: 3px; }
+.edicao-banner-aviso { color: #9A6B12; font-weight: 500; }
+.edicao-banner .btn-back { flex-shrink: 0; }
+
+/* Botão "Editar" no histórico */
+.hist-acoes { text-align: right; }
+.btn-editar-orc {
+  background: var(--surface);
+  border: 1.5px solid var(--border);
+  border-radius: 20px;
+  color: var(--uva);
+  font-family: var(--font-body);
+  font-size: .74rem;
+  font-weight: 600;
+  padding: 5px 12px;
+  cursor: pointer;
+  transition: all .15s;
+  white-space: nowrap;
+}
+.btn-editar-orc:hover:not(:disabled) { background: var(--uva); border-color: var(--uva); color: #fff; }
+.btn-editar-orc:disabled { opacity: .5; cursor: default; }
+#btn-editar-orcamento:disabled { opacity: .5; cursor: default; }

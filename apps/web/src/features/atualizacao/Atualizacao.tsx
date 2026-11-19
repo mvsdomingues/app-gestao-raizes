@@ -3,6 +3,9 @@ import { CHAVES_FORNECEDORES, ROTULOS_FORNECEDORES, type ChaveFornecedor } from 
 import { useApp } from '../../app/contexto';
 import { api } from '../../lib/api';
 import { CartoesStatus } from './CartoesStatus';
+import { PainelBackup } from './PainelBackup';
+import { PainelKommo } from './PainelKommo';
+import { avisar, erro, erroDe } from '../../lib/dialogo';
 
 const INTERVALO_MS = 1200;
 const TEXTO_BOTAO = '⟳ Atualizar agora';
@@ -86,14 +89,14 @@ export function Atualizacao() {
   const iniciar = async () => {
     const selecionados = CHAVES_FORNECEDORES.filter((k) => selecao[k]);
     if (selecionados.length === 0) {
-      alert('Selecione ao menos um fornecedor.');
+      void avisar('Selecione ao menos um fornecedor.', { tipo: 'aviso' });
       return;
     }
     setBotao({ desabilitado: true, texto: '⟳ Iniciando…' });
     try {
       const data = await api.iniciarAtualizacao(selecionados);
       if (!data.ok) {
-        alert('Erro: ' + (data.msg || 'falha desconhecida'));
+        void erro(data.msg || 'Falha desconhecida ao iniciar a atualização.');
         setBotao({ desabilitado: false, texto: TEXTO_BOTAO });
         return;
       }
@@ -104,7 +107,7 @@ export function Atualizacao() {
       setFim('');
       iniciarPolling();
     } catch (e) {
-      alert('Falha de rede: ' + (e instanceof Error ? e.message : e));
+      void erroDe('Falha de rede ao iniciar a atualização.', e);
       setBotao({ desabilitado: false, texto: TEXTO_BOTAO });
     }
   };
@@ -170,6 +173,10 @@ export function Atualizacao() {
         </div>
 
         <CartoesStatus />
+
+        <PainelBackup visivel={tela === 'status'} />
+
+        <PainelKommo visivel={tela === 'status'} />
       </div>
     </div>
   );

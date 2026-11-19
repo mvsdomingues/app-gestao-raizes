@@ -1,0 +1,83 @@
+/* Visualizador de imagens (link do cliente): janela sobre a página, com zoom e setas */
+.visualizador {
+  position: fixed; inset: 0; z-index: 3000;
+  background: rgb(24, 12, 28);
+  display: flex; flex-direction: column;
+  color: #fff; font-family: 'Jost', sans-serif;
+  animation: visualizador-entra .15s ease-out;
+  touch-action: manipulation;
+}
+@keyframes visualizador-entra { from { opacity: 0; } to { opacity: 1; } }
+.visualizador-topo {
+  display: flex; align-items: center; gap: 12px;
+  padding: 12px 16px; padding-top: max(12px, env(safe-area-inset-top));
+}
+.visualizador-legenda { flex: 1; min-width: 0; }
+.visualizador-titulo { font-size: .95rem; font-weight: 500; line-height: 1.3; overflow: hidden; text-overflow: ellipsis; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; }
+.visualizador-detalhe { font-size: .78rem; opacity: .7; margin-top: 2px; }
+.visualizador-contador { font-size: .8rem; opacity: .75; white-space: nowrap; }
+.visualizador-fechar {
+  width: 44px; height: 44px; flex-shrink: 0; border-radius: 50%;
+  border: 1px solid rgba(255,255,255,.35); background: rgba(255,255,255,.08);
+  color: #fff; font-size: 1.1rem; cursor: pointer;
+}
+.visualizador-fechar:hover, .visualizador-fechar:focus-visible { background: rgba(255,255,255,.2); outline: none; }
+.visualizador-area {
+  flex: 1; min-height: 0; display: flex; overflow: hidden;
+  padding: 0 64px;
+}
+.visualizador-area img {
+  margin: auto; display: block;
+  max-width: 100%; max-height: 100%; object-fit: contain;
+  background: #fff; border-radius: 6px;
+  cursor: zoom-in; user-select: none; -webkit-user-drag: none;
+}
+.visualizador-area.com-zoom { overflow: auto; padding: 0; -webkit-overflow-scrolling: touch; overscroll-behavior: contain; }
+.visualizador-area.com-zoom img { max-width: none; max-height: none; border-radius: 0; cursor: grab; }
+.visualizador-area.com-zoom img:active { cursor: grabbing; }
+.visualizador-falha { margin: auto; padding: 24px; background: rgba(255,255,255,.08); border-radius: 8px; font-size: .9rem; }
+.visualizador-seta {
+  position: absolute; top: 50%; transform: translateY(-50%);
+  width: 48px; height: 48px; border-radius: 50%;
+  border: 1px solid rgba(255,255,255,.35); background: rgba(24,12,28,.55);
+  color: #fff; font-size: 1.9rem; line-height: 1; cursor: pointer;
+}
+.visualizador-seta:hover, .visualizador-seta:focus-visible { background: rgba(255,255,255,.2); outline: none; }
+.visualizador-seta.anterior { left: 10px; }
+.visualizador-seta.proxima { right: 10px; }
+.visualizador-dica {
+  text-align: center; font-size: .76rem; opacity: .7;
+  padding: 10px 16px; padding-bottom: max(10px, env(safe-area-inset-bottom));
+}
+
+/* Miniaturas clicáveis na folha */
+.img-ampliavel {
+  position: relative; display: inline-flex; flex-shrink: 0;
+  padding: 0; border: 0; background: none; cursor: zoom-in; border-radius: 6px;
+  font: inherit; color: inherit;
+}
+.img-ampliavel:focus-visible { outline: 2px solid var(--uva); outline-offset: 2px; }
+.img-ampliavel-icone {
+  position: absolute; right: -5px; bottom: -5px;
+  width: 18px; height: 18px; border-radius: 50%;
+  background: var(--uva); color: #fff; font-size: 10px; line-height: 18px; text-align: center;
+  box-shadow: 0 1px 3px rgba(0,0,0,.25); pointer-events: none;
+}
+.orc-mockup .img-ampliavel { display: block; width: 100%; border-radius: 0; }
+.orc-mockup .img-ampliavel-icone { right: 8px; bottom: 8px; width: 26px; height: 26px; line-height: 26px; font-size: 13px; }
+.img-ampliavel:hover img { filter: brightness(.94); }
+
+@media (max-width: 640px) {
+  .visualizador-area { padding: 0 8px; }
+  .visualizador-seta { top: auto; bottom: 52px; transform: none; width: 44px; height: 44px; font-size: 1.6rem; }
+}
+
+@media print {
+  .visualizador { display: none !important; }
+  .img-ampliavel-icone { display: none !important; }
+}
+
+/* No link do cliente, a miniatura clicável fica um pouco maior na tela (área de toque); a impressão não muda */
+@media screen {
+  .pub-folha .img-ampliavel .orc-prod-img { width: 48px; height: 48px; }
+}

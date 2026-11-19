@@ -17,6 +17,8 @@
     "start": "npm run start -w @raizes/server",
     "atualizar": "npm run atualizar -w @raizes/server --",
     "imagens:spot": "npm run imagens:spot -w @raizes/server --",
+    "backup": "npm run backup -w @raizes/server --",
+    "restaurar": "npm run restaurar -w @raizes/server --",
     "setup:playwright": "npm run setup:playwright -w @raizes/server",
     "typecheck": "npm run typecheck --workspaces --if-present",
     "test": "vitest run"

@@ -1,0 +1,108 @@
+/* ══════════════════════════════════
+   DADOS DE FATURAMENTO E ENTREGA
+   (carrinho, orçamento, pedido e página do cliente)
+══════════════════════════════════ */
+.fat-form { display: flex; flex-direction: column; gap: 12px; }
+.fat-tipo { display: flex; gap: 8px; flex-wrap: wrap; }
+.fat-tipo-opcao {
+  display: inline-flex; align-items: center; gap: 6px; padding: 7px 12px; border: 1.5px solid var(--border, #DDD8CF);
+  border-radius: 8px; font-size: .84rem; cursor: pointer; background: #fff; user-select: none;
+}
+.fat-form .fat-tipo-opcao { text-transform: none; letter-spacing: normal; font-size: .84rem; font-weight: 500; margin: 0; color: var(--grafite, #1F2329); }
+.fat-form .fat-tipo-opcao.ativo { border-color: var(--uva, #5E3A73); background: #faf6fb; color: var(--berinjela, #3A183F); font-weight: 600; }
+.fat-tipo-opcao input { accent-color: var(--uva, #5E3A73); margin: 0; }
+.fat-grade { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 10px 12px; }
+.fat-campo { display: flex; flex-direction: column; gap: 4px; grid-column: span 2; min-width: 0; }
+.fat-campo.largo { grid-column: span 4; }
+.fat-cep, .fat-numero, .fat-uf { grid-column: span 1; }
+.fat-logradouro { grid-column: span 3; }
+.fat-form .fat-campo label { margin: 0; }
+.fat-campo label { font-size: .74rem; font-weight: 600; color: #5b544c; letter-spacing: .2px; }
+.fat-obrig { color: var(--danger, #C0392B); }
+.fat-opc { color: #8a8279; font-weight: 400; }
+.fat-campo input, .fat-campo select {
+  width: 100%; border: 1.5px solid var(--border, #DDD8CF); border-radius: 7px; padding: 8px 10px; font: inherit; font-size: .88rem;
+  background: #fff; color: var(--grafite, #1F2329); box-sizing: border-box;
+}
+.fat-campo input:focus, .fat-campo select:focus { outline: none; border-color: var(--uva, #5E3A73); box-shadow: 0 0 0 3px rgba(94, 58, 115, .12); }
+.fat-campo.com-erro input, .fat-campo.com-erro select { border-color: var(--danger, #C0392B); }
+.fat-erro { font-size: .72rem; color: var(--danger, #C0392B); }
+.fat-dica { font-size: .72rem; color: #8a8279; }
+.fat-subtitulo { font-size: .72rem; font-weight: 600; letter-spacing: 1px; text-transform: uppercase; color: #8a8279; margin-top: 4px; }
+@media (max-width: 620px) {
+  .fat-grade { grid-template-columns: 1fr 1fr; }
+  .fat-campo, .fat-campo.largo, .fat-logradouro { grid-column: span 2; }
+  .fat-cep, .fat-numero, .fat-uf { grid-column: span 1; }
+}
+
+.fat-modal { max-width: 680px; }
+
+/* Resumo */
+.fat-resumo { margin: 6px 0 0; display: flex; flex-direction: column; gap: 4px; font-size: .84rem; }
+.fat-resumo > div { display: grid; grid-template-columns: 72px 1fr; gap: 8px; }
+.fat-resumo dt { color: #8a8279; font-size: .76rem; }
+.fat-resumo dd { margin: 0; color: var(--grafite, #1F2329); line-height: 1.4; }
+.fat-resumo-doc { color: #5b544c; }
+
+/* Carrinho */
+.cart-faturamento { padding: 10px 0 4px; border-top: 1px dashed var(--border); margin-top: 6px; }
+.cart-faturamento-topo { display: flex; justify-content: space-between; align-items: center; }
+.cart-faturamento .link-botao { font-size: .8rem; }
+.cart-faturamento-vazio { display: block; font-size: .74rem; color: var(--muted); font-style: italic; margin-top: 4px; }
+.cart-faturamento .fat-resumo { font-size: .78rem; }
+.cart-faturamento .fat-resumo > div { grid-template-columns: 58px 1fr; }
+
+/* Orçamento e pedido */
+.orc-faturamento-painel { align-items: flex-start; }
+.orc-faturamento-painel .fat-resumo { margin: 0; }
+.pedido-faturamento { margin-top: 22px; padding: 16px 20px; border: 1px solid var(--border); border-radius: var(--radius-lg); background: var(--surface); }
+.pedido-fat-vazio { color: #8A5A00; font-size: .86rem; margin: 6px 0 0; }
+.pedido-fat-dica { color: var(--muted); font-size: .76rem; margin: 8px 0 0; font-style: italic; }
+
+/* Página do cliente */
+.pub-faturamento { margin: 6px 0 16px; padding: 16px; border: 1px solid #E5E0D8; border-radius: 10px; background: #fdfcfa; }
+.pub-faturamento h3 { margin: 0 0 4px; font-size: 1.02rem; color: #3A183F; }
+.pub-faturamento-sub { margin: 0 0 12px; font-size: .84rem; color: #5b544c; }
+@media print { .pedido-faturamento { break-inside: avoid; } }
+
+/* Folha: faturamento no início, instruções especiais (só impressão) e rodapé parametrizável */
+.orc-faturamento {
+  display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 10px 24px;
+  margin: -6px 0 18px; padding: 10px 14px; border: 1px solid #E5E0D8; border-radius: 8px; font-size: .8rem; color: #1F2329;
+}
+.orc-faturamento-col { display: flex; flex-direction: column; gap: 2px; line-height: 1.4; }
+.orc-faturamento-nome { font-weight: 600; font-size: .88rem; color: #3A183F; }
+.orc-instrucoes { margin: 18px 0 6px; padding: 12px 16px; border: 1px solid #E5E0D8; border-radius: 8px; break-inside: avoid; }
+.orc-instrucoes-texto { font-size: .8rem; line-height: 1.5; white-space: pre-wrap; color: #1F2329; }
+.orc-rodape-texto { margin-top: 28px; font-size: .7rem; line-height: 1.45; color: #7A7167; white-space: pre-wrap; text-align: center; }
+@media print { .orc-faturamento { break-inside: avoid; } }
+
+/* Parâmetros › Impressão */
+.param-texto { display: flex; flex-direction: column; gap: 6px; margin-bottom: 18px; }
+.param-texto-titulo { font-weight: 600; font-size: .92rem; color: var(--berinjela); }
+.param-texto textarea { resize: vertical; font-family: var(--font-body); line-height: 1.5; }
+.param-contador { align-self: flex-end; font-size: .72rem; color: var(--muted); }
+/* Linha de validade depois do rodapé, com espaçamento dobrado */
+.orc-footer.apos-rodape { margin-top: 56px; }
+
+/* Parâmetros › Tabelas gerais */
+.param-tabelas { display: flex; flex-direction: column; gap: 18px; }
+.param-tabela .update-panel-header { align-items: flex-start; gap: 12px; }
+.param-tabela .btn-novo:disabled { opacity: .5; cursor: not-allowed; }
+.param-tabela-vazia { font-size: .84rem; color: var(--muted); font-style: italic; margin: 6px 0 0; }
+.param-descricao { color: var(--muted); font-size: .84rem; white-space: pre-wrap; }
+.param-numero { display: flex; align-items: center; gap: 6px; }
+.param-numero span { font-size: .84rem; color: var(--muted); }
+.param-numero input { text-align: right; }
+.param-campo-dica { display: block; font-size: .72rem; color: var(--muted); margin-top: 4px; }
+
+/* Entrega: mesmo endereço do faturamento ou outro endereço */
+.fat-entrega { display: flex; flex-direction: column; gap: 10px; padding-top: 10px; border-top: 1px dashed #E5E0D8; }
+.fat-form .fat-entrega-mesmo {
+  display: inline-flex; align-items: center; gap: 8px; margin: 0; font-size: .86rem; font-weight: 500;
+  text-transform: none; letter-spacing: normal; color: var(--grafite, #1F2329); cursor: pointer;
+}
+.fat-entrega-mesmo input { accent-color: var(--uva, #5E3A73); width: 16px; height: 16px; margin: 0; }
+.fat-recebedor, .fat-telefone { grid-column: span 2; }
+.fat-resumo-mesmo { color: #8a8279; }
+.orc-entrega-obs { font-style: italic; color: #5b544c; }

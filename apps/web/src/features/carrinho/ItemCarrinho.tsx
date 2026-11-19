@@ -1,8 +1,11 @@
-import { useEffect, useRef, useState, type FocusEvent, type FormEvent } from 'react';
-import { calcPreco, formatBRL, getFaixa, type CampoNumerico } from '@raizes/shared';
+import { useEffect, useMemo, useRef, useState, type FocusEvent, type FormEvent } from 'react';
+import { formatBRL, getFaixa, type CampoNumerico } from '@raizes/shared';
 import { useApp } from '../../app/contexto';
+import { useSessao } from '../../app/sessao';
+import { classeFornecedor } from '../../lib/fornecedor';
 import { ImagemProduto } from '../../components/ImagemProduto';
-import { useCarrinho, type ItemCarrinho as Item } from '../../state/carrinho';
+import { precosDoCarrinho, useCarrinho, type ItemCarrinho as Item } from '../../state/carrinho';
+import { BlocoPersonalizacao } from './BlocoPersonalizacao';
 
 /**
  * Item do carrinho com a calculadora de preço.
@@ -10,12 +13,16 @@ import { useCarrinho, type ItemCarrinho as Item } from '../../state/carrinho';
  * redesenhada (mesmo comportamento da versão anterior).
  */
 export function ItemCarrinho({ item }: { item: Item }) {
-  const { abrirModalAvulso, abrirMockupParaProduto } = useApp();
-  const { remover, definirQtd, definirCalc, definirCalcBool } = useCarrinho();
+  const { parametros, tecnicas } = useApp();
+  const { pode } = useSessao();
+  const { estado, remover, definirQtd, definirCalc, definirObservacaoItem, definirPersonalizacao } = useCarrinho();
   const { produto: p, qty, calc: c } = item;
   const id = p.id;
 
-  const res = calcPreco(p.preco as number, qty, c);
+  // Impostos e margem dos Parâmetros; material e mão de obra pelas tabelas da técnica
+  // (material somado com os outros itens da mesma técnica)
+  const precos = useMemo(() => precosDoCarrinho(estado.itens, parametros, tecnicas), [estado.itens, parametros, tecnicas]);
+  const { res, personalizacao } = precos.get(estado.itens[String(id)] ?? item) ?? [...precos.values()][0]!;
   const faixa = getFaixa(qty);
   // A faixa ao lado da quantidade é fixada quando o item é desenhado
   const [faixaInicial] = useState(faixa.nome);
@@ -32,17 +39,14 @@ export function ItemCarrinho({ item }: { item: Item }) {
     return () => el.removeEventListener('change', aoMudar);
   });
 
-  const campo = (nome: CampoNumerico, escala = 1) => ({
+  const campo = (nome: CampoNumerico) => ({
     onFocus: (e: FocusEvent<HTMLInputElement>) => e.target.select(),
-    onInput: (e: FormEvent<HTMLInputElement>) => {
-      // Percentuais chegam divididos por 100, como na versão anterior
-      const bruto = escala === 1 ? e.currentTarget.value : String(Number(e.currentTarget.value) / escala);
-      definirCalc(id, nome, Math.max(0, Number.parseFloat(bruto) || 0));
-    },
+    onInput: (e: FormEvent<HTMLInputElement>) =>
+      definirCalc(id, nome, Math.max(0, Number.parseFloat(e.currentTarget.value) || 0)),
   });
 
   return (
-    <div className={`cart-item${p.is_custom ? ' cart-item-custom' : ''}`} id={`cartitem-${id}`}>
+    <div className={`cart-item${p.origem === 'proprio' ? ' cart-item-custom' : ''}`} id={`cartitem-${id}`}>
       <div className="cart-thumb">
         <ImagemProduto
           url={p.imagem_url}
@@ -53,22 +57,16 @@ export function ItemCarrinho({ item }: { item: Item }) {
       <div className="cart-item-info" style={{ minWidth: 0, flex: 1 }}>
         <div className="cart-item-name">
           {p.nome}
-          {p.is_custom && (
-            <>
-              {' '}
-              <button className="btn-edit-custom" onClick={() => abrirModalAvulso(id)} title="Editar produto avulso">
-                ✎
-              </button>
-            </>
+          {p.codigo && (
+            <span className="cart-item-codigo" title="Código do produto">
+              {p.codigo}
+            </span>
           )}
         </div>
         <div className="cart-item-price">
-          <span className={`sup-badge sup-${p.is_custom ? 'CUSTOM' : p.fornecedor}`}>{p.fornecedor}</span>
+          <span className={`sup-badge ${classeFornecedor(p.fornecedor, p.origem)}`}>{p.fornecedor}</span>
           {' \u00a0Custo fornecedor: '}
           {formatBRL(p.preco)}/un{' '}
-          <button className="btn-item-mockup" onClick={() => abrirMockupParaProduto(id)} title="Gerar Mockup deste produto">
-            🎨 Mockup
-          </button>
         </div>
         <div className="qty-control">
           <button className="qty-btn" onClick={() => definirQtd(id, Math.max(1, qty - 1), true)}>
@@ -92,6 +90,26 @@ export function ItemCarrinho({ item }: { item: Item }) {
           </button>
           <span style={{ fontSize: '.68rem', color: 'var(--muted)', marginLeft: 4 }}>{faixaInicial}</span>
         </div>
+        <div className="cart-item-obs">
+          <textarea
+            className="cart-item-obs-input"
+            id={`obs-item-${id}`}
+            rows={1}
+            maxLength={500}
+            placeholder="Observação deste produto (cor, gravação, posição do logo…)"
+            aria-label={`Observação de ${p.nome ?? 'produto'}`}
+            value={item.observacao ?? ''}
+            onChange={(e) => definirObservacaoItem(id, e.target.value)}
+          />
+        </div>
+        <BlocoPersonalizacao
+          idItem={id}
+          valor={item.personalizacao}
+          resultado={personalizacao}
+          tecnicas={tecnicas}
+          qty={qty}
+          mudar={(v) => definirPersonalizacao(id, v)}
+        />
         <div className="calc-section calc-section-result">
           <div className="calc-result-row">
             <div>
@@ -113,32 +131,8 @@ export function ItemCarrinho({ item }: { item: Item }) {
         </div>
 
         <details className="calc-details">
-          <summary>⚙ Ajustar custos e margem</summary>
+          <summary>⚙ Ajustar custos fixos</summary>
           <div className="calc-panel-inner">
-            <div className="calc-section-title">Custos de Personalização (R$/un)</div>
-            <div className="calc-row">
-              <span className="calc-label">Material (tinta, papel, adesivo…)</span>
-              <input className="calc-input" type="number" min="0" step="0.10"
-                defaultValue={c.mat_personalizacao.toFixed(2)} {...campo('mat_personalizacao')} />
-            </div>
-            <div className="calc-row">
-              <span className="calc-label">Mão de obra / serviço</span>
-              <input className="calc-input" type="number" min="0" step="0.50"
-                defaultValue={c.mo_personalizacao.toFixed(2)} {...campo('mo_personalizacao')} />
-            </div>
-            <div className="calc-section-title">Imposto de Compra (sobre custo do fornecedor)</div>
-            <div className="calc-row calc-row-check">
-              <label className="calc-check">
-                <input type="checkbox" defaultChecked={c.imposto_compra_ativo}
-                  onChange={(e) => definirCalcBool(id, e.target.checked)} />
-                <span>Aplicar imposto de compra</span>
-              </label>
-              <div style={{ display: 'flex', alignItems: 'center', gap: 3 }}>
-                <input className="calc-input" type="number" min="0" max="100" step="0.5" style={{ width: 60 }}
-                  defaultValue={(c.imposto_compra * 100).toFixed(1)} {...campo('imposto_compra', 100)} />
-                <span className="calc-suffix">%</span>
-              </div>
-            </div>
             <div className="calc-section-title">Custos Fixos por Pedido (R$ total, rateado pela qtd)</div>
             <div className="calc-row">
               <span className="calc-label">Designer / mockup</span>
@@ -149,23 +143,6 @@ export function ItemCarrinho({ item }: { item: Item }) {
               <span className="calc-label">Logística / frete compra</span>
               <input className="calc-input" type="number" min="0" step="5"
                 defaultValue={c.logistica_total.toFixed(2)} {...campo('logistica_total')} />
-            </div>
-            <div className="calc-section-title">Parâmetros de Precificação</div>
-            <div className="calc-row">
-              <span className="calc-label">Imposto sobre Venda (Simples Nacional)</span>
-              <div style={{ display: 'flex', alignItems: 'center', gap: 3 }}>
-                <input className="calc-input" type="number" min="0" max="100" step="0.5" style={{ width: 60 }}
-                  defaultValue={(c.imposto * 100).toFixed(1)} {...campo('imposto', 100)} />
-                <span className="calc-suffix">%</span>
-              </div>
-            </div>
-            <div className="calc-row">
-              <span className="calc-label">Margem desejada</span>
-              <div style={{ display: 'flex', alignItems: 'center', gap: 3 }}>
-                <input className="calc-input" type="number" min="0" max="99" step="1" style={{ width: 60 }}
-                  defaultValue={(c.margem * 100).toFixed(0)} {...campo('margem', 100)} />
-                <span className="calc-suffix">%</span>
-              </div>
             </div>
           </div>
         </details>

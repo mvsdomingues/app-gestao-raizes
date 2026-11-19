@@ -4,19 +4,22 @@ import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 import { criarApp } from '../src/app';
 import { abrirBanco } from '../src/db/conexao';
 import { GerenciadorAtualizacao } from '../src/services/gerenciador-atualizacao';
+import { clienteDeTeste, entrar } from './sessao-teste';
 
 const db = abrirBanco(':memory:');
+const CLI = clienteDeTeste(db);
 let servidor: Server;
 let base = '';
+let cookie = '';
 
 const get = async (url: string) => {
-  const r = await fetch(base + url);
+  const r = await fetch(base + url, { headers: { Cookie: cookie } });
   return { status: r.status, json: await r.json() };
 };
 const post = async (url: string, corpo: unknown) => {
   const r = await fetch(base + url, {
     method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
+    headers: { 'Content-Type': 'application/json', Cookie: cookie },
     body: typeof corpo === 'string' ? corpo : JSON.stringify(corpo),
   });
   return { status: r.status, json: await r.json() };
@@ -41,6 +44,7 @@ beforeAll(async () => {
   servidor = app.listen(0, '127.0.0.1');
   await new Promise((r) => servidor.once('listening', r));
   base = `http://127.0.0.1:${(servidor.address() as AddressInfo).port}`;
+  cookie = await entrar(base);
 });
 
 afterAll(() => servidor.close());
@@ -68,16 +72,72 @@ describe('API', () => {
   it('salva e consulta orçamentos', async () => {
     expect((await post('/api/orcamentos', {})).json).toEqual({ erro: 'itens vazio' });
     expect((await post('/api/orcamentos', 'não é json')).status).toBe(400);
-    expect((await post('/api/orcamentos', { itens: [{}], total: 'x' })).json).toEqual({ erro: 'valores inválidos' });
+    expect((await post('/api/orcamentos', { cliente_id: CLI, itens: [{}], total: 'x' })).json).toEqual({ erro: 'valores inválidos' });
     const item = { nome: 'A', codigo: 'B', fornecedor: 'ASIA', imagem_url: '', qty: 2, preco: 10, composicao: 'c' };
-    const criado = await post('/api/orcamentos', { itens: [item], subtotal: 20, frete: '5', total: 25 });
+    const criado = await post('/api/orcamentos', { cliente_id: CLI, itens: [item], subtotal: 20, frete: '5', total: 25 });
     expect(criado.json.numero).toBe('ORC-0001');
     expect(criado.json.data_hora).toMatch(/^\d{4}-\d\d-\d\dT\d\d:\d\d:\d\d$/);
     const lista = await get('/api/orcamentos');
-    expect(lista.json[0]).toMatchObject({ id: 1, numero: 'ORC-0001', frete: 5, total: 25, qtd_itens: 1 });
+    expect(lista.json.total).toBe(1);
+    expect(lista.json.orcamentos[0]).toMatchObject({ id: 1, numero: 'ORC-0001', frete: 5, total: 25, qtd_itens: 1 });
     const det = await get('/api/orcamentos/1');
     expect(det.json.itens).toEqual([item]);
     expect(det.json.itens_json).toBeUndefined();
+  });
+
+  it('altera um orçamento salvo mantendo o número', async () => {
+    const put = async (url: string, corpo: unknown) => {
+      const r = await fetch(base + url, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json', Cookie: cookie },
+        body: JSON.stringify(corpo),
+      });
+      return { status: r.status, json: await r.json() };
+    };
+    const antes = (await get('/api/orcamentos/1')).json;
+    db.prepare("UPDATE orcamentos SET data_hora = '2026-01-01T10:00:00' WHERE id = 1").run();
+    const item = { nome: 'Novo', codigo: 'X', fornecedor: 'XBZ', imagem_url: '', qty: 5, preco: 3, composicao: 'c' };
+    for (let i = 0; i < 3; i++) {
+      const r = await put('/api/orcamentos/1', { itens: [item, item], subtotal: 30, frete: 0, total: 30 + i });
+      expect(r.json).toMatchObject({ id: 1, numero: 'ORC-0001' });
+      expect(r.json.data_hora).not.toBe('2026-01-01T10:00:00');
+    }
+    const depois = (await get('/api/orcamentos/1')).json;
+    expect(depois).toMatchObject({ numero: antes.numero, qtd_itens: 2, total: 32, itens: [item, item] });
+    expect((await get('/api/orcamentos')).json.total).toBe(1);
+    expect((await put('/api/orcamentos/99', { itens: [item] })).status).toBe(404);
+    expect((await put('/api/orcamentos/1', { itens: [] })).json).toEqual({ erro: 'itens vazio' });
+  });
+
+  it('filtra e pagina a lista de orçamentos', async () => {
+    const ins = db.prepare(
+      'INSERT INTO orcamentos (data_hora, subtotal, frete, total, qtd_itens, itens_json) VALUES (?,?,?,?,?,?)',
+    );
+    // 30 orçamentos extras (ids 2..31), em dias diferentes de outubro
+    for (let i = 2; i <= 31; i++) {
+      const itens = [{ nome: i % 2 ? 'Caneca Térmica' : 'Garrafa Inox', codigo: `CD-${i}` }];
+      ins.run(`2026-10-${String(i).padStart(2, '0')}T10:00:00`, i * 10, 0, i * 10, 1, JSON.stringify(itens));
+    }
+    const lista = async (qs: string) => (await get('/api/orcamentos' + qs)).json;
+
+    const p1 = await lista('');
+    expect(p1.total).toBe(31);
+    expect(p1.orcamentos).toHaveLength(20);
+    expect(p1.orcamentos[0].numero).toBe('ORC-0031');
+    const p2 = await lista('?limit=20&offset=20');
+    expect(p2.orcamentos).toHaveLength(11);
+    expect(p2.orcamentos.at(-1).numero).toBe('ORC-0001');
+
+    expect((await lista('?numero=ORC-0007')).orcamentos.map((o: { id: number }) => o.id)).toEqual([7]);
+    expect((await lista('?numero=7')).total).toBe(1);
+    expect((await lista('?numero=xyz')).total).toBe(0);
+    expect((await lista('?produto=caneca')).total).toBe(15);
+    expect((await lista('?produto=CD-12')).orcamentos[0].id).toBe(12);
+    expect((await lista('?de=2026-10-10&ate=2026-10-12')).total).toBe(3);
+    expect((await lista('?min=100&max=150')).total).toBe(6);
+    expect((await lista('?produto=garrafa&min=200&de=2026-10-25')).orcamentos.map((o: { id: number }) => o.id)).toEqual([
+      30, 28, 26,
+    ]);
   });
 
   it('valida o proxy de imagens', async () => {

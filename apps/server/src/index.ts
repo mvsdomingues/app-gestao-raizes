@@ -3,6 +3,8 @@ import { fileURLToPath } from 'node:url';
 import { criarApp } from './app';
 import { config } from './config';
 import { abrirBanco } from './db/conexao';
+import { ApiKommo } from './kommo/api';
+import { ServicoKommo } from './kommo/servico';
 import { GerenciadorAtualizacao } from './services/gerenciador-atualizacao';
 
 const aqui = dirname(fileURLToPath(import.meta.url));
@@ -17,7 +19,26 @@ const gerenciador = new GerenciadorAtualizacao({
   args: [...process.execArgv.filter((a) => !a.startsWith('--watch')), scriptAtualizacao],
 });
 
-const app = criarApp({ db, gerenciador, imagensDir: config.imagensDir, webDist: config.webDist });
+// Integração com o Kommo: ligada só com KOMMO_ATIVO=1, KOMMO_SUBDOMINIO e KOMMO_TOKEN no .env
+const kommo = config.kommo
+  ? new ServicoKommo(
+      db,
+      new ApiKommo({ baseUrl: config.kommo.baseUrl, token: config.kommo.token }),
+      config.kommo.subdominio,
+      config.kommo.syncMinutos,
+    )
+  : null;
+kommo?.iniciarAgendamento();
+
+const app = criarApp({
+  db,
+  gerenciador,
+  imagensDir: config.imagensDir,
+  webDist: config.webDist,
+  kommo,
+  urlPublica: config.urlPublica,
+  backup: config.backup,
+});
 
 const servidor = app.listen(config.porta, config.host, () => {
   const linha = '='.repeat(50);
@@ -26,11 +47,13 @@ const servidor = app.listen(config.porta, config.host, () => {
   console.log(linha);
   console.log(`  Acesse: http://localhost:${config.porta}`);
   console.log(`  Banco:  ${config.dbPath}`);
+  console.log(`  Kommo:  ${kommo ? `${kommo.subdominio} (sincroniza a cada ${kommo.intervaloMin} min)` : 'desligado'}`);
   console.log(`${linha}\n`);
 });
 
 function desligar() {
   gerenciador.encerrar();
+  kommo?.parar();
   servidor.close(() => {
     db.close();
     process.exit(0);

@@ -1,0 +1,18 @@
+import { StrictMode } from 'react';
+import { createRoot } from 'react-dom/client';
+import { PaginaPublica } from './PaginaPublica';
+import '../styles/00-tokens-base.css';
+import '../styles/50-atualizacao-historico.css';
+import '../styles/80-formularios.css';
+import '../styles/99c-clientes.css';
+import '../styles/99d-link-publico.css';
+import '../styles/99e-detalhe-produto.css';
+import '../styles/99f-estudio-mockup.css';
+import '../styles/99h-faturamento.css';
+import '../styles/99k-visualizador.css';
+
+createRoot(document.getElementById('root')!).render(
+  <StrictMode>
+    <PaginaPublica />
+  </StrictMode>,
+);
