@@ -1,7 +1,8 @@
-import { FLUXO_PEDIDO, ROTULOS_STATUS_PEDIDO } from '@raizes/shared';
+import { FLUXO_PEDIDO, ROTULOS_STATUS_PEDIDO, textoDias } from '@raizes/shared';
 import { useApp } from '../../app/contexto';
 import { useSessao } from '../../app/sessao';
 import { Bt, Dica, Menu, Passos, Secao, Tabela, TelaAjuda } from './componentes';
+import { useDiasValidade } from '../orcamentos/validade';
 
 const SUMARIO = [
   { id: 'man-inicio', titulo: 'Primeiros passos' },
@@ -39,6 +40,8 @@ const SUMARIO = [
 export function ManualOperacao() {
   const { irPara } = useApp();
   const { pode } = useSessao();
+  /** Validade do orçamento (Parâmetros › Sistema), ex.: "3 dias" */
+  const dias = textoDias(useDiasValidade());
   /** Link para outra tela (só quando o usuário tem acesso a ela). */
   const Ir = ({ tela, children }: { tela: Parameters<typeof irPara>[0]; children: string }) =>
     pode(tela) ? (
@@ -410,6 +413,28 @@ export function ManualOperacao() {
           Desistiu? <Bt>Limpar carrinho</Bt> sai da alteração sem modificar o orçamento salvo. Mockups acompanham o produto; o
           mockup de um produto removido é apagado.
         </Dica>
+        <h4>Reabrir um orçamento cancelado ou expirado</h4>
+        <p>
+          <Bt>↺ Reabrir</Bt> volta o orçamento para <b>Aberto</b> com os <b>preços a conferir</b>: ele não pode ser enviado nem
+          virar pedido até ser editado e salvo. Ao clicar em <Bt>✎ Editar</Bt>, cada produto busca o <b>custo atual</b> no
+          catálogo e o preço é recalculado (margem, impostos e ajustes do item continuam os mesmos; a personalização usa as
+          tabelas atuais). No topo do carrinho aparece o resumo e, em cada produto, um selo:
+        </p>
+        <Tabela
+          colunas={['Selo', 'Significado']}
+          linhas={[
+            ['↑ / ↓ Preço atualizado: custo R$ X → R$ Y', 'O custo do produto mudou desde o orçamento; o preço já foi recalculado.'],
+            ['= Preço sem alteração', 'O custo atual é igual ao gravado no orçamento.'],
+            [
+              '⚠ Fora do catálogo',
+              'O produto não está mais no catálogo (descontinuado, item livre ou sem código): o custo anterior foi mantido. Confira.',
+            ],
+          ]}
+        />
+        <p>
+          Confira e clique em <Bt>Salvar ORC-…</Bt>: a marca de preços a conferir sai e o orçamento pode ser enviado de novo, com
+          uma nova validade. <Bt>↩ Voltar para aberto</Bt> (de um orçamento Enviado) não atualiza os preços.
+        </p>
       </Secao>
 
       {/* ─────────────────────────────── 8 */}
@@ -445,7 +470,7 @@ export function ManualOperacao() {
           linhas={[
             [
               'Aberto',
-              'Ao gerar; ao voltar de Enviado; ao reabrir um cancelado',
+              'Ao gerar; ao voltar de Enviado; ao reabrir um cancelado ou expirado (preços a conferir)',
               'Editar, criar mockups, enviar, gerar pedido, cancelar',
             ],
             ['Enviado', 'Ao clicar em Enviar para o Cliente', 'Voltar para aberto, gerar pedido, cancelar, gerar novo link'],
@@ -454,9 +479,19 @@ export function ManualOperacao() {
               'Automático ao gerar o pedido (pelo sistema ou pelo aceite do cliente)',
               'Só consulta; o código PED-… é clicável',
             ],
-            ['Cancelado', 'Cancelamento manual (com motivo) ou recusa do cliente pelo link', 'Reabrir (volta para Aberto)'],
+            [
+              'Cancelado',
+              'Cancelamento manual (com motivo), recusa do cliente pelo link ou expiração (fim da validade, automático)',
+              'Reabrir (volta para Aberto; os preços são atualizados na próxima edição)',
+            ],
           ]}
         />
+        <Dica tipo="regra">
+          <b>Expiração:</b> o orçamento Enviado que passa da validade ({dias} a partir do envio, em{' '}
+          <Menu>Parâmetros › Sistema</Menu>) sem resposta do cliente é <b>cancelado automaticamente</b> pelo sistema. Ele
+          aparece como <i>Cancelado · expirou</i>, o histórico registra “Expirou” feito por <i>Sistema</i> e, a partir daí, segue
+          as mesmas regras de um cancelado.
+        </Dica>
         <Dica tipo="regra">
           Só orçamento <b>Aberto</b> pode ser alterado. Orçamento com pedido gerado nunca é alterado nem cancelado — cancela-se o
           pedido, e o orçamento volta para a situação que tinha antes (Aberto ou Enviado). Toda mudança de situação fica no
@@ -481,7 +516,10 @@ export function ManualOperacao() {
         <Tabela
           colunas={['Regra', 'Detalhe']}
           linhas={[
-            ['Validade', '7 dias a partir do envio. Vencido, o cliente ainda vê o orçamento, mas sem os botões de resposta.'],
+            [
+              'Validade',
+              `${dias} a partir do envio (Parâmetros › Sistema; o valor novo vale para os próximos envios). Terminado o prazo, o orçamento expira: é cancelado automaticamente e o cliente vê “Validade encerrada”, sem os botões de resposta.`,
+            ],
             ['Novo link', 'Gerar novo link invalida o anterior na hora.'],
             ['Em revisão', 'Se o orçamento voltar para Aberto, o link mostra “em revisão”. Ao reenviar, a validade recomeça.'],
             ['Uma resposta', 'O cliente aceita ou rejeita uma única vez; data, hora, IP e navegador ficam gravados.'],
@@ -1031,7 +1069,10 @@ export function ManualOperacao() {
               'Itens da lista usada em Em Fechamento (incluir, renomear, reordenar, remover). Vale para os próximos pedidos.',
             ],
             ['Impressão', 'Instruções especiais (só na impressão/PDF) e rodapé.'],
-            ['Sistema', 'Enviar notas para o Kommo (só vale com a integração religada no servidor).'],
+            [
+              'Sistema',
+              'Validade do orçamento em dias (prazo para o cliente responder; vencido, o orçamento expira) e enviar notas para o Kommo (só vale com a integração religada no servidor).',
+            ],
           ]}
         />
       </Secao>
@@ -1105,7 +1146,15 @@ export function ManualOperacao() {
         />
         <p>
           A atualização traz preço, estoque, fotos, descrição, ficha técnica e categorias. Também pode ser agendada no servidor
-          para rodar todos os dias. Orçamentos já gerados guardam o custo da época e não mudam.
+          para rodar todos os dias. Orçamentos já gerados guardam o custo da época e não mudam (só ao reabrir um cancelado ou
+          expirado os custos são atualizados, na edição seguinte).
+        </p>
+        <h4>Expiração de orçamentos</h4>
+        <p>
+          O cartão <i>Expiração de orçamentos</i>, na mesma tela, mostra a validade configurada, a data e hora da última
+          execução da rotina, quantos orçamentos expiraram nela e a próxima execução. A rotina roda ao iniciar o sistema e a cada
+          15 minutos; o link do cliente também confere a validade na hora em que é aberto. O cartão fica em <b>vermelho</b> se a
+          última execução falhou ou se a rotina parou de rodar.
         </p>
       </Secao>
 
@@ -1196,7 +1245,11 @@ export function ManualOperacao() {
             ],
             [
               'O cliente não consegue aceitar',
-              'O link venceu (7 dias) ou o cliente já respondeu. Volte para aberto e reenvie para renovar a validade.',
+              `O orçamento expirou (validade de ${dias}) ou o cliente já respondeu. Expirado: use Reabrir, edite (preços atualizados), salve e envie de novo.`,
+            ],
+            [
+              'Não consigo enviar um orçamento reaberto',
+              'Ele está com os preços a conferir: clique em Editar, confira os preços atualizados e salve. Depois, envie.',
             ],
             ['Não aparece o botão de mockup', 'Mockups só com o orçamento Aberto.'],
             [

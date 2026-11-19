@@ -2,7 +2,7 @@ import type { OrigemMovimento, UsuarioResumo } from '@raizes/shared';
 
 /**
  * Nome do usuário responsável (login no tooltip); "Cliente (link)" quando a ação veio
- * da página do cliente; "—" nos registros anteriores ao controle de acesso.
+ * da página do cliente; "Sistema" nas ações automáticas; "—" nos registros anteriores ao controle de acesso.
  */
 export function NomeUsuario({
   usuario,
@@ -17,6 +17,13 @@ export function NomeUsuario({
     return (
       <span className={`nome-usuario cliente ${className}`} title="Resposta do cliente pela página do orçamento">
         Cliente (link)
+      </span>
+    );
+  }
+  if (origem === 'SISTEMA') {
+    return (
+      <span className={`nome-usuario sistema ${className}`} title="Ação automática do sistema (ex.: orçamento que expirou)">
+        Sistema
       </span>
     );
   }

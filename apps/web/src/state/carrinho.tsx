@@ -36,6 +36,25 @@ export interface ProdutoCarrinho {
   fotos?: string[];
 }
 
+/**
+ * Preço revisto ao editar um orçamento reaberto: custo atualizado pelo catálogo
+ * ("atualizado" ou "igual") ou mantido porque o produto não está mais no catálogo ("fora").
+ */
+export interface AtualizacaoPreco {
+  situacao: 'atualizado' | 'igual' | 'fora';
+  /** Custo unitário gravado no orçamento */
+  anterior: number;
+  /** Custo unitário atual do catálogo (null = fora do catálogo) */
+  atual: number | null;
+}
+
+/** Quantos itens tiveram o custo atualizado, ficaram iguais ou estão fora do catálogo. */
+export interface ResumoPrecos {
+  atualizados: number;
+  iguais: number;
+  fora: number;
+}
+
 export interface ItemCarrinho {
   produto: ProdutoCarrinho;
   qty: number;
@@ -44,6 +63,8 @@ export interface ItemCarrinho {
   observacao?: string;
   /** Técnica, medidas da arte e ajustes de material / mão de obra */
   personalizacao: EntradaPersonalizacao;
+  /** Orçamento reaberto: o que aconteceu com o custo deste item ao carregar (selo no cartão) */
+  atualizacaoPreco?: AtualizacaoPreco;
 }
 
 /**
@@ -81,6 +102,8 @@ export interface EdicaoOrcamento {
   numero: string;
   /** Aviso exibido no carrinho (ex.: orçamento antigo sem os ajustes por item). */
   aviso?: string;
+  /** Orçamento reaberto: preços atualizados com os custos atuais (resumo no topo do carrinho) */
+  precos?: ResumoPrecos;
 }
 
 type Acao =

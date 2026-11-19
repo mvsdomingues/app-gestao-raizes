@@ -4,7 +4,7 @@ import { useApp } from '../../app/contexto';
 import { useSessao } from '../../app/sessao';
 import { classeFornecedor } from '../../lib/fornecedor';
 import { ImagemProduto } from '../../components/ImagemProduto';
-import { precosDoCarrinho, useCarrinho, type ItemCarrinho as Item } from '../../state/carrinho';
+import { precosDoCarrinho, useCarrinho, type AtualizacaoPreco, type ItemCarrinho as Item } from '../../state/carrinho';
 import { BlocoPersonalizacao } from './BlocoPersonalizacao';
 
 /**
@@ -68,6 +68,7 @@ export function ItemCarrinho({ item }: { item: Item }) {
           {' \u00a0Custo fornecedor: '}
           {formatBRL(p.preco)}/un{' '}
         </div>
+        {item.atualizacaoPreco && <SeloPreco a={item.atualizacaoPreco} id={id} />}
         <div className="qty-control">
           <button className="qty-btn" onClick={() => definirQtd(id, Math.max(1, qty - 1), true)}>
             −
@@ -153,6 +154,30 @@ export function ItemCarrinho({ item }: { item: Item }) {
         </button>
         <span className="cart-item-subtotal">{formatBRL(res.preco * qty)}</span>
       </div>
+    </div>
+  );
+}
+
+/** Selo do orçamento reaberto: o custo foi atualizado pelo catálogo, ficou igual ou foi mantido. */
+function SeloPreco({ a, id }: { a: AtualizacaoPreco; id: number }) {
+  if (a.situacao === 'fora') {
+    return (
+      <div className="cart-selo-preco fora" id={`selo-preco-${id}`} title="O produto não foi encontrado no catálogo atual">
+        ⚠ Fora do catálogo: preço anterior mantido ({formatBRL(a.anterior)}/un) — confira o custo
+      </div>
+    );
+  }
+  if (a.situacao === 'igual') {
+    return (
+      <div className="cart-selo-preco igual" id={`selo-preco-${id}`}>
+        = Preço sem alteração: custo atual igual ao do orçamento
+      </div>
+    );
+  }
+  const subiu = (a.atual ?? 0) > a.anterior;
+  return (
+    <div className={`cart-selo-preco ${subiu ? 'subiu' : 'caiu'}`} id={`selo-preco-${id}`}>
+      {subiu ? '↑' : '↓'} Preço atualizado: custo {formatBRL(a.anterior)} → {formatBRL(a.atual)}/un
     </div>
   );
 }

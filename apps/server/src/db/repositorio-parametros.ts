@@ -1,5 +1,6 @@
 import {
   IMPRESSAO_DEFAULTS,
+  LIMITES_DIAS_VALIDADE,
   LIMITES_IMPRESSAO,
   SISTEMA_DEFAULTS,
   type ParametrosImpressao,
@@ -40,6 +41,10 @@ export function gravarParametrosSistema(db: Banco, corpo: Record<string, unknown
     if (typeof corpo[chave] !== typeof SISTEMA_DEFAULTS[chave]) erros.push(`${chave}: valor inválido`);
     else (novos as Record<string, unknown>)[chave] = corpo[chave];
   }
+  const dias = novos.dias_validade_orcamento;
+  if (dias !== undefined && (!Number.isInteger(dias) || dias < LIMITES_DIAS_VALIDADE.min || dias > LIMITES_DIAS_VALIDADE.max)) {
+    erros.push(`Validade do orçamento: informe um número inteiro de ${LIMITES_DIAS_VALIDADE.min} a ${LIMITES_DIAS_VALIDADE.max} dias`);
+  }
   if (erros.length) return erros;
   const agora = dataHoraLocal();
   const gravar = db.prepare(
@@ -50,6 +55,11 @@ export function gravarParametrosSistema(db: Banco, corpo: Record<string, unknown
     for (const [chave, valor] of Object.entries(novos)) gravar.run(chave, JSON.stringify(valor), agora);
   })();
   return [];
+}
+
+/** Validade do orçamento enviado ao cliente, em dias (Parâmetros › Sistema). */
+export function diasValidadeOrcamento(db: Banco): number {
+  return lerParametrosSistema(db).valores.dias_validade_orcamento;
 }
 
 /** Notas no contato do Kommo ligadas? */

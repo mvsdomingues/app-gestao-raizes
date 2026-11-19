@@ -133,6 +133,7 @@ export function PaginaPublica() {
           publico
           ampliarImagens
           validoAte={o.valido_ate}
+          diasValidade={o.dias_validade}
           folha={{
             numero: o.numero,
             dataHora: o.data_hora,

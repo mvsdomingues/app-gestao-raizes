@@ -7,6 +7,8 @@ import { carregarSessao, exigirAcesso } from './lib/sessao';
 import { rotasAuth } from './routes/auth';
 import { rotasAtualizacao } from './routes/atualizacao';
 import { rotasBackup } from './routes/backup';
+import { rotasExpiracao } from './routes/expiracao';
+import { ServicoExpiracao } from './services/expiracao';
 import { rotasEquipes } from './routes/equipes';
 import { rotasRelatorios } from './routes/relatorios';
 import { rotasCatalogo } from './routes/catalogo';
@@ -37,9 +39,20 @@ export interface OpcoesApp {
   urlPublica?: string | null;
   /** Backup diário (pasta, dias, destino externo) para o quadro da tela Atualização; ausente = sem a rota */
   backup?: ConfigBackup | null;
+  /** Rotina de expiração dos orçamentos (ausente = uma parada, só para o cartão de situação) */
+  expiracao?: ServicoExpiracao | null;
 }
 
-export function criarApp({ db, gerenciador, imagensDir, webDist, kommo = null, urlPublica = null, backup = null }: OpcoesApp) {
+export function criarApp({
+  db,
+  gerenciador,
+  imagensDir,
+  webDist,
+  kommo = null,
+  urlPublica = null,
+  backup = null,
+  expiracao = null,
+}: OpcoesApp) {
   const app = express();
   app.disable('x-powered-by');
   app.set('json spaces', 0);
@@ -73,6 +86,7 @@ export function criarApp({ db, gerenciador, imagensDir, webDist, kommo = null, u
   app.use(rotasComissoes(db));
   app.use(rotasAtualizacao(gerenciador));
   if (backup) app.use(rotasBackup(backup));
+  app.use(rotasExpiracao(expiracao ?? new ServicoExpiracao(db)));
   app.use(rotaProxyImagem());
 
   // Imagens baixadas localmente (ex.: /static/imagens/spot/11103-103.jpg)

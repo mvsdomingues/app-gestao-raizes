@@ -225,6 +225,21 @@ export function Carrinho() {
                 Ao salvar, o {edicao.numero} é atualizado (mesmo número, com a data de hoje).
                 {edicao.aviso && <span className="edicao-banner-aviso"> {edicao.aviso}</span>}
               </div>
+              {edicao.precos && (
+                <div className="edicao-banner-precos" id="edicao-precos">
+                  <b>Orçamento reaberto: preços atualizados com os custos atuais.</b>{' '}
+                  {[
+                    edicao.precos.atualizados &&
+                      `${edicao.precos.atualizados} ${edicao.precos.atualizados === 1 ? 'item com preço atualizado' : 'itens com preço atualizado'}`,
+                    edicao.precos.iguais && `${edicao.precos.iguais} sem alteração`,
+                    edicao.precos.fora &&
+                      `${edicao.precos.fora} fora do catálogo (preço anterior mantido)`,
+                  ]
+                    .filter(Boolean)
+                    .join(' · ')}
+                  . Confira cada produto e salve para liberar o envio ao cliente.
+                </div>
+              )}
             </div>
             <button className="btn-back" onClick={limparTudo}>
               Cancelar alteração

@@ -26,6 +26,7 @@ import { api } from '../../lib/api';
 import { avisar, confirmar, erroDe } from '../../lib/dialogo';
 import { FolhaOrcamento } from '../orcamentos/FolhaOrcamento';
 import { useParametrosImpressao } from '../orcamentos/impressao';
+import { useDiasValidade } from '../orcamentos/validade';
 import { ClienteVinculado } from '../clientes/ClienteVinculado';
 import { SeletorCliente } from '../clientes/SeletorCliente';
 import { ResumoFaturamento } from '../clientes/FormularioFaturamento';
@@ -36,6 +37,7 @@ import { agoraLocal, duracao, formatarDataHora, TagStatusPedido, useAcoesPedido 
 /** Aba "Detalhes": etapas do pedido, histórico de movimentações e o orçamento de origem. */
 export function DetalhePedido() {
   const impressao = useParametrosImpressao();
+  const diasValidade = useDiasValidade();
   const { pedidoAberto: p, atualizarPedidoAberto, setAbaPedidos, mostrarOrcamento, irPara } = useApp();
   const { pode } = useSessao();
   const { avancar, cancelar, processando } = useAcoesPedido(atualizarPedidoAberto);
@@ -232,6 +234,7 @@ export function DetalhePedido() {
       <h3 className="pedido-secao">Itens do pedido (orçamento {p.orcamento_numero})</h3>
       <div className="orcamento-sheet-full">
         <FolhaOrcamento
+          diasValidade={diasValidade}
           folha={{
             id: p.orcamento.id,
             numero: p.orcamento.numero,

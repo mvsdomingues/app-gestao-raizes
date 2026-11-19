@@ -153,13 +153,13 @@ describe('status Cancelado', () => {
 });
 
 describe('link do cliente', () => {
-  it('enviar gera o link (código aleatório de 43 caracteres) com validade de 7 dias; reenviar mantém o link', async () => {
+  it('enviar gera o link (código aleatório de 43 caracteres) com a validade do parâmetro (padrão 3 dias); reenviar mantém o link', async () => {
     const e = await enviado();
     expect(e.codigo).toMatch(/^[A-Za-z0-9]{43}$/);
     expect(e.url).toBe(`${base}/o/${e.codigo}`);
     const o = await req('GET', `/api/orcamentos/${e.id}`);
     const dias = (Date.parse(o.json.link.valido_ate) - Date.parse(o.json.link.enviado_em)) / 864e5;
-    expect(Math.round(dias)).toBe(7);
+    expect(Math.round(dias)).toBe(3);
     expect(o.json.link).toMatchObject({ visto_em: null, vencido: false });
     await req('POST', `/api/orcamentos/${e.id}/status`, { status: 'ABERTO' });
     const de2 = await req('POST', `/api/orcamentos/${e.id}/status`, { status: 'ENVIADO' });
@@ -336,8 +336,16 @@ describe('link do cliente', () => {
     await kommo.enviarNotas();
     expect(mock.notas.at(-1)!.params.text).toContain(`Cliente recusou o orçamento ${e.numero} pelo link`);
     expect(mock.notas.length).toBe(antes + 1);
-    // Reabrir + reenviar: nova rodada, resposta anterior descartada, mesmo link
-    await req('POST', `/api/orcamentos/${e.id}/status`, { status: 'ABERTO' });
+    // Reabrir: preços a conferir (não envia antes de editar e salvar)
+    const re = await req('POST', `/api/orcamentos/${e.id}/status`, { status: 'ABERTO' });
+    expect(re.json.precos_conferir).toBe(true);
+    const bloqueado = await req('POST', `/api/orcamentos/${e.id}/status`, { status: 'ENVIADO' });
+    expect(bloqueado.status).toBe(409);
+    expect(bloqueado.json.erro).toMatch(/preços/);
+    const salvo = await req('PUT', `/api/orcamentos/${e.id}`, { itens: [item(1)], subtotal: 200, frete: 15, total: 215 });
+    expect(salvo.status).toBe(200);
+    expect((await req('GET', `/api/orcamentos/${e.id}`)).json.precos_conferir).toBe(false);
+    // Reenviar: nova rodada, resposta anterior descartada, mesmo link
     const de = await req('POST', `/api/orcamentos/${e.id}/status`, { status: 'ENVIADO' });
     expect(de.json.resposta_cliente).toBeNull();
     expect((await req('GET', `/api/publico/orcamentos/${e.codigo}`, undefined, false)).json.situacao).toBe('DISPONIVEL');

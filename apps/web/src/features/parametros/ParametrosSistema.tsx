@@ -1,7 +1,8 @@
 import { useEffect, useState } from 'react';
-import { SISTEMA_DEFAULTS, type ParametrosSistema as Valores } from '@raizes/shared';
+import { LIMITES_DIAS_VALIDADE, SISTEMA_DEFAULTS, textoDias, type ParametrosSistema as Valores } from '@raizes/shared';
 import { api } from '../../lib/api';
 import { invalidarConfigClientes, useConfigClientes } from '../clientes/config';
+import { invalidarDiasValidade } from '../orcamentos/validade';
 
 function dataBr(v: string): string {
   return v.replace(/^(\d{4})-(\d\d)-(\d\d)[ T](\d\d:\d\d).*/, '$3/$2/$1 às $4');
@@ -30,6 +31,8 @@ export function ParametrosSistema({ visitas }: { visitas: number }) {
   }, [visitas]);
 
   const alterado = !!gravado && JSON.stringify(form) !== JSON.stringify(gravado);
+  const dias = form.dias_validade_orcamento;
+  const diasValido = Number.isInteger(dias) && dias >= LIMITES_DIAS_VALIDADE.min && dias <= LIMITES_DIAS_VALIDADE.max;
 
   const salvar = async () => {
     setSalvando(true);
@@ -39,6 +42,7 @@ export function ParametrosSistema({ visitas }: { visitas: number }) {
       setForm(r.valores);
       setAtualizado(r.atualizado);
       invalidarConfigClientes();
+      invalidarDiasValidade();
       setMensagem({ tipo: 'ok', texto: '✓ Parâmetros de sistema salvos. Valem a partir de agora para todos os usuários.' });
     } catch (e) {
       setMensagem({ tipo: 'erro', texto: e instanceof Error ? e.message : String(e) });
@@ -51,8 +55,47 @@ export function ParametrosSistema({ visitas }: { visitas: number }) {
     <div className="update-panel param-panel param-sistema" id="param-sistema">
       <div className="update-panel-header">
         <div>
-          <h3 className="update-panel-title">Integração com o Kommo</h3>
+          <h3 className="update-panel-title">Validade do orçamento</h3>
           <p className="update-panel-sub">{atualizado ? `Última alteração: ${dataBr(atualizado)}` : 'Usando os valores padrão do sistema.'}</p>
+        </div>
+      </div>
+
+      <div className="param-opcao param-validade">
+        <span>
+          <b>Prazo para o cliente responder</b>
+          <span className="param-opcao-sub">
+            Contado a partir do envio ao cliente. Terminado o prazo, o orçamento <b>expira</b>: é cancelado automaticamente e
+            segue as regras de um cancelado (para usar de novo, é preciso reabrir, e os preços são atualizados na próxima
+            edição). O prazo aparece na folha do orçamento e na página do cliente. O valor novo vale para os próximos envios;
+            quem já recebeu mantém o prazo informado.
+          </span>
+        </span>
+        <label className="param-validade-campo" htmlFor="param-dias_validade_orcamento">
+          <input
+            type="number"
+            id="param-dias_validade_orcamento"
+            min={LIMITES_DIAS_VALIDADE.min}
+            max={LIMITES_DIAS_VALIDADE.max}
+            step={1}
+            value={Number.isFinite(dias) ? dias : ''}
+            disabled={!gravado}
+            onChange={(e) => {
+              setForm((f) => ({ ...f, dias_validade_orcamento: e.target.value === '' ? Number.NaN : Number(e.target.value) }));
+              setMensagem(null);
+            }}
+          />
+          <span>{diasValido ? textoDias(dias).replace(/^\d+ /, '') : 'dias'}</span>
+        </label>
+      </div>
+      {!diasValido && (
+        <div className="form-mensagem erro" id="param-validade-erro">
+          Informe um número inteiro de {LIMITES_DIAS_VALIDADE.min} a {LIMITES_DIAS_VALIDADE.max} dias.
+        </div>
+      )}
+
+      <div className="update-panel-header param-secao">
+        <div>
+          <h3 className="update-panel-title">Integração com o Kommo</h3>
         </div>
       </div>
 
@@ -101,7 +144,7 @@ export function ParametrosSistema({ visitas }: { visitas: number }) {
         >
           Restaurar padrões
         </button>
-        <button className="btn-update" id="btn-salvar-sistema" onClick={() => void salvar()} disabled={salvando || !alterado}>
+        <button className="btn-update" id="btn-salvar-sistema" onClick={() => void salvar()} disabled={salvando || !alterado || !diasValido}>
           {salvando ? 'Salvando…' : 'Salvar parâmetros'}
         </button>
       </div>

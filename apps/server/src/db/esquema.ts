@@ -506,6 +506,11 @@ function migrarColunas(db: Database.Database): void {
     if (!colunas(db, 'orcamentos').includes(coluna)) db.exec(`ALTER TABLE orcamentos ADD COLUMN ${coluna} ${tipo}`);
   }
   db.exec('CREATE UNIQUE INDEX IF NOT EXISTS ux_orcamentos_link ON orcamentos(link_codigo)');
+  // Expiração (cancelamento automático ao fim da validade) e reabertura com preços a atualizar
+  if (!colunas(db, 'orcamentos').includes('expirado_em')) db.exec('ALTER TABLE orcamentos ADD COLUMN expirado_em TEXT');
+  if (!colunas(db, 'orcamentos').includes('precos_conferir')) {
+    db.exec('ALTER TABLE orcamentos ADD COLUMN precos_conferir INTEGER NOT NULL DEFAULT 0');
+  }
   // Movimentações feitas pelo cliente (aceite/recusa pelo link)
   for (const tabela of ['orcamentos_movimentos', 'pedidos_movimentos']) {
     if (!colunas(db, tabela).includes('origem')) db.exec(`ALTER TABLE ${tabela} ADD COLUMN origem TEXT`);

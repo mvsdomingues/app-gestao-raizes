@@ -2,7 +2,6 @@
 import { randomBytes } from 'node:crypto';
 import {
   personalizacoesParaCliente,
-  DIAS_VALIDADE_LINK,
   numeroOrcamento,
   resumoDescricao,
   diferencasFaturamento,
@@ -29,7 +28,8 @@ import { SQL_STATUS_ORCAMENTO } from './repositorio-orcamentos';
 import { criarPedido, pedidoAtivoDoOrcamento } from './repositorio-pedidos';
 import { registrarMovimentoOrcamento } from './repositorio-orcamentos';
 import { mockupsDoOrcamento } from './repositorio-mockups';
-import { lerParametrosImpressao } from './repositorio-parametros';
+import { diasValidadeOrcamento, lerParametrosImpressao } from './repositorio-parametros';
+import { expirarVencidos } from './repositorio-expiracao';
 
 const LETRAS = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789';
 
@@ -61,7 +61,8 @@ function somarDias(iso: string, dias: number): string {
 
 /**
  * Cria o link se ainda não existe. `envio` = o orçamento está sendo enviado ao cliente:
- * a validade recomeça e a resposta da rodada anterior é descartada.
+ * a validade recomeça (dias de Parâmetros › Sistema, gravada no envio: mudar o parâmetro
+ * não altera o prazo já informado ao cliente) e a resposta da rodada anterior é descartada.
  */
 export function garantirLink(db: Banco, id: number, envio = false): string {
   const o = db.prepare('SELECT link_codigo FROM orcamentos WHERE id = ?').get(id) as { link_codigo: string | null } | undefined;
@@ -73,7 +74,7 @@ export function garantirLink(db: Banco, id: number, envio = false): string {
       `UPDATE orcamentos SET link_codigo = ?, link_enviado_em = ?, link_valido_ate = ?,
               resposta = NULL, resposta_em = NULL, resposta_obs = NULL, resposta_ip = NULL, resposta_navegador = NULL
         WHERE id = ?`,
-    ).run(codigo, agora, somarDias(agora, DIAS_VALIDADE_LINK), id);
+    ).run(codigo, agora, somarDias(agora, diasValidadeOrcamento(db)), id);
   } else if (!o.link_codigo) {
     db.prepare('UPDATE orcamentos SET link_codigo = ? WHERE id = ?').run(codigo, id);
   }
@@ -152,20 +153,27 @@ interface LinhaPublica extends LinhaLink {
   contato_nome: string | null;
   usuario_id: number | null;
   situacao: string;
+  expirado_em: string | null;
+}
+
+function lerPorCodigo(db: Banco, codigo: string): LinhaPublica | undefined {
+  return db
+    .prepare(
+      `SELECT id, data_hora, itens_json, subtotal, frete, total, observacao, entrega_prevista, faturamento_json, cliente_nome, cliente_telefone, contato_nome, usuario_id,
+              expirado_em, ${COLUNAS_LINK}, ${SQL_STATUS_ORCAMENTO} AS situacao
+         FROM orcamentos WHERE link_codigo = ?`,
+    )
+    .get(codigo) as LinhaPublica | undefined;
 }
 
 function porCodigo(db: Banco, codigo: string): LinhaPublica {
-  const l = codigoLinkValido(codigo)
-    ? (db
-        .prepare(
-          `SELECT id, data_hora, itens_json, subtotal, frete, total, observacao, entrega_prevista, faturamento_json, cliente_nome, cliente_telefone, contato_nome, usuario_id,
-                  ${COLUNAS_LINK}, ${SQL_STATUS_ORCAMENTO} AS situacao
-             FROM orcamentos WHERE link_codigo = ?`,
-        )
-        .get(codigo) as LinhaPublica | undefined)
-    : undefined;
+  let l = codigoLinkValido(codigo) ? lerPorCodigo(db, codigo) : undefined;
   // Mesma resposta para código inexistente, revogado ou malformado
   if (!l || !l.link_enviado_em) throw new ErroHttp(404, 'Link inválido ou expirado');
+  // Validade terminou e a rotina ainda não passou: expira agora (o cliente nunca pega um vencido "vivo")
+  if (l.situacao === 'ENVIADO' && vencido(l.link_valido_ate) && expirarVencidos(db, isoLocal(), l.id)) {
+    l = lerPorCodigo(db, codigo)!;
+  }
   return l;
 }
 
@@ -176,6 +184,8 @@ function situacaoPublica(l: LinhaPublica): SituacaoPublica {
     case 'PEDIDO_GERADO':
       return 'ACEITO';
     case 'CANCELADO':
+      // Expirou (cancelado pelo sistema ao fim da validade): "Validade encerrada"
+      if (l.expirado_em) return 'VENCIDO';
       return l.resposta === 'RECUSADO' ? 'RECUSADO' : 'CANCELADO';
     default:
       return 'EM_REVISAO';
@@ -222,6 +232,7 @@ export function orcamentoPublico(db: Banco, codigo: string): OrcamentoPublico {
     numero: numeroOrcamento(l.id),
     data_hora: l.data_hora,
     valido_ate: l.link_valido_ate,
+    dias_validade: diasValidadeOrcamento(db),
     situacao,
     // Só o contato deste orçamento (nunca os outros contatos da empresa); igual ao nome = pessoa física, não repete
     cliente: l.cliente_nome
