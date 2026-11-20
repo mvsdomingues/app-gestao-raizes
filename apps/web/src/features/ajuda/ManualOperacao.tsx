@@ -257,7 +257,7 @@ export function ManualOperacao() {
             ],
             [
               'Material da mesma técnica',
-              'Somado entre todas as aplicações do orçamento (do mesmo item ou de itens diferentes) e arredondado uma vez só.',
+              'Somado só entre as aplicações do mesmo produto (ex.: frente e verso) e arredondado uma vez. Produtos diferentes não dividem material: o preço de cada produto não muda quando outro entra ou sai do orçamento.',
             ],
             ['Trocar a técnica', 'Descarta os ajustes da aplicação; local e medidas ficam.'],
             ['Limite', 'Até 5 personalizações por item.'],
@@ -1284,7 +1284,10 @@ export function ManualOperacao() {
             ['Técnica', 'Forma de personalização (Sublimação, DTF UV, Laser…), cadastrada em Tabelas gerais.'],
             ['Fração mínima', 'Menor quantidade de material que se usa/compra, em m².'],
             ['Folga', 'Percentual de sobra de material para perdas e acertos.'],
-            ['Rateio', 'Divisão de um valor entre itens (material somado por técnica; custos fixos entre as peças).'],
+            [
+              'Rateio',
+              'Divisão de um valor entre as peças de um item (custos fixos pela quantidade; material somado entre as aplicações do mesmo produto). Produtos diferentes não dividem custos.',
+            ],
             ['Custos fixos', 'Designer/mockup e logística: valores por pedido, divididos pela quantidade.'],
             ['Margem real', 'Quanto do preço de venda sobra como lucro, depois do custo e do imposto sobre venda.'],
             ['Ajustado', 'Item cujo material ou mão de obra foi alterado pelo operador em relação ao sugerido.'],

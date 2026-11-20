@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useRef, useState, type FocusEvent, type FormEvent } from 'react';
-import { formatBRL, getFaixa, type CampoNumerico } from '@raizes/shared';
+import { arredondarPrecoUnitario, formatBRL, getFaixa, type CampoNumerico } from '@raizes/shared';
 import { useApp } from '../../app/contexto';
 import { useSessao } from '../../app/sessao';
 import { classeFornecedor } from '../../lib/fornecedor';
@@ -23,6 +23,8 @@ export function ItemCarrinho({ item }: { item: Item }) {
   // (material somado com os outros itens da mesma técnica)
   const precos = useMemo(() => precosDoCarrinho(estado.itens, parametros, tecnicas), [estado.itens, parametros, tecnicas]);
   const { res, personalizacao } = precos.get(estado.itens[String(id)] ?? item) ?? [...precos.values()][0]!;
+  // Preço/un em centavos: o mesmo gravado no orçamento e mostrado ao cliente
+  const precoUnit = arredondarPrecoUnitario(res.preco);
   const faixa = getFaixa(qty);
   // A faixa ao lado da quantidade é fixada quando o item é desenhado
   const [faixaInicial] = useState(faixa.nome);
@@ -123,7 +125,7 @@ export function ItemCarrinho({ item }: { item: Item }) {
               </div>
             </div>
             <div className="calc-result-val" id={`calc-val-${id}`}>
-              {formatBRL(res.preco)}
+              {formatBRL(precoUnit)}
             </div>
           </div>
           <div className="calc-warn" id={`calc-warn-${id}`} style={{ display: qty < 10 ? 'block' : 'none' }}>
@@ -152,7 +154,7 @@ export function ItemCarrinho({ item }: { item: Item }) {
         <button className="remove-btn" onClick={() => remover(id)}>
           ✕
         </button>
-        <span className="cart-item-subtotal">{formatBRL(res.preco * qty)}</span>
+        <span className="cart-item-subtotal">{formatBRL(precoUnit * qty)}</span>
       </div>
     </div>
   );

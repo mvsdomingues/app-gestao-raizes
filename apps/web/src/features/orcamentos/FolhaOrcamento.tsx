@@ -29,7 +29,7 @@ function materialInterno(r: ResultadoPersonalizacao): string {
   const m2 = (v: number) => v.toLocaleString('pt-BR', { maximumFractionDigits: 4 });
   const partes = [`Interno: ${r.tecnica}${r.local ? ` (${r.local})` : ''} · material ${m2(r.material_m2)} m²`];
   if (r.grupo && r.grupo.itens > 1)
-    partes.push(`rateado entre ${r.grupo.itens} aplicações (${m2(r.grupo.material_m2)} m² no total)`);
+    partes.push(`somado entre ${r.grupo.itens} aplicações do produto (${m2(r.grupo.material_m2)} m² no total)`);
   if (r.material_ajustado) partes.push('material ajustado');
   if (r.mao_obra_ajustada) partes.push('mão de obra ajustada');
   return partes.join(' · ');

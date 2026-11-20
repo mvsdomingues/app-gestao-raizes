@@ -47,7 +47,10 @@ export interface ItemOrcamento {
   fornecedor: string;
   imagem_url: string;
   qty: number;
+  /** Preço unitário de venda (regra atual: em centavos) */
   preco: number;
+  /** Regra de preço do cálculo (2 = produtos independentes, sem rateio; ausente = regra anterior) */
+  regra_preco?: number;
   composicao: string;
   /** Presente nos orçamentos novos; "proprio" para produtos próprios. */
   origem?: OrigemProduto;

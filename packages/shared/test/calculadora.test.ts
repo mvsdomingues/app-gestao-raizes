@@ -1,6 +1,8 @@
 import { readFileSync } from 'node:fs';
 import { describe, expect, it } from 'vitest';
 import {
+  arredondarPrecoUnitario,
+  orcamentoNaRegraAtual,
   CALC_DEFAULTS,
   calcPreco,
   getFaixa,
@@ -40,7 +42,8 @@ describe('calculadora (paridade com a versão Python/JS original)', () => {
       c.qty,
       c.calc,
     );
-    expect(item.preco).toBe(c.snap.preco);
+    // Regra atual: o preço/un gravado é o da calculadora original arredondado em centavos
+    expect(item.preco).toBe(arredondarPrecoUnitario(c.snap.preco));
     expect(item.composicao).toBe(c.snap.composicao);
   });
 
@@ -81,5 +84,26 @@ describe('parâmetros fixos (não ajustáveis por item)', () => {
       CALC_DEFAULTS,
     );
     expect(item).toMatchObject({ produto_id: 7, custo: 10, calc: CALC_DEFAULTS, origem: 'fornecedor' });
+  });
+
+  it('preço/un em centavos: a linha é sempre exatamente preço/un × quantidade', () => {
+    expect(arredondarPrecoUnitario(22.230508474576276)).toBe(22.23);
+    expect(arredondarPrecoUnitario(10.005)).toBe(10.01);
+    expect(arredondarPrecoUnitario(1.004999)).toBe(1);
+    for (let qty = 10; qty <= 500; qty += 7) {
+      for (let custo = 3; custo <= 30; custo += 1.37) {
+        const item = montarItemOrcamento({ nome: 'x', codigo: 'c', fornecedor: 'ASIA', imagem_url: '', preco: custo }, qty, CALC_DEFAULTS);
+        expect(Math.round(item.preco * 100) / 100).toBe(item.preco);
+        expect(Math.abs(calcPreco(custo, qty, CALC_DEFAULTS).preco - item.preco)).toBeLessThanOrEqual(0.005 + 1e-9);
+      }
+    }
+  });
+
+  it('marca a regra de preço no item; orçamento antigo (sem a marca) fica na regra anterior', () => {
+    const item = montarItemOrcamento({ nome: 'x', codigo: 'c', fornecedor: 'ASIA', imagem_url: '', preco: 10 }, 50, CALC_DEFAULTS);
+    expect(item.regra_preco).toBe(2);
+    expect(orcamentoNaRegraAtual([item, item])).toBe(true);
+    expect(orcamentoNaRegraAtual([item, { ...item, regra_preco: undefined }])).toBe(false);
+    expect(orcamentoNaRegraAtual([])).toBe(false);
   });
 });
