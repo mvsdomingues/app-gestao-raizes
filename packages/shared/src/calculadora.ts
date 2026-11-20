@@ -108,6 +108,27 @@ export function calcPreco(
   };
 }
 
+/**
+ * Preço unitário de venda em centavos (arredondamento normal). É o valor gravado no item
+ * e usado em todas as somas: a linha do item é sempre exatamente preço/un × quantidade,
+ * igual ao que o cliente vê e confere. O `calcPreco` continua exato (memória de cálculo).
+ */
+export function arredondarPrecoUnitario(preco: number): number {
+  return Math.round((preco + Number.EPSILON) * 100) / 100;
+}
+
+/**
+ * Regra de preço com que o item foi calculado (gravada em `ItemOrcamento.regra_preco`):
+ * 2 = sem rateio de material entre produtos (cada produto independente) e preço/un em centavos.
+ * Itens sem a marca foram calculados pela regra anterior (material rateado no orçamento).
+ */
+export const REGRA_PRECO_ATUAL = 2;
+
+/** Todos os itens calculados pela regra atual (preço de cada produto independente dos outros). */
+export function orcamentoNaRegraAtual(itens: { regra_preco?: number }[]): boolean {
+  return itens.length > 0 && itens.every((i) => (i.regra_preco ?? 1) >= REGRA_PRECO_ATUAL);
+}
+
 /** Texto "custo base … · margem … + imposto venda …" gravado em cada item do orçamento. */
 export function montarComposicao(
   custoBase: number,
@@ -179,7 +200,8 @@ export function montarItemOrcamento(
     fornecedor: p.fornecedor,
     imagem_url: p.imagem_url as string,
     qty,
-    preco: res.preco,
+    preco: arredondarPrecoUnitario(res.preco),
+    regra_preco: REGRA_PRECO_ATUAL,
     composicao: montarComposicao(p.preco as number, calc, res),
     origem: p.origem ?? 'fornecedor',
     produto_id: p.id,

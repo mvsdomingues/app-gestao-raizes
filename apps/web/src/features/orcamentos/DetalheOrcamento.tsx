@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import {
   FLUXO_ORCAMENTO,
   motivoBloqueioAlteracao,
+  motivoPrecosAConferir,
   podeGerarPedido,
   ROTULOS_STATUS_ORCAMENTO,
   type Orcamento,
@@ -17,6 +18,7 @@ import { ModalNovoPedido } from '../pedidos/ModalNovoPedido';
 import { useEditarOrcamento } from './editar-orcamento';
 import { FolhaOrcamento } from './FolhaOrcamento';
 import { useParametrosImpressao } from './impressao';
+import { useDiasValidade } from './validade';
 import { TagStatusOrcamento, useSituacaoOrcamento } from './situacao';
 import { ClienteVinculado } from '../clientes/ClienteVinculado';
 import { ResumoFaturamento } from '../clientes/FormularioFaturamento';
@@ -32,6 +34,7 @@ export function DetalheOrcamento() {
   const { editar, carregando } = useEditarOrcamento();
   const { alterar, processando } = useSituacaoOrcamento((o) => setInfo(o));
   const impressao = useParametrosImpressao();
+  const diasValidade = useDiasValidade();
 
   // Recarrega a situação ao abrir outro orçamento, ao gerar/cancelar pedido ou quando ela muda
   useEffect(() => {
@@ -61,6 +64,9 @@ export function DetalheOrcamento() {
   const indice = status ? etapas.indexOf(status) : -1;
   const resposta = info?.resposta_cliente ?? null;
   const cliente = info ? (info.cliente ?? null) : (folha?.cliente ?? null);
+  // Reaberto e ainda não editado: envio e pedido só depois de conferir os preços
+  const precosConferir = !!info?.precos_conferir && status === 'ABERTO';
+  const expirou = !!info?.expirado && cancelado;
 
   return (
     <>
@@ -74,7 +80,8 @@ export function DetalheOrcamento() {
               <button
                 className="btn-back"
                 id="btn-marcar-enviado"
-                disabled={processando !== null}
+                disabled={processando !== null || precosConferir}
+                title={precosConferir ? motivoPrecosAConferir(folha.numero) : undefined}
                 onClick={() => void alterar(folha.id!, folha.numero, status, 'ENVIADO', info ? (info.cliente ?? null) : folha.cliente)}
               >
                 ✉ Enviar para o Cliente
@@ -111,7 +118,13 @@ export function DetalheOrcamento() {
               </button>
             )}
             {folha.id !== undefined && !pedido && status && podeGerarPedido(status) && pode('pedidos') && (
-              <button className="btn-back" id="btn-gerar-pedido" onClick={() => setGerando(true)}>
+              <button
+                className="btn-back"
+                id="btn-gerar-pedido"
+                disabled={precosConferir}
+                title={precosConferir ? motivoPrecosAConferir(folha.numero) : undefined}
+                onClick={() => setGerando(true)}
+              >
                 📦 Gerar pedido
               </button>
             )}
@@ -148,7 +161,7 @@ export function DetalheOrcamento() {
           <div className="orc-situacao-topo">
             <div className="orc-situacao-atual">
               <span className="orc-situacao-rotulo">Situação</span>
-              <TagStatusOrcamento status={status} />
+              <TagStatusOrcamento status={status} expirado={expirou} />
               {pedido && (
                 <button
                   className={`tag-orc-pedido${pode('pedidos') ? '' : ' sem-link'}`}
@@ -205,7 +218,22 @@ export function DetalheOrcamento() {
             </div>
           )}
 
-          {cancelamento && (
+          {cancelamento && expirou && (
+            <div className="orc-cancelado orc-expirado" id="orc-cancelado">
+              <b>Expirou</b> em {formatarDataHora(cancelamento.data_hora)}
+              {cancelamento.observacao && <> — {cancelamento.observacao.replace(/^Expirou: /, '')}</>}. Cancelado
+              automaticamente pelo sistema. Use <b>Reabrir</b> para voltar a trabalhar nele: na próxima edição, os preços são
+              atualizados com os custos atuais.
+            </div>
+          )}
+          {precosConferir && (
+            <div className="orc-precos-conferir" id="orc-precos-conferir">
+              <b>Preços a conferir.</b> Este orçamento foi reaberto e os custos dos produtos podem ter mudado. Use{' '}
+              <b>Editar</b>: os preços são atualizados com os custos atuais e cada produto mostra o que mudou. Depois de
+              salvar, ele pode ser enviado ao cliente ou virar pedido.
+            </div>
+          )}
+          {cancelamento && !expirou && (
             <div className="orc-cancelado" id="orc-cancelado">
               <b>{cancelamento.origem === 'CLIENTE' ? 'Recusado pelo cliente' : 'Cancelado'}</b> em{' '}
               {formatarDataHora(cancelamento.data_hora)}
@@ -234,12 +262,18 @@ export function DetalheOrcamento() {
               return (
                 <li key={s} className={`orc-passo ${estado} so-${s}`}>
                   <span className="orc-passo-marca">{estado === 'feito' ? '✓' : s === 'CANCELADO' ? '✕' : i + 1}</span>
-                  <span className="orc-passo-nome">{ROTULOS_STATUS_ORCAMENTO[s]}</span>
+                  <span className="orc-passo-nome">{s === 'CANCELADO' && expirou ? 'Expirado' : ROTULOS_STATUS_ORCAMENTO[s]}</span>
                   <span className="orc-passo-data">
                     {m ? (
                       <>
                         {formatarDataHora(m.data_hora)}
-                        {m.origem === 'CLIENTE' ? <> · cliente (link)</> : m.usuario && <> · {m.usuario.nome}</>}
+                        {m.origem === 'CLIENTE' ? (
+                          <> · cliente (link)</>
+                        ) : m.origem === 'SISTEMA' ? (
+                          <> · sistema</>
+                        ) : (
+                          m.usuario && <> · {m.usuario.nome}</>
+                        )}
                       </>
                     ) : estado === 'futuro' ? (
                       '—'
@@ -304,6 +338,8 @@ export function DetalheOrcamento() {
               faturamento: info?.faturamento ?? null,
             }}
             impressao={impressao}
+            diasValidade={diasValidade}
+            validoAte={status === 'ENVIADO' ? (info?.link?.valido_ate ?? null) : null}
           />
         ) : (
           <div className="orc-empty-state">

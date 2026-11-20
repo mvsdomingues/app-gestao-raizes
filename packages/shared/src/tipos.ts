@@ -47,7 +47,10 @@ export interface ItemOrcamento {
   fornecedor: string;
   imagem_url: string;
   qty: number;
+  /** Preço unitário de venda (regra atual: em centavos) */
   preco: number;
+  /** Regra de preço do cálculo (2 = produtos independentes, sem rateio; ausente = regra anterior) */
+  regra_preco?: number;
   composicao: string;
   /** Presente nos orçamentos novos; "proprio" para produtos próprios. */
   origem?: OrigemProduto;
@@ -94,6 +97,8 @@ export interface ResumoOrcamento {
   entrega_prevista?: string | null;
   /** O cliente já abriu o link */
   visto?: boolean;
+  /** Cancelado automaticamente porque a validade terminou (expirou) */
+  expirado?: boolean;
 }
 
 /** Resposta paginada de GET /api/orcamentos */
@@ -139,6 +144,11 @@ export interface Orcamento extends ResumoOrcamento {
   mockups?: import('./orcamentos').MockupOrcamento[];
   /** Dados de faturamento e entrega do cliente (null = não informados) */
   faturamento?: import('./faturamento').DadosFaturamento | null;
+  /**
+   * Reaberto depois de cancelado ou expirado: os preços precisam ser atualizados (Editar e salvar)
+   * antes de enviar ao cliente ou gerar pedido.
+   */
+  precos_conferir?: boolean;
 }
 
 /** Corpo de POST /api/orcamentos */
@@ -250,11 +260,20 @@ export interface RespostaParametros {
 export interface ParametrosSistema {
   /** Envia as notas para o contato no Kommo (orçamento enviado, aceite, recusa, pedido gerado) */
   kommo_notas_ativo: boolean;
+  /**
+   * Validade do orçamento enviado ao cliente, em dias (contada do envio). Vencida, o orçamento
+   * expira: é cancelado automaticamente. O valor novo vale para os próximos envios.
+   */
+  dias_validade_orcamento: number;
 }
 
 export const SISTEMA_DEFAULTS: ParametrosSistema = {
   kommo_notas_ativo: true,
+  dias_validade_orcamento: 3,
 };
+
+/** Limites aceitos para a validade do orçamento (dias inteiros). */
+export const LIMITES_DIAS_VALIDADE = { min: 1, max: 90 } as const;
 
 /** Textos da impressão do orçamento (aba "Impressão" da tela Parâmetros). */
 export interface ParametrosImpressao {

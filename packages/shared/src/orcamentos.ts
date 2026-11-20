@@ -58,11 +58,51 @@ export function formatarDataBr(v: string | null | undefined): string {
   return m ? `${m[3]}/${m[2]}/${m[1]}` : v;
 }
 
-/** Validade do link enviado ao cliente (igual ao texto "Válido por 7 dias" da folha). */
-export const DIAS_VALIDADE_LINK = 7;
+/** "1 dia", "3 dias" — validade nos textos para o cliente (folha, link) e nas telas. */
+export function textoDias(dias: number): string {
+  return `${dias} ${dias === 1 ? 'dia' : 'dias'}`;
+}
 
-/** Quem fez a movimentação: um usuário do sistema ou o cliente, pelo link. */
-export type OrigemMovimento = 'USUARIO' | 'CLIENTE';
+/**
+ * Quem fez a movimentação: um usuário do sistema, o cliente (pelo link) ou o próprio
+ * sistema (rotina automática, ex.: orçamento que expirou).
+ */
+export type OrigemMovimento = 'USUARIO' | 'CLIENTE' | 'SISTEMA';
+
+/** Texto do histórico quando o orçamento expira (cancelamento automático). */
+export const PREFIXO_EXPIROU = 'Expirou';
+
+/**
+ * Reaberto (de Cancelado ou expirado) e ainda não editado: os preços precisam ser
+ * atualizados antes de enviar ou gerar pedido. Mesmo texto no servidor e na tela.
+ */
+export function motivoPrecosAConferir(numero: string): string {
+  return `Os preços do ${numero} precisam ser conferidos: ele foi reaberto e os custos dos produtos podem ter mudado. Use "Editar", confira os preços atualizados e salve antes de enviar ao cliente ou gerar o pedido.`;
+}
+
+/** Situação da rotina que expira os orçamentos vencidos (GET /api/expiracao/status). */
+export interface ExecucaoExpiracao {
+  inicio: string;
+  fim: string;
+  ok: boolean;
+  /** Quantos orçamentos expiraram nesta execução */
+  expirados: number;
+  erro?: string;
+}
+
+export interface StatusExpiracao {
+  /** Validade atual (Parâmetros › Sistema), em dias */
+  dias_validade: number;
+  /** Intervalo entre as execuções, em minutos */
+  intervalo_min: number;
+  ultima: ExecucaoExpiracao | null;
+  /** Data/hora da última execução sem erro */
+  ultima_ok: string | null;
+  /** Data/hora prevista da próxima execução (null = rotina parada) */
+  proxima: string | null;
+  /** Última execução falhou ou a rotina está atrasada */
+  alerta: boolean;
+}
 
 /** Resposta do cliente pelo link. */
 export type RespostaCliente = 'ACEITO' | 'RECUSADO';
@@ -109,6 +149,8 @@ export interface OrcamentoPublico {
   numero: string;
   data_hora: string;
   valido_ate: string | null;
+  /** Validade em dias (Parâmetros › Sistema), para os textos da folha */
+  dias_validade: number;
   situacao: SituacaoPublica;
   /** Cliente (empresa) e, "aos cuidados de", só a pessoa de contato deste orçamento */
   cliente: { nome: string; telefone: string | null; contato?: string | null } | null;

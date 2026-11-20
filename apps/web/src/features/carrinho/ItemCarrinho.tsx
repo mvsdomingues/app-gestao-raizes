@@ -1,10 +1,10 @@
 import { useEffect, useMemo, useRef, useState, type FocusEvent, type FormEvent } from 'react';
-import { formatBRL, getFaixa, type CampoNumerico } from '@raizes/shared';
+import { arredondarPrecoUnitario, formatBRL, getFaixa, type CampoNumerico } from '@raizes/shared';
 import { useApp } from '../../app/contexto';
 import { useSessao } from '../../app/sessao';
 import { classeFornecedor } from '../../lib/fornecedor';
 import { ImagemProduto } from '../../components/ImagemProduto';
-import { precosDoCarrinho, useCarrinho, type ItemCarrinho as Item } from '../../state/carrinho';
+import { precosDoCarrinho, useCarrinho, type AtualizacaoPreco, type ItemCarrinho as Item } from '../../state/carrinho';
 import { BlocoPersonalizacao } from './BlocoPersonalizacao';
 
 /**
@@ -23,6 +23,8 @@ export function ItemCarrinho({ item }: { item: Item }) {
   // (material somado com os outros itens da mesma técnica)
   const precos = useMemo(() => precosDoCarrinho(estado.itens, parametros, tecnicas), [estado.itens, parametros, tecnicas]);
   const { res, personalizacao } = precos.get(estado.itens[String(id)] ?? item) ?? [...precos.values()][0]!;
+  // Preço/un em centavos: o mesmo gravado no orçamento e mostrado ao cliente
+  const precoUnit = arredondarPrecoUnitario(res.preco);
   const faixa = getFaixa(qty);
   // A faixa ao lado da quantidade é fixada quando o item é desenhado
   const [faixaInicial] = useState(faixa.nome);
@@ -68,6 +70,7 @@ export function ItemCarrinho({ item }: { item: Item }) {
           {' \u00a0Custo fornecedor: '}
           {formatBRL(p.preco)}/un{' '}
         </div>
+        {item.atualizacaoPreco && <SeloPreco a={item.atualizacaoPreco} id={id} />}
         <div className="qty-control">
           <button className="qty-btn" onClick={() => definirQtd(id, Math.max(1, qty - 1), true)}>
             −
@@ -122,7 +125,7 @@ export function ItemCarrinho({ item }: { item: Item }) {
               </div>
             </div>
             <div className="calc-result-val" id={`calc-val-${id}`}>
-              {formatBRL(res.preco)}
+              {formatBRL(precoUnit)}
             </div>
           </div>
           <div className="calc-warn" id={`calc-warn-${id}`} style={{ display: qty < 10 ? 'block' : 'none' }}>
@@ -151,8 +154,32 @@ export function ItemCarrinho({ item }: { item: Item }) {
         <button className="remove-btn" onClick={() => remover(id)}>
           ✕
         </button>
-        <span className="cart-item-subtotal">{formatBRL(res.preco * qty)}</span>
+        <span className="cart-item-subtotal">{formatBRL(precoUnit * qty)}</span>
       </div>
+    </div>
+  );
+}
+
+/** Selo do orçamento reaberto: o custo foi atualizado pelo catálogo, ficou igual ou foi mantido. */
+function SeloPreco({ a, id }: { a: AtualizacaoPreco; id: number }) {
+  if (a.situacao === 'fora') {
+    return (
+      <div className="cart-selo-preco fora" id={`selo-preco-${id}`} title="O produto não foi encontrado no catálogo atual">
+        ⚠ Fora do catálogo: preço anterior mantido ({formatBRL(a.anterior)}/un) — confira o custo
+      </div>
+    );
+  }
+  if (a.situacao === 'igual') {
+    return (
+      <div className="cart-selo-preco igual" id={`selo-preco-${id}`}>
+        = Preço sem alteração: custo atual igual ao do orçamento
+      </div>
+    );
+  }
+  const subiu = (a.atual ?? 0) > a.anterior;
+  return (
+    <div className={`cart-selo-preco ${subiu ? 'subiu' : 'caiu'}`} id={`selo-preco-${id}`}>
+      {subiu ? '↑' : '↓'} Preço atualizado: custo {formatBRL(a.anterior)} → {formatBRL(a.atual)}/un
     </div>
   );
 }

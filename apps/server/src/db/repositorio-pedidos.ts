@@ -31,7 +31,7 @@ import {
   type DadosFaturamento,
 } from '@raizes/shared';
 import { ErroHttp } from '../lib/http';
-import { registrarMovimentoOrcamento } from './repositorio-orcamentos';
+import { exigirPrecosConferidos, registrarMovimentoOrcamento } from './repositorio-orcamentos';
 import { colunasResponsavel, extrairResponsavel } from './repositorio-usuarios';
 import { isoLocal } from '../lib/datas';
 import { faturamentoDoBanco } from '../lib/faturamento';
@@ -337,6 +337,7 @@ export function criarPedido(
     if (existe.status === 'CANCELADO') {
       throw new ErroHttp(409, `O ${numeroOrcamento(orcamentoId)} está cancelado. Reabra o orçamento antes de gerar o pedido.`);
     }
+    exigirPrecosConferidos(db, orcamentoId);
     // Responsável do pedido: quem gera, ou (por escolha) o responsável do orçamento
     let responsavel = usuarioId;
     if (opcoes.responsavelId && opcoes.responsavelId !== usuarioId) {

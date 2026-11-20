@@ -1,6 +1,8 @@
 import { useState, type ReactNode } from 'react';
 import { Logo } from '../../components/Logo';
 import {
+  SISTEMA_DEFAULTS,
+  textoDias,
   entregaPreenchida,
   formatarCep,
   formatarDataBr,
@@ -27,7 +29,7 @@ function materialInterno(r: ResultadoPersonalizacao): string {
   const m2 = (v: number) => v.toLocaleString('pt-BR', { maximumFractionDigits: 4 });
   const partes = [`Interno: ${r.tecnica}${r.local ? ` (${r.local})` : ''} · material ${m2(r.material_m2)} m²`];
   if (r.grupo && r.grupo.itens > 1)
-    partes.push(`rateado entre ${r.grupo.itens} aplicações (${m2(r.grupo.material_m2)} m² no total)`);
+    partes.push(`somado entre ${r.grupo.itens} aplicações do produto (${m2(r.grupo.material_m2)} m² no total)`);
   if (r.material_ajustado) partes.push('material ajustado');
   if (r.mao_obra_ajustada) partes.push('mão de obra ajustada');
   return partes.join(' · ');
@@ -65,6 +67,7 @@ export function FolhaOrcamento({
   folha,
   publico = false,
   validoAte,
+  diasValidade = SISTEMA_DEFAULTS.dias_validade_orcamento,
   impressao,
   ampliarImagens = false,
 }: {
@@ -74,8 +77,10 @@ export function FolhaOrcamento({
   ampliarImagens?: boolean;
   /** Instruções especiais (só na impressão) e rodapé, da tela Parâmetros › Impressão */
   impressao?: ParametrosImpressao | null;
-  /** Data/hora até quando vale (link do cliente); sem ela, "Válido por 7 dias" */
+  /** Data/hora até quando vale (link do cliente); sem ela, "Válido por N dias" */
   validoAte?: string | null;
+  /** Validade em dias (Parâmetros › Sistema) */
+  diasValidade?: number;
 }) {
   const { numero, dataHora, itens, subtotal, frete, total } = folha;
   const d = dataHora ? new Date(dataHora) : new Date();
@@ -359,7 +364,7 @@ export function FolhaOrcamento({
       {/* Assinatura e validade: sempre a última linha do documento */}
       <div className={`orc-footer${impressao?.rodape ? ' apos-rodape' : ''}`}>
         <div className="orc-footer-brand">Raízes Personalizados</div>
-        <span>{validade ? `Válido até ${validade}` : 'Válido por 7 dias'} · sujeito à disponibilidade de estoque</span>
+        <span>{validade ? `Válido até ${validade}` : `Válido por ${textoDias(diasValidade)}`} · sujeito à disponibilidade de estoque</span>
       </div>
     </>
   );

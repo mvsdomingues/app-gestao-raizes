@@ -7,7 +7,7 @@ import {
   calcComPersonalizacao,
   calcPreco,
   calcularPersonalizacao,
-  calcularPersonalizacaoOrcamento,
+  arredondarPrecoUnitario,
   calcularPersonalizacoesOrcamento,
   entradaVazia,
   getFaixa,
@@ -56,7 +56,7 @@ const SUMARIO = [
   { id: 'calc-quantidade', titulo: 'Quantidade e custos fixos' },
   { id: 'calc-material', titulo: 'Material da personalização' },
   { id: 'calc-folga', titulo: 'Folga e fração mínima' },
-  { id: 'calc-grupo', titulo: 'Material somado no orçamento' },
+  { id: 'calc-grupo', titulo: 'Cada produto é calculado sozinho' },
   { id: 'calc-mao-obra', titulo: 'Mão de obra' },
   { id: 'calc-sem-tecnica', titulo: 'Item sem técnica' },
   { id: 'calc-ajustes', titulo: 'Ajustes do operador' },
@@ -82,23 +82,19 @@ export function MemoriasCalculo() {
   const sub = calcularPersonalizacao({ ...personalizacaoVazia(), tecnica_id: 1, altura_cm: 10, largura_cm: 8 }, 50, [SUBLIMACAO]);
   const caneca = calcPreco(20, 50, calcComPersonalizacao(P, sub));
 
-  // Agrupamento: 5 cores × 20 un, DTF UV, arte 8 × 8 cm
+  // Produtos independentes: 5 cores × 20 un, DTF UV, arte 8 × 8 cm — cada cor calculada sozinha
   const cores = ['Azul', 'Preto', 'Transparente', 'Verde', 'Vermelho'];
-  const grupo = calcularPersonalizacaoOrcamento(
+  const porCor = calcularPersonalizacoesOrcamento(
     cores.map((c) => ({
       chave: c,
-      personalizacao: {
-        ...personalizacaoVazia(),
-        tecnica_id: 2,
-        altura_cm: 8,
-        largura_cm: 8,
-      },
+      entrada: { ...entradaVazia(), aplicacoes: [{ ...personalizacaoVazia(), tecnica_id: 2, altura_cm: 8, largura_cm: 8 }] },
       qty: 20,
     })),
     [DTF],
   );
-  const g1 = grupo.get('Azul')!;
-  const isolado = calcularPersonalizacao({ ...personalizacaoVazia(), tecnica_id: 2, altura_cm: 8, largura_cm: 8 }, 20, [DTF]);
+  const g1 = porCor.get('Azul')!.aplicacoes[0]!;
+  const precoCor = (n: number) =>
+    arredondarPrecoUnitario(calcPreco(20, 20, calcComPersonalizacao(P, porCor.get(cores[n]!)!)).preco);
 
   // Folga: arte de 0,5 m² (50 × 100 cm), fração 1 m², R$ 30/m²
   const folgaLinhas = [1, 2, 3, 4].map((q) => {
@@ -361,7 +357,7 @@ export function MemoriasCalculo() {
             ['Custo total/un', `${brl(base.custoVar)} + ${brl(base.custoFixoRateado)}`, brl(base.custoTotal)],
             ['Divisor', `1 − ${pct(P.imposto, 0)} − ${pct(P.margem, 0)}`, num(divisor, 2, 2)],
             ['Preço de venda/un', `${brl(base.custoTotal)} ÷ ${num(divisor, 2, 2)}`, brl(base.preco)],
-            ['Total do item', `${brl(base.preco)} × 50 un`, brl(base.preco * 50)],
+            ['Total do item', `${brl(base.preco)} × 50 un`, brl(arredondarPrecoUnitario(base.preco) * 50)],
           ]}
           conclusao={
             <>
@@ -421,7 +417,7 @@ export function MemoriasCalculo() {
           num={[2, 3, 4, 5]}
           linhas={[10, 25, 50, 100, 500, 1000].map((q) => {
             const r = calcPreco(20, q, P);
-            return [`${q} un`, getFaixa(q).nome, brl(r.custoFixoRateado), brl(r.custoTotal), brl(r.preco), brl(r.preco * q)];
+            return [`${q} un`, getFaixa(q).nome, brl(r.custoFixoRateado), brl(r.custoTotal), brl(r.preco), brl(arredondarPrecoUnitario(r.preco) * q)];
           })}
         />
         <p className="ajuda-pequeno">Produto de R$ 20,00 com os parâmetros de fábrica.</p>
@@ -506,44 +502,39 @@ export function MemoriasCalculo() {
         </Dica>
       </Secao>
 
-      <Secao id="calc-grupo" titulo="Material somado por técnica no orçamento" numero={7}>
+      <Secao id="calc-grupo" titulo="Cada produto é calculado sozinho" numero={7}>
         <p>
-          Itens com a <b>mesma técnica</b> no mesmo orçamento dividem o material: as áreas necessárias (já com a folga) são
-          somadas, arredondadas <b>uma única vez</b> e o valor é rateado pela área de cada item. Assim, várias cores do mesmo
-          produto (ou produtos diferentes com a mesma técnica) não pagam, cada uma, uma fração mínima inteira.
+          O preço de cada produto depende <b>só dele</b>: quantidade, custo, personalização e ajustes do próprio item. Produtos
+          diferentes do orçamento <b>não dividem material</b>, mesmo com a mesma técnica. Assim, incluir ou remover um produto
+          nunca muda o preço dos outros, e o total que o cliente confere (somando os produtos que escolheu) é exatamente o que o
+          sistema calcula.
         </p>
         <Exemplo
-          titulo="Exemplo: caneca em 5 cores × 20 unidades, arte 8 × 8 cm, DTF UV"
+          titulo="Exemplo: caneca de R$ 20,00 em 5 cores × 20 unidades, arte 8 × 8 cm, DTF UV"
           dados={<>Tabela Material do DTF UV: {brl(60)}/m² · fração mínima 1 m² · folga 10%</>}
           passos={[
             ['Área da arte', '8 × 8 ÷ 10.000', `${num(g1.area_arte_m2)} m²`],
-            ['Área necessária por cor', `20 × ${num(g1.area_arte_m2)} × 1,10`, `${num(g1.area_necessaria_m2)} m²`],
-            ['Área do orçamento', `5 cores × ${num(g1.area_necessaria_m2)} m²`, `${num(g1.grupo!.area_necessaria_m2)} m²`],
+            ['Área necessária de cada cor', `20 × ${num(g1.area_arte_m2)} × 1,10`, `${num(g1.area_necessaria_m2)} m²`],
             [
-              'Material do orçamento',
-              `${num(g1.grupo!.area_necessaria_m2)} m² → ${g1.grupo!.fracoes} fração de 1 m²`,
-              `${num(g1.grupo!.material_m2)} m² · ${brl(g1.grupo!.material_valor)}`,
-            ],
-            [
-              'Parte de cada cor',
-              `${brl(g1.grupo!.material_valor)} × (${num(g1.area_necessaria_m2)} ÷ ${num(g1.grupo!.area_necessaria_m2)})`,
-              `${num(g1.material_m2_sugerido)} m² · ${brl(g1.material_valor)}`,
+              'Material de cada cor',
+              `${num(g1.area_necessaria_m2)} m² → ${g1.fracoes} fração de 1 m²`,
+              `${num(g1.material_m2)} m² · ${brl(g1.material_valor)}`,
             ],
             ['Material por unidade', `${brl(g1.material_valor)} ÷ 20 un`, brl(g1.material_unit)],
+            ['Preço/un de cada cor', 'mesmo cálculo para as 5 cores', brl(precoCor(0))],
           ]}
           conclusao={
             <>
-              Se cada cor fosse calculada sozinha, seriam {cores.length} × {brl(isolado.material_valor)} ={' '}
-              <b>{brl(isolado.material_valor * cores.length)}</b> de material ({brl(isolado.material_unit)}/un). Somando, o
-              orçamento paga <b>{brl(g1.grupo!.material_valor)}</b> ({brl(g1.material_unit)}
-              /un).
+              Se o cliente ficar só com 3 cores, cada uma continua custando <b>{brl(precoCor(0))}</b>/un: o total passa de{' '}
+              {brl(precoCor(0) * 20 * 5)} para <b>{brl(precoCor(0) * 20 * 3)}</b>, sem nenhum recálculo.
             </>
           }
         />
         <Dica tipo="regra">
-          Os centavos que sobram do rateio ficam no último item, para a soma fechar exatamente. Itens com pendência (técnica sem
-          cadastro ou arte sem medida) ficam fora do rateio. Um item sozinho na técnica tem o mesmo resultado do cálculo
-          individual.
+          A soma de material vale só <b>dentro do mesmo produto</b>: aplicações da mesma técnica no mesmo item (ex.: frente e
+          verso) somam a área e arredondam uma vez (veja “Várias personalizações no item”). Como o produto sai do orçamento
+          inteiro, isso nunca muda o preço de outro produto. Orçamentos gravados antes desta regra mantêm os valores com que foram
+          enviados; ao serem editados, passam a ser calculados assim.
         </Dica>
       </Secao>
 
@@ -647,11 +638,11 @@ export function MemoriasCalculo() {
               brl(canecaVarias.custoTotal),
             ],
             ['Preço/un', `${brl(canecaVarias.custoTotal)} ÷ ${num(divisor, 2, 2)}`, brl(canecaVarias.preco)],
-            ['Total do item', `${brl(canecaVarias.preco)} × 50`, brl(canecaVarias.preco * 50)],
+            ['Total do item', `${brl(canecaVarias.preco)} × 50`, brl(arredondarPrecoUnitario(canecaVarias.preco) * 50)],
           ]}
           conclusao={
             <>
-              Só com a Sublimação, o mesmo item custaria {brl(caneca.preco)}/un ({brl(caneca.preco * 50)}). O cliente vê duas
+              Só com a Sublimação, o mesmo item custaria {brl(caneca.preco)}/un ({brl(arredondarPrecoUnitario(caneca.preco) * 50)}). O cliente vê duas
               linhas: “Personalização: Corte Laser (Tampa) · arte 5 × 5 cm” e “Personalização: Sublimação (Corpo) · arte 10 × 8
               cm”, sem valores.
             </>
@@ -672,7 +663,7 @@ export function MemoriasCalculo() {
             ],
             ['Mão de obra/un', `2 aplicações × ${brl(2.5)}`, brl(fv.mao_obra_unit)],
           ]}
-          conclusao="O material de aplicações com a mesma técnica é somado e arredondado uma vez (também entre itens diferentes do orçamento); a mão de obra é cobrada em cada aplicação, porque são duas operações."
+          conclusao="O material de aplicações com a mesma técnica no mesmo produto é somado e arredondado uma vez (produtos diferentes não somam); a mão de obra é cobrada em cada aplicação, porque são duas operações."
         />
         <Dica tipo="regra">
           Item sem nenhuma aplicação usa os valores padrão “sem técnica”; ao adicionar a primeira personalização, eles deixam de
@@ -690,7 +681,7 @@ export function MemoriasCalculo() {
             ['Custos fixos/un', `${brl(P.designer_total + P.logistica_total)} ÷ 50`, brl(caneca.custoFixoRateado)],
             ['Custo total/un', 'soma das linhas acima', brl(caneca.custoTotal)],
             ['Preço/un', `${brl(caneca.custoTotal)} ÷ ${num(divisor, 2, 2)}`, brl(caneca.preco)],
-            ['Total do item', `${brl(caneca.preco)} × 50`, brl(caneca.preco * 50)],
+            ['Total do item', `${brl(caneca.preco)} × 50`, brl(arredondarPrecoUnitario(caneca.preco) * 50)],
           ]}
         />
       </Secao>
@@ -699,13 +690,23 @@ export function MemoriasCalculo() {
         <Formula
           linhas={[
             <>
-              <b>Subtotal</b> = soma de (preço/un × quantidade) de todos os itens
+              <b>Preço/un</b> = preço calculado arredondado em centavos (arredondamento normal)
+            </>,
+            <>
+              <b>Total do item</b> = preço/un × quantidade
+            </>,
+            <>
+              <b>Subtotal</b> = soma do total de todos os itens
             </>,
             <>
               <b>Total</b> = subtotal + frete
             </>,
           ]}
         />
+        <p>
+          O preço/un é gravado em centavos, o mesmo que aparece na folha e para o cliente: quem conferir “preço/un × quantidade”
+          chega exatamente ao total da linha, e a soma das linhas fecha com o subtotal.
+        </p>
         <p>
           O frete é digitado no resumo do carrinho e é somado sem margem nem imposto. O valor gravado no orçamento é o que vale
           para o pedido e para o cliente: mudanças posteriores em Parâmetros ou nas tabelas não alteram orçamentos já gerados — só
@@ -912,7 +913,7 @@ function Simulador() {
         {pct(parametros.imposto)}, imposto de compra{' '}
         {parametros.imposto_compra_ativo ? pct(parametros.imposto_compra) : 'desligado'}, designer{' '}
         {brl(parametros.designer_total)}, logística {brl(parametros.logistica_total)}) e as tabelas de técnicas. Nada é gravado.
-        Considera o item sozinho no orçamento (sem rateio com outros itens).
+        Cada produto é calculado sozinho, como no carrinho.
       </p>
       <div className="ajuda-sim-campos">
         <label>
@@ -986,7 +987,7 @@ function Simulador() {
             ],
             ['Custo total/un', 'soma', brl(res.custoTotal)],
             ['Preço/un', `${brl(res.custoTotal)} ÷ ${num(divisor, 4, 2)}`, brl(res.preco)],
-            ['Total do item', `${brl(res.preco)} × ${q}`, brl(res.preco * q)],
+            ['Total do item', `${brl(res.preco)} × ${q}`, brl(arredondarPrecoUnitario(res.preco) * q)],
           ]}
           conclusao={
             <>

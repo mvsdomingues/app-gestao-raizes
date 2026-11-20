@@ -293,19 +293,19 @@ function CartaoAplicacao({
         <>
           {r.grupo && r.grupo.itens > 1 && (
             <div className="pers-grupo" id={`${pref}-grupo`}>
-              {r.tecnica} no orçamento: {r.grupo.itens} aplicações · {num(r.grupo.area_necessaria_m2)} m² necessários (com folga)
+              {r.tecnica} neste produto: {r.grupo.itens} aplicações · {num(r.grupo.area_necessaria_m2)} m² necessários (com folga)
               →{' '}
               <b>
                 {num(r.grupo.material_m2)} m² ({r.grupo.fracoes} × {num(r.fracao_minima ?? 0)} m²) ·{' '}
                 {formatBRL(r.grupo.material_valor)}
               </b>
-              , rateado pela área da arte de cada aplicação.
+              , dividido pela área da arte de cada aplicação.
             </div>
           )}
           <div className="pers-sugestao" id={`${pref}-sugestao`}>
             {r.grupo && r.grupo.itens > 1 ? (
               <>
-                Parte deste item: <b>{num(r.material_m2_sugerido)} m²</b> · <b>{formatBRL(r.material_valor_sugerido)}</b>
+                Parte desta aplicação: <b>{num(r.material_m2_sugerido)} m²</b> · <b>{formatBRL(r.material_valor_sugerido)}</b>
                 <span className="pers-detalhe">
                   {' '}
                   — arte {num(r.area_arte_m2)} m² × {qty} un = {num(r.area_necessaria_m2)} m² necessários ·{' '}

@@ -6,6 +6,7 @@ import { abrirBanco } from './db/conexao';
 import { ApiKommo } from './kommo/api';
 import { ServicoKommo } from './kommo/servico';
 import { GerenciadorAtualizacao } from './services/gerenciador-atualizacao';
+import { ServicoExpiracao } from './services/expiracao';
 
 const aqui = dirname(fileURLToPath(import.meta.url));
 // Em desenvolvimento (tsx) roda o .ts; no build, o .js gerado em dist/cli.
@@ -30,6 +31,10 @@ const kommo = config.kommo
   : null;
 kommo?.iniciarAgendamento();
 
+// Expiração dos orçamentos vencidos: agora e a cada 15 minutos
+const expiracao = new ServicoExpiracao(db);
+expiracao.iniciar();
+
 const app = criarApp({
   db,
   gerenciador,
@@ -38,6 +43,7 @@ const app = criarApp({
   kommo,
   urlPublica: config.urlPublica,
   backup: config.backup,
+  expiracao,
 });
 
 const servidor = app.listen(config.porta, config.host, () => {
@@ -47,6 +53,7 @@ const servidor = app.listen(config.porta, config.host, () => {
   console.log(linha);
   console.log(`  Acesse: http://localhost:${config.porta}`);
   console.log(`  Banco:  ${config.dbPath}`);
+  console.log(`  Expiração de orçamentos: a cada ${expiracao.intervaloMin} min`);
   console.log(`  Kommo:  ${kommo ? `${kommo.subdominio} (sincroniza a cada ${kommo.intervaloMin} min)` : 'desligado'}`);
   console.log(`${linha}\n`);
 });
@@ -54,6 +61,7 @@ const servidor = app.listen(config.porta, config.host, () => {
 function desligar() {
   gerenciador.encerrar();
   kommo?.parar();
+  expiracao.parar();
   servidor.close(() => {
     db.close();
     process.exit(0);

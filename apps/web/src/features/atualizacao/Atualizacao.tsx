@@ -4,6 +4,7 @@ import { useApp } from '../../app/contexto';
 import { api } from '../../lib/api';
 import { CartoesStatus } from './CartoesStatus';
 import { PainelBackup } from './PainelBackup';
+import { PainelExpiracao } from './PainelExpiracao';
 import { PainelKommo } from './PainelKommo';
 import { avisar, erro, erroDe } from '../../lib/dialogo';
 
@@ -175,6 +176,8 @@ export function Atualizacao() {
         <CartoesStatus />
 
         <PainelBackup visivel={tela === 'status'} />
+
+        <PainelExpiracao visivel={tela === 'status'} />
 
         <PainelKommo visivel={tela === 'status'} />
       </div>

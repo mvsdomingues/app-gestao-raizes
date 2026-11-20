@@ -322,7 +322,7 @@ export function ListaOrcamentos() {
                   </td>
                   <td>
                     <div className="orc-situacao">
-                      <TagStatusOrcamento status={r.status} />
+                      <TagStatusOrcamento status={r.status} expirado={r.expirado} />
                       {r.resposta && r.status !== 'ENVIADO' ? (
                         <span
                           className={`icone-resposta ${r.resposta}`}

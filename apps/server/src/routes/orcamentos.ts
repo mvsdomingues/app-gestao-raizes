@@ -98,6 +98,7 @@ export function lerOrcamento(db: Banco, id: number, base = ''): Orcamento | unde
       `SELECT orcamentos.id, orcamentos.data_hora, orcamentos.subtotal, orcamentos.frete, orcamentos.total,
               orcamentos.qtd_itens, orcamentos.itens_json, orcamentos.observacao, orcamentos.entrega_prevista,
               orcamentos.faturamento_json, ${SQL_STATUS_ORCAMENTO} AS status,
+              orcamentos.precos_conferir, orcamentos.expirado_em,
               ${COLUNAS_CLIENTE}, ${COLUNAS_LINK},
               ${colunasResponsavel('ur', 'resp')}, ${colunasResponsavel('ua', 'alt')}
          FROM orcamentos ${JOIN_RESPONSAVEIS} WHERE orcamentos.id = ?`,
@@ -108,9 +109,11 @@ export function lerOrcamento(db: Banco, id: number, base = ''): Orcamento | unde
   const alteradoPor = extrairResponsavel(row, 'alt');
   const cliente = clienteDaLinha(row);
   const { link, resposta_cliente } = extrairLink(row, base);
-  const { itens_json, faturamento_json, ...resto } = row;
+  const { itens_json, faturamento_json, precos_conferir, expirado_em, ...resto } = row;
   return {
     ...resto,
+    precos_conferir: !!precos_conferir && resto.status === 'ABERTO',
+    expirado: !!expirado_em && resto.status === 'CANCELADO',
     faturamento: faturamentoDoBanco(faturamento_json),
     cliente,
     link,
@@ -224,7 +227,7 @@ export function rotasOrcamentos(db: Banco, opcoes: OpcoesOrcamentos = {}): Route
                 orcamentos.qtd_itens, orcamentos.entrega_prevista, ${SQL_STATUS_ORCAMENTO} AS status,
                 (${SQL_PEDIDO_ATIVO.replace('{campo}', 'codigo')}) AS pedido_codigo,
                 (${SQL_PEDIDO_ATIVO.replace('{campo}', 'status')}) AS pedido_status,
-                ${COLUNAS_CLIENTE}, orcamentos.resposta,
+                ${COLUNAS_CLIENTE}, orcamentos.resposta, orcamentos.expirado_em,
                 (orcamentos.link_visto_em IS NOT NULL AND orcamentos.link_enviado_em IS NOT NULL) AS visto,
                 ${colunasResponsavel('ur', 'resp')}, ${colunasResponsavel('ua', 'alt')}
            FROM orcamentos ${JOIN_RESPONSAVEIS} ${whereSql}
@@ -239,9 +242,10 @@ export function rotasOrcamentos(db: Banco, opcoes: OpcoesOrcamentos = {}): Route
         const responsavel = extrairResponsavel(linha, 'resp');
         const alteradoPor = extrairResponsavel(linha, 'alt');
         const cliente = clienteDaLinha(linha);
-        const { pedido_codigo, pedido_status, ...row } = linha;
+        const { pedido_codigo, pedido_status, expirado_em, ...row } = linha;
         return {
           ...row,
+          expirado: !!expirado_em && row.status === 'CANCELADO',
           cliente,
           visto: !!row.visto,
           numero: numeroOrcamento(row.id),
@@ -435,7 +439,8 @@ export function rotasOrcamentos(db: Banco, opcoes: OpcoesOrcamentos = {}): Route
       .prepare(
         `UPDATE orcamentos SET data_hora = ?, subtotal = ?, frete = ?, total = ?, qtd_itens = ?, itens_json = ?,
                 alterado_por = ?, observacao = ?, cliente_id = ?, cliente_nome = ?, cliente_telefone = ?, cliente_email = ?,
-                cliente_kommo_id = ?, entrega_prevista = ?, faturamento_json = ?, contato_id = ?, contato_nome = ? WHERE id = ?`,
+                cliente_kommo_id = ?, entrega_prevista = ?, faturamento_json = ?, contato_id = ?, contato_nome = ?,
+                precos_conferir = 0 WHERE id = ?`,
       )
       .run(
         dataHora,

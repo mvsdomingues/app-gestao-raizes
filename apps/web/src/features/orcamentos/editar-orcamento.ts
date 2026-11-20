@@ -1,8 +1,15 @@
 import { useState } from 'react';
-import { motivoBloqueioAlteracao, entradaDoItemOrcamento, type ItemOrcamento, type Orcamento, type ParametrosCalculo } from '@raizes/shared';
+import {
+  motivoBloqueioAlteracao,
+  entradaDoItemOrcamento,
+  type ItemOrcamento,
+  type Orcamento,
+  type ParametrosCalculo,
+  type Produto,
+} from '@raizes/shared';
 import { useApp } from '../../app/contexto';
 import { api } from '../../lib/api';
-import { useCarrinho, type ItemCarrinho, type Itens } from '../../state/carrinho';
+import { useCarrinho, type AtualizacaoPreco, type ItemCarrinho, type Itens, type ResumoPrecos } from '../../state/carrinho';
 import { avisar, confirmar, erro } from '../../lib/dialogo';
 
 /** Ids dos itens que não estão mais no catálogo (bem abaixo dos ids de produtos próprios). */
@@ -19,32 +26,58 @@ function custoDaComposicao(composicao: string): number | null {
  * continue ligado ao catálogo (cartão marcado, mockup etc.). Os ids dos fornecedores
  * mudam a cada atualização da base, por isso a busca é pelo código.
  */
-async function localizarNoCatalogo(item: ItemOrcamento): Promise<number | null> {
+async function localizarNoCatalogo(item: ItemOrcamento): Promise<Produto | null> {
   if (!item.codigo) return null;
   try {
     const r = await api.produtos({ q: item.codigo, fornecedor: item.fornecedor, estoque: false, limit: 80, offset: 0 });
-    return r.produtos.find((p) => p.codigo === item.codigo)?.id ?? null;
+    return r.produtos.find((p) => p.codigo === item.codigo) ?? null;
   } catch {
     return null;
   }
 }
 
-/** Converte os itens de um orçamento salvo em itens do carrinho. */
+/** Custo atual do produto no catálogo (null = não encontrado ou sem preço). */
+function custoAtual(p: Produto | null): number | null {
+  return p && typeof p.preco === 'number' && Number.isFinite(p.preco) && p.preco > 0 ? p.preco : null;
+}
+
+/**
+ * Converte os itens de um orçamento salvo em itens do carrinho. Normalmente usa o custo
+ * gravado no orçamento; com `atualizarPrecos` (orçamento reaberto), busca o custo atual
+ * no catálogo e marca em cada item o que mudou (os fora do catálogo mantêm o custo gravado).
+ */
 async function montarItensCarrinho(
   o: Orcamento,
   parametros: ParametrosCalculo,
-): Promise<{ itens: Itens; semAjustes: boolean }> {
-  const ids = await Promise.all(o.itens.map(localizarNoCatalogo));
+  atualizarPrecos = false,
+): Promise<{ itens: Itens; semAjustes: boolean; resumo: ResumoPrecos | null }> {
+  const produtos = await Promise.all(o.itens.map(localizarNoCatalogo));
   const usados = new Set<number>();
   const itens: Itens = {};
   let semAjustes = false;
+  const resumo: ResumoPrecos = { atualizados: 0, iguais: 0, fora: 0 };
 
   o.itens.forEach((item, i) => {
-    let id = ids[i];
+    let id = produtos[i]?.id;
     if (id === null || id === undefined || usados.has(id)) id = BASE_ID_FORA_CATALOGO - i;
     usados.add(id);
 
-    const custo = item.custo ?? custoDaComposicao(item.composicao) ?? 0;
+    const gravado = item.custo ?? custoDaComposicao(item.composicao) ?? 0;
+    let custo = gravado;
+    let atualizacao: AtualizacaoPreco | undefined;
+    if (atualizarPrecos) {
+      const atual = custoAtual(produtos[i] ?? null);
+      if (atual === null) {
+        atualizacao = { situacao: 'fora', anterior: gravado, atual: null };
+        resumo.fora++;
+      } else {
+        custo = atual;
+        const mudou = Math.abs(atual - gravado) >= 0.005;
+        atualizacao = { situacao: mudou ? 'atualizado' : 'igual', anterior: gravado, atual };
+        if (mudou) resumo.atualizados++;
+        else resumo.iguais++;
+      }
+    }
     if (!item.calc) semAjustes = true;
     const linha: ItemCarrinho = {
       produto: {
@@ -54,7 +87,8 @@ async function montarItensCarrinho(
         fornecedor: item.fornecedor,
         codigo: item.codigo,
         imagem_url: item.imagem_url,
-        preco: custo, // custo gravado no orçamento (não o custo atual do fornecedor)
+        // custo gravado no orçamento; reaberto: o custo atual do catálogo
+        preco: custo,
         descricao: item.descricao ?? null,
         medidas: item.medidas ?? null,
         material: item.material ?? null,
@@ -64,10 +98,11 @@ async function montarItensCarrinho(
       observacao: item.observacao ?? '',
       // Personalização: as aplicações do operador; formatos anteriores são convertidos
       personalizacao: entradaDoItemOrcamento(item),
+      ...(atualizacao ? { atualizacaoPreco: atualizacao } : {}),
     };
     itens[id] = linha;
   });
-  return { itens, semAjustes };
+  return { itens, semAjustes, resumo: atualizarPrecos ? resumo : null };
 }
 
 /**
@@ -125,7 +160,7 @@ export function useEditarOrcamento() {
         }
         return;
       }
-      const { itens, semAjustes } = await montarItensCarrinho(o, parametros);
+      const { itens, semAjustes, resumo } = await montarItensCarrinho(o, parametros, !!o.precos_conferir);
       carregarOrcamento(
         itens,
         String(o.frete || 0),
@@ -135,6 +170,7 @@ export function useEditarOrcamento() {
           aviso: semAjustes
             ? 'Orçamento gravado antes desta versão: os custos de personalização e fixos foram preenchidos com os Parâmetros atuais — confira os valores.'
             : undefined,
+          precos: resumo ?? undefined,
         },
         o.observacao ?? '',
         o.cliente ?? null,

@@ -81,8 +81,9 @@ export interface ResultadoPersonalizacao {
   /** O que o operador informou (para reabrir o orçamento no carrinho) */
   entrada: PersonalizacaoItem;
   /**
-   * Material calculado em conjunto com os outros itens da mesma técnica no orçamento
-   * (área somada e arredondada uma vez só; cada item fica com a parte da sua área).
+   * Material calculado em conjunto com as outras aplicações da mesma técnica NO MESMO
+   * PRODUTO (ex.: frente e verso): área somada e arredondada uma vez; cada aplicação fica
+   * com a parte da sua área. Produtos diferentes nunca dividem material.
    */
   grupo?: GrupoMaterial;
   /** Impede gerar o orçamento (cadastro incompleto, arte sem medidas…) */
@@ -201,9 +202,9 @@ export function calcularPersonalizacao(
   };
 }
 
-/** Material de uma técnica somado no orçamento. */
+/** Material de uma técnica somado entre as aplicações de um mesmo produto. */
 export interface GrupoMaterial {
-  /** Quantos itens dividem o material */
+  /** Quantas aplicações dividem o material */
   itens: number;
   area_necessaria_m2: number;
   fracoes: number;
@@ -211,7 +212,7 @@ export interface GrupoMaterial {
   material_valor: number;
 }
 
-/** Item do orçamento/carrinho para o cálculo em conjunto. */
+/** Aplicação para o cálculo do material em conjunto. */
 export interface ItemPersonalizacao<K> {
   chave: K;
   personalizacao: PersonalizacaoItem;
@@ -219,14 +220,15 @@ export interface ItemPersonalizacao<K> {
 }
 
 /**
- * Personalização de todos os itens do orçamento. O material de cada técnica é
- * calculado em conjunto: as áreas necessárias (já com a folga) dos itens são somadas,
- * arredondadas UMA vez em frações mínimas e o material é rateado pela área de cada
- * item. Assim várias cores do mesmo produto (ou produtos diferentes com a mesma
- * técnica) não pagam uma fração mínima cada. Ajustes do operador valem por item.
- * Um item sozinho na técnica dá o mesmo resultado de `calcularPersonalizacao`.
+ * Material de várias aplicações calculado em conjunto: por técnica, as áreas necessárias
+ * (já com a folga) são somadas, arredondadas UMA vez em frações mínimas e o material é
+ * dividido pela área de cada aplicação. O sistema usa só DENTRO DE UM MESMO PRODUTO
+ * (ex.: frente e verso com a mesma técnica): produtos diferentes não dividem material,
+ * para que o preço de cada produto não dependa dos outros do orçamento. Ajustes do
+ * operador valem por aplicação. Uma aplicação sozinha na técnica dá o mesmo resultado
+ * de `calcularPersonalizacao`.
  */
-export function calcularPersonalizacaoOrcamento<K>(
+export function somarMaterialPorTecnica<K>(
   itens: ItemPersonalizacao<K>[],
   tecnicas: TecnicaComValores[] | null,
   padrao?: PadraoSemTecnica,
@@ -236,7 +238,7 @@ export function calcularPersonalizacaoOrcamento<K>(
   for (const i of itens) {
     const r = calcularPersonalizacao(i.personalizacao, i.qty, tecnicas, padrao);
     res.set(i.chave, r);
-    // Só entram no rateio itens com técnica de cadastro completo e arte medida
+    // Só entram na soma aplicações com técnica de cadastro completo e arte medida
     if (r.tecnica_id === null || r.erro) continue;
     const g = grupos.get(r.tecnica_id) ?? [];
     g.push({ chave: i.chave, r, qtd: Math.max(1, i.qty) });
@@ -252,7 +254,7 @@ export function calcularPersonalizacaoOrcamento<K>(
     const valorGrupo = dinheiro(m2Grupo * preco);
     const grupo: GrupoMaterial = { itens: membros.length, area_necessaria_m2: area, fracoes, material_m2: m2Grupo, material_valor: valorGrupo };
 
-    // Rateio pela área; os centavos que sobram do arredondamento ficam no último item
+    // Divisão pela área; os centavos que sobram do arredondamento ficam na última aplicação
     let valorDistribuido = 0;
     membros.forEach((m, n) => {
       const parte = area > 0 ? m.r.area_necessaria_m2 / area : 0;
@@ -315,7 +317,7 @@ export function descreverPersonalizacao(r: ResultadoPersonalizacao): string {
     return ['sem técnica de personalização', ...ajustes].join(' · ');
   }
   const partes = [`${r.tecnica} · arte ${n(r.altura_cm ?? 0, 1)} × ${n(r.largura_cm ?? 0, 1)} cm`, `material ${n(r.material_m2)} m²`];
-  if (r.grupo && r.grupo.itens > 1) partes.push(`material rateado entre ${r.grupo.itens} aplicações (${n(r.grupo.material_m2)} m² no total)`);
+  if (r.grupo && r.grupo.itens > 1) partes.push(`material somado entre ${r.grupo.itens} aplicações do produto (${n(r.grupo.material_m2)} m² no total)`);
   if (r.material_ajustado) partes.push('material ajustado');
   if (r.mao_obra_ajustada) partes.push('mão de obra ajustada');
   return partes.join(' · ');
@@ -412,29 +414,27 @@ function aplicacaoSemTecnica(p: PersonalizacaoItem): ResultadoPersonalizacao {
 }
 
 /**
- * Personalização de todos os itens do orçamento, com várias aplicações por item.
- * O material de cada técnica é somado entre TODAS as aplicações do orçamento (de
- * itens diferentes ou do mesmo item, como frente e verso), arredondado uma vez e
- * rateado pela área; a mão de obra é cobrada por aplicação.
+ * Personalização de cada item do orçamento, com várias aplicações por item. Cada item é
+ * calculado SOZINHO: o material de cada técnica é somado só entre as aplicações do próprio
+ * item (ex.: frente e verso), arredondado uma vez e dividido pela área; a mão de obra é
+ * cobrada por aplicação. Assim o preço de um produto não muda quando outro entra ou sai
+ * do orçamento (o cliente pode escolher produtos e o total fecha exatamente).
  */
 export function calcularPersonalizacoesOrcamento<K>(
   itens: ItemEntradaPersonalizacao<K>[],
   tecnicas: TecnicaComValores[] | null,
   padrao?: PadraoSemTecnica,
 ): Map<K, PersonalizacaoCalculada> {
-  // Aplicações com técnica entram no cálculo em conjunto (chave = item + posição)
-  const comTecnica: ItemPersonalizacao<string>[] = [];
-  itens.forEach((it, i) =>
-    it.entrada.aplicacoes.forEach((a, j) => {
-      if (a.tecnica_id !== null) comTecnica.push({ chave: `${i}:${j}`, personalizacao: a, qty: it.qty });
-    }),
-  );
-  const calculadas = calcularPersonalizacaoOrcamento(comTecnica, tecnicas, padrao);
-
   const res = new Map<K, PersonalizacaoCalculada>();
-  itens.forEach((it, i) => {
+  for (const it of itens) {
+    // Aplicações com técnica do próprio item entram no cálculo em conjunto (chave = posição)
+    const comTecnica: ItemPersonalizacao<number>[] = [];
+    it.entrada.aplicacoes.forEach((a, j) => {
+      if (a.tecnica_id !== null) comTecnica.push({ chave: j, personalizacao: a, qty: it.qty });
+    });
+    const calculadas = somarMaterialPorTecnica(comTecnica, tecnicas, padrao);
     const aplicacoes = it.entrada.aplicacoes.map((a, j) =>
-      a.tecnica_id === null ? aplicacaoSemTecnica(a) : calculadas.get(`${i}:${j}`)!,
+      a.tecnica_id === null ? aplicacaoSemTecnica(a) : calculadas.get(j)!,
     );
     const semTecnica = it.entrada.aplicacoes.length
       ? null
@@ -445,7 +445,7 @@ export function calcularPersonalizacoesOrcamento<K>(
           padrao,
         );
     res.set(it.chave, totalizar(it.entrada, aplicacoes, semTecnica));
-  });
+  }
   return res;
 }
 

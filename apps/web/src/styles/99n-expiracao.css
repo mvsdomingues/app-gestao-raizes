@@ -1,0 +1,36 @@
+/* ── Validade do orçamento: expiração automática e reabertura com preços atualizados ── */
+
+/* Detalhes do orçamento: expirou e preços a conferir */
+.orc-cancelado.orc-expirado { background: #FBF4E6; border-left-color: #C9952B; }
+.orc-precos-conferir {
+  margin-top: 14px; padding: 10px 14px; border-radius: var(--radius); font-size: .86rem;
+  background: #FBF4E6; border-left: 3px solid #C9952B;
+}
+.orc-precos-conferir b { color: #8A5D0E; }
+@media print { .orc-precos-conferir { display: none !important; } }
+
+/* Tag "Cancelado · expirou" */
+.tag-orc-status.so-CANCELADO.expirado { --so-fundo: #FBF4E6; --so-texto: #8A5D0E; --so-borda: #EBD3A0; }
+
+/* Carrinho: resumo no topo e selo em cada produto */
+.edicao-banner-precos { margin-top: 6px; font-size: .8rem; color: #6B4A10; }
+.cart-selo-preco {
+  display: inline-block; margin-top: 4px; padding: 2px 8px; border-radius: 999px;
+  font-size: .72rem; font-weight: 500; border: 1px solid transparent;
+}
+.cart-selo-preco.subiu { background: #FDECEA; color: var(--danger); border-color: #F2C4BE; }
+.cart-selo-preco.caiu { background: #EAF5E8; color: var(--success); border-color: #CDE6C8; }
+.cart-selo-preco.igual { background: #F1EEF6; color: var(--uva); border-color: #DDD3E8; }
+.cart-selo-preco.fora { background: #FBF4E6; color: #8A5D0E; border-color: #EBD3A0; }
+
+/* Parâmetros › Sistema: campo de dias */
+.param-validade { align-items: center; }
+.param-validade-campo { display: flex; align-items: center; gap: 8px; flex-shrink: 0; font-size: .9rem; color: var(--berinjela); }
+.param-opcao .param-validade-campo input { width: 80px; height: auto; margin-top: 0; padding: 6px 8px; text-align: right; }
+.param-secao { margin-top: 22px; }
+
+/* Histórico: ação automática */
+.nome-usuario.sistema { color: #8A5D0E; font-style: italic; }
+
+/* Detalhes: ações bloqueadas (ex.: enviar/gerar pedido com preços a conferir) ficam visivelmente desabilitadas */
+.orc-toolbar-actions .btn-back:disabled { opacity: .45; cursor: not-allowed; }

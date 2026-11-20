@@ -12,9 +12,21 @@ import { avisar, confirmar, erroDe, perguntar } from '../../lib/dialogo';
 import { mostrarLinkEnviado } from './LinkCliente';
 import { api, ErroApi } from '../../lib/api';
 
-/** Tag colorida com a situação do orçamento (Aberto, Enviado, Pedido gerado, Cancelado). */
-export function TagStatusOrcamento({ status }: { status: StatusOrcamento }) {
-  return <span className={`tag-orc-status so-${status}`}>{ROTULOS_STATUS_ORCAMENTO[status]}</span>;
+/**
+ * Tag colorida com a situação do orçamento (Aberto, Enviado, Pedido gerado, Cancelado).
+ * `expirado`: cancelado automaticamente ao fim da validade ("Cancelado · expirou").
+ */
+export function TagStatusOrcamento({ status, expirado = false }: { status: StatusOrcamento; expirado?: boolean }) {
+  const exp = expirado && status === 'CANCELADO';
+  return (
+    <span
+      className={`tag-orc-status so-${status}${exp ? ' expirado' : ''}`}
+      title={exp ? 'Cancelado automaticamente: a validade terminou' : undefined}
+    >
+      {ROTULOS_STATUS_ORCAMENTO[status]}
+      {exp ? ' · expirou' : ''}
+    </span>
+  );
 }
 
 /** Ação de mudar a situação manual (enviar, voltar para aberto, cancelar com motivo, reabrir), com confirmação. */
@@ -59,7 +71,9 @@ export function useSituacaoOrcamento(aoAlterar?: (o: Orcamento) => void) {
       novo === 'CANCELADO'
         ? true
         : novo === 'ABERTO' && atual === 'CANCELADO'
-          ? await confirmar(`Reabrir o ${numero}?\n\nEle volta para "Aberto" e pode ser alterado e enviado de novo.`, {
+          ? await confirmar(
+              `Reabrir o ${numero}?\n\nEle volta para "Aberto". Na próxima edição, os preços são atualizados com os custos atuais dos produtos; ele só pode ser enviado ao cliente ou virar pedido depois de editado e salvo.`,
+              {
               titulo: 'Reabrir orçamento',
               ok: 'Reabrir',
             })

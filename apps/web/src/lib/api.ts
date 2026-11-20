@@ -8,6 +8,7 @@ import type {
   RespostaEquipes,
   OpcaoResponsavel,
   StatusBackup,
+  StatusExpiracao,
   CarteiraComissao,
   CarteiraResumo,
   ClienteCarteira,
@@ -242,6 +243,7 @@ export const api = {
   statusAtualizacao: () => getJson<StatusAtualizacao>('/api/atualizar/status'),
   /** Backup diário da base (quadro da tela Atualização) */
   statusBackup: () => enviar<StatusBackup>('GET', '/api/backup/status'),
+  statusExpiracao: () => enviar<StatusExpiracao>('GET', '/api/expiracao/status'),
 
   // ── Produtos próprios ──
   produtosProprios: (q = '') => enviar<ProdutoProprio[]>('GET', `/api/produtos-proprios?q=${encodeURIComponent(q)}`),

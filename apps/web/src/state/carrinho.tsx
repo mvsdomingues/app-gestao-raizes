@@ -1,5 +1,6 @@
 import { createContext, useContext, useMemo, useReducer, type ReactNode } from 'react';
 import {
+  arredondarPrecoUnitario,
   calcComParametros,
   calcPreco,
   type CampoNumerico,
@@ -36,6 +37,25 @@ export interface ProdutoCarrinho {
   fotos?: string[];
 }
 
+/**
+ * Preço revisto ao editar um orçamento reaberto: custo atualizado pelo catálogo
+ * ("atualizado" ou "igual") ou mantido porque o produto não está mais no catálogo ("fora").
+ */
+export interface AtualizacaoPreco {
+  situacao: 'atualizado' | 'igual' | 'fora';
+  /** Custo unitário gravado no orçamento */
+  anterior: number;
+  /** Custo unitário atual do catálogo (null = fora do catálogo) */
+  atual: number | null;
+}
+
+/** Quantos itens tiveram o custo atualizado, ficaram iguais ou estão fora do catálogo. */
+export interface ResumoPrecos {
+  atualizados: number;
+  iguais: number;
+  fora: number;
+}
+
 export interface ItemCarrinho {
   produto: ProdutoCarrinho;
   qty: number;
@@ -44,6 +64,8 @@ export interface ItemCarrinho {
   observacao?: string;
   /** Técnica, medidas da arte e ajustes de material / mão de obra */
   personalizacao: EntradaPersonalizacao;
+  /** Orçamento reaberto: o que aconteceu com o custo deste item ao carregar (selo no cartão) */
+  atualizacaoPreco?: AtualizacaoPreco;
 }
 
 /**
@@ -81,6 +103,8 @@ export interface EdicaoOrcamento {
   numero: string;
   /** Aviso exibido no carrinho (ex.: orçamento antigo sem os ajustes por item). */
   aviso?: string;
+  /** Orçamento reaberto: preços atualizados com os custos atuais (resumo no topo do carrinho) */
+  precos?: ResumoPrecos;
 }
 
 type Acao =
@@ -280,15 +304,17 @@ export function useCarrinho(): ContextoCarrinho {
 /** Subtotal dos preços calculados (sem frete), com os parâmetros cadastrados. */
 export function subtotalCarrinho(itens: Itens, parametros: ParametrosCalculo, tecnicas: TecnicaComValores[] | null): number {
   const precos = precosDoCarrinho(itens, parametros, tecnicas);
-  return Object.values(itens).reduce((s, item) => s + precos.get(item)!.res.preco * item.qty, 0);
+  // Preço/un em centavos (o mesmo gravado no orçamento): a soma fecha com a folha
+  return Object.values(itens).reduce((s, item) => s + arredondarPrecoUnitario(precos.get(item)!.res.preco) * item.qty, 0);
 }
 
 export type PrecoItem = { personalizacao: PersonalizacaoCalculada; calc: ParametrosCalculo; res: ResultadoCalculo };
 
 /**
  * Preço de cada item do carrinho: parâmetros cadastrados (impostos e margem), ajustes
- * do item e o custo de personalização. O material é calculado em conjunto por técnica
- * (área somada, arredondada uma vez e rateada) — por isso depende do carrinho inteiro.
+ * do item e o custo de personalização. Cada item é calculado sozinho (o material só é
+ * somado entre as aplicações do próprio item): incluir ou remover um produto não muda o
+ * preço dos outros. O preço gravado e somado é o `res.preco` arredondado em centavos.
  */
 export function precosDoCarrinho(
   itens: Itens,
