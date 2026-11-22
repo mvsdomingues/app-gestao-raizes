@@ -231,7 +231,7 @@ export function ManualOperacao() {
               Em <Bt>Local (opcional)</Bt>, diga onde vai a arte (tampa, frente, verso…). O local aparece para o cliente.
             </>,
             <>
-              Informe <Bt>Altura da arte (cm)</Bt> e <Bt>Largura da arte (cm)</Bt> — o tamanho da área personalizada em cada peça.
+              Informe <Bt>Largura da arte (cm)</Bt> e <Bt>Altura da arte (cm)</Bt> — o tamanho da área personalizada em cada peça. Na folha e no link do cliente as medidas saem com a largura primeiro, identificadas: “8 cm (L) × 10 cm (A)”.
             </>,
             <>
               Confira o <b>material sugerido</b> (m², frações, folga e valor) e a <b>mão de obra</b>. Quando outras aplicações do
@@ -273,7 +273,7 @@ export function ManualOperacao() {
         <Dica tipo="atencao">
           O orçamento <b>não é gerado</b> enquanto alguma aplicação estiver sem técnica escolhida, com técnica sem cadastro
           completo ou com a arte sem medida. A mensagem lista o item e a aplicação (ex.: “Caneca Verde: aplicação 2 (Sublimação ·
-          Corpo): informe a altura e a largura”). A correção do cadastro é feita em <Menu>Parâmetros › Tabelas gerais</Menu>; ao
+          Corpo): informe a largura e a altura”). A correção do cadastro é feita em <Menu>Parâmetros › Tabelas gerais</Menu>; ao
           voltar ao carrinho, as tabelas são relidas.
         </Dica>
         <Dica>
