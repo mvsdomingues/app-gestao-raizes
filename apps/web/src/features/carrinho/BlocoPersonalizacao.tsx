@@ -261,18 +261,18 @@ function CartaoAplicacao({
           />
         </label>
         <CampoNumero
-          id={`${pref}-altura`}
-          rotulo="Altura da arte (cm)"
-          passo="0.1"
-          valor={valor.altura_cm}
-          mudar={(v) => alterar({ altura_cm: v })}
-        />
-        <CampoNumero
           id={`${pref}-largura`}
           rotulo="Largura da arte (cm)"
           passo="0.1"
           valor={valor.largura_cm}
           mudar={(v) => alterar({ largura_cm: v })}
+        />
+        <CampoNumero
+          id={`${pref}-altura`}
+          rotulo="Altura da arte (cm)"
+          passo="0.1"
+          valor={valor.altura_cm}
+          mudar={(v) => alterar({ altura_cm: v })}
         />
         <button
           type="button"

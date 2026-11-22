@@ -78,7 +78,7 @@ export function MemoriasCalculo() {
   const base = calcPreco(20, 50, P);
   const divisor = 1 - P.imposto - P.margem;
 
-  // Material: 50 canecas, arte 10 × 8 cm, Sublimação
+  // Material: 50 canecas, arte 8 cm (L) × 10 cm (A), Sublimação
   const sub = calcularPersonalizacao({ ...personalizacaoVazia(), tecnica_id: 1, altura_cm: 10, largura_cm: 8 }, 50, [SUBLIMACAO]);
   const caneca = calcPreco(20, 50, calcComPersonalizacao(P, sub));
 
@@ -96,7 +96,7 @@ export function MemoriasCalculo() {
   const precoCor = (n: number) =>
     arredondarPrecoUnitario(calcPreco(20, 20, calcComPersonalizacao(P, porCor.get(cores[n]!)!)).preco);
 
-  // Folga: arte de 0,5 m² (50 × 100 cm), fração 1 m², R$ 30/m²
+  // Folga: arte de 0,5 m² (100 cm (L) × 50 cm (A)), fração 1 m², R$ 30/m²
   const folgaLinhas = [1, 2, 3, 4].map((q) => {
     const sem = calcularPersonalizacao(
       {
@@ -444,7 +444,7 @@ export function MemoriasCalculo() {
           titulo="Fórmula do material"
           linhas={[
             <>
-              <b>Área da arte (m²)</b> = altura (cm) × largura (cm) ÷ 10.000
+              <b>Área da arte (m²)</b> = largura (cm) × altura (cm) ÷ 10.000
             </>,
             <>
               <b>Área necessária</b> = quantidade × área da arte × (1 + folga da técnica)
@@ -461,10 +461,10 @@ export function MemoriasCalculo() {
           ]}
         />
         <Exemplo
-          titulo="Exemplo: 50 canecas, arte 10 × 8 cm, Sublimação"
+          titulo="Exemplo: 50 canecas, arte 8 cm (L) × 10 cm (A), Sublimação"
           dados={<>Tabela Material da Sublimação: {brl(40)}/m² · fração mínima 0,25 m² · folga 10%</>}
           passos={[
-            ['Área da arte', '10 cm × 8 cm ÷ 10.000', `${num(sub.area_arte_m2)} m²`],
+            ['Área da arte', '8 cm × 10 cm ÷ 10.000', `${num(sub.area_arte_m2)} m²`],
             ['Área necessária', `50 × ${num(sub.area_arte_m2)} m² × 1,10`, `${num(sub.area_necessaria_m2)} m²`],
             [
               'Frações',
@@ -489,7 +489,7 @@ export function MemoriasCalculo() {
           material é sempre arredondado <b>para cima</b>. A <b>folga</b> é uma sobra de segurança (perdas, testes, acerto de
           máquina) e é aplicada <b>antes</b> do arredondamento.
         </p>
-        <p>Exemplo com arte de 0,5 m² (50 × 100 cm), fração de 1 m² e R$ 30,00/m²:</p>
+        <p>Exemplo com arte de 0,5 m² (100 cm (L) × 50 cm (A)), fração de 1 m² e R$ 30,00/m²:</p>
         <Tabela
           colunas={['Quantidade', 'Sem folga: necessária', 'Sem folga: material', 'Folga 10%: necessária', 'Folga 10%: material']}
           num={[1, 2, 3, 4]}
@@ -510,7 +510,7 @@ export function MemoriasCalculo() {
           sistema calcula.
         </p>
         <Exemplo
-          titulo="Exemplo: caneca de R$ 20,00 em 5 cores × 20 unidades, arte 8 × 8 cm, DTF UV"
+          titulo="Exemplo: caneca de R$ 20,00 em 5 cores × 20 unidades, arte 8 cm (L) × 8 cm (A), DTF UV"
           dados={<>Tabela Material do DTF UV: {brl(60)}/m² · fração mínima 1 m² · folga 10%</>}
           passos={[
             ['Área da arte', '8 × 8 ÷ 10.000', `${num(g1.area_arte_m2)} m²`],
@@ -610,7 +610,7 @@ export function MemoriasCalculo() {
           ]}
         />
         <Exemplo
-          titulo="Exemplo: 50 canecas de R$ 20,00 — Corte Laser na tampa (5 × 5 cm) + Sublimação no corpo (10 × 8 cm)"
+          titulo="Exemplo: 50 canecas de R$ 20,00 — Corte Laser na tampa (5 × 5 cm) + Sublimação no corpo (8 cm (L) × 10 cm (A))"
           dados={
             <>
               Corte Laser: {brl(300)}/m², fração 1 m², folga 10%, mão de obra {brl(3)} · Sublimação: {brl(40)}/m², fração 0,25 m²,
@@ -643,13 +643,13 @@ export function MemoriasCalculo() {
           conclusao={
             <>
               Só com a Sublimação, o mesmo item custaria {brl(caneca.preco)}/un ({brl(arredondarPrecoUnitario(caneca.preco) * 50)}). O cliente vê duas
-              linhas: “Personalização: Corte Laser (Tampa) · arte 5 × 5 cm” e “Personalização: Sublimação (Corpo) · arte 10 × 8
-              cm”, sem valores.
+              linhas: “Personalização: Corte Laser (Tampa) · arte 5 cm (L) × 5 cm (A)” e “Personalização: Sublimação (Corpo) · arte 8 cm
+              (L) × 10 cm (A)”, sem valores.
             </>
           }
         />
         <Exemplo
-          titulo="Mesma técnica duas vezes: Sublimação na frente e no verso (10 × 8 cm, 50 canecas)"
+          titulo="Mesma técnica duas vezes: Sublimação na frente e no verso (8 cm (L) × 10 cm (A), 50 canecas)"
           passos={[
             [
               'Área necessária somada',
@@ -938,12 +938,12 @@ function Simulador() {
         {tecnica && (
           <>
             <label>
-              <span>Altura da arte (cm)</span>
-              <input id="sim-altura" inputMode="decimal" value={altura} onChange={(e) => setAltura(e.target.value)} />
-            </label>
-            <label>
               <span>Largura da arte (cm)</span>
               <input id="sim-largura" inputMode="decimal" value={largura} onChange={(e) => setLargura(e.target.value)} />
+            </label>
+            <label>
+              <span>Altura da arte (cm)</span>
+              <input id="sim-altura" inputMode="decimal" value={altura} onChange={(e) => setAltura(e.target.value)} />
             </label>
           </>
         )}
@@ -956,7 +956,7 @@ function Simulador() {
           passos={[
             ...(pers.tecnica_id !== null
               ? ([
-                  ['Área da arte', `${num(lerNum(altura))} × ${num(lerNum(largura))} ÷ 10.000`, `${num(pers.area_arte_m2)} m²`],
+                  ['Área da arte', `${num(lerNum(largura))} × ${num(lerNum(altura))} ÷ 10.000`, `${num(pers.area_arte_m2)} m²`],
                   [
                     'Área necessária',
                     `${q} × ${num(pers.area_arte_m2)} × ${num(1 + (pers.folga ?? 0), 4)}`,

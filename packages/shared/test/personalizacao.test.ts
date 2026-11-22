@@ -12,6 +12,7 @@ import {
   personalizacoesParaCliente,
   montarItemOrcamento,
   personalizacaoVazia,
+  textoPersonalizacaoCliente,
   type TecnicaComValores,
 } from '../src';
 
@@ -95,7 +96,7 @@ describe('situações especiais', () => {
   it('cadastro incompleto ou arte sem medidas pedem correção', () => {
     expect(calcularPersonalizacao(arte05(4), 10, TECNICAS).erro).toMatch(/Cadastre a técnica "Só mão de obra" na tabela Material/);
     expect(calcularPersonalizacao(arte05(99), 10, TECNICAS).erro).toMatch(/não existe mais/);
-    expect(calcularPersonalizacao({ ...arte05(3), largura_cm: null }, 10, TECNICAS).erro).toMatch(/altura e a largura/);
+    expect(calcularPersonalizacao({ ...arte05(3), largura_cm: null }, 10, TECNICAS).erro).toMatch(/largura e a altura/);
   });
 
   it('o item do orçamento guarda o cálculo e a composição soma material e mão de obra', () => {
@@ -168,7 +169,7 @@ describe('somarMaterialPorTecnica: material somado entre aplicações', () => {
     expect(r.get('a')).toMatchObject({ material_valor: 5, material_ajustado: true });
     expect(r.get('b')).toMatchObject({ material_valor: 30, material_ajustado: false });
     expect(r.get('b')!.grupo!.itens).toBe(2);
-    expect(r.get('c')!.erro).toMatch(/altura e a largura/);
+    expect(r.get('c')!.erro).toMatch(/largura e a altura/);
   });
 });
 
@@ -274,7 +275,7 @@ describe('várias personalizações por item', () => {
       T,
     ).get(1)!;
     expect(r.erro).toContain('aplicação 2: Escolha a técnica');
-    expect(r.erro).toContain('aplicação 3 (Sublimação · Corpo): Informe a altura e a largura');
+    expect(r.erro).toContain('aplicação 3 (Sublimação · Corpo): Informe a largura e a altura');
     expect(r.aplicacoes[1]).toMatchObject({ material_valor: 0, mao_obra_unit: 0 });
     const seis = { ...entradaVazia(), aplicacoes: Array.from({ length: LIMITE_APLICACOES + 1 }, () => ap(1, 5, 5)) };
     expect(calcularPersonalizacoesOrcamento([{ chave: 1, entrada: seis, qty: 10 }], T).get(1)!.erro).toMatch(/No máximo 5/);
@@ -290,5 +291,16 @@ describe('várias personalizações por item', () => {
       aplicacoes: [],
       sem_tecnica: { material_valor: 10, mao_obra_unit: 3 },
     });
+  });
+});
+
+describe('texto da personalização para o cliente', () => {
+  it('identifica largura (L) e altura (A), com a largura primeiro', () => {
+    expect(textoPersonalizacaoCliente({ tecnica: 'Sublimação', local: 'Corpo', altura_cm: 10, largura_cm: 8 })).toBe(
+      'Sublimação (Corpo) · arte 8 cm (L) × 10 cm (A)',
+    );
+    expect(textoPersonalizacaoCliente({ tecnica: 'Corte Laser', local: null, altura_cm: 2.5, largura_cm: 12 })).toBe(
+      'Corte Laser · arte 12 cm (L) × 2,5 cm (A)',
+    );
   });
 });

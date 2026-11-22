@@ -3,7 +3,7 @@
 // Sempre a partir das tabelas de Parâmetros › Tabelas gerais.
 //
 // Material:
-//   área da arte (m²)   = altura (cm) × largura (cm) ÷ 10.000
+//   área da arte (m²)   = largura (cm) × altura (cm) ÷ 10.000
 //   área necessária     = quantidade × área da arte × (1 + folga da técnica)
 //   material sugerido   = área necessária arredondada PARA CIMA em frações mínimas
 //   custo do material   = material × preço por m²
@@ -198,7 +198,7 @@ export function calcularPersonalizacao(
       (p.material_m2 !== null && arred(p.material_m2) !== m2Sugerido) ||
       (p.material_valor !== null && dinheiro(p.material_valor) !== dinheiro(m2 * preco)),
     mao_obra_ajustada: p.mao_obra_unit !== null && dinheiro(p.mao_obra_unit) !== dinheiro(moSugerido),
-    erro: erroCadastro ?? (semMedidas ? 'Informe a altura e a largura da arte (cm).' : null),
+    erro: erroCadastro ?? (semMedidas ? 'Informe a largura e a altura da arte (cm).' : null),
   };
 }
 
@@ -303,10 +303,10 @@ export function personalizacaoParaCliente(
   return { tecnica: r.tecnica, local: normalizarLocal(r.local), altura_cm: r.altura_cm, largura_cm: r.largura_cm };
 }
 
-/** "Sublimação · arte 10 × 8 cm" (texto para o cliente). */
+/** "Sublimação · arte 8 cm (L) × 10 cm (A)" — largura primeiro, como no carrinho (texto para o cliente). */
 export function textoPersonalizacaoCliente(p: PersonalizacaoCliente): string {
   const cm = (v: number) => v.toLocaleString('pt-BR', { maximumFractionDigits: 1 });
-  return `${p.tecnica}${p.local ? ` (${p.local})` : ''} · arte ${cm(p.altura_cm)} × ${cm(p.largura_cm)} cm`;
+  return `${p.tecnica}${p.local ? ` (${p.local})` : ''} · arte ${cm(p.largura_cm)} cm (L) × ${cm(p.altura_cm)} cm (A)`;
 }
 
 /** Texto curto para a composição do preço e a folha interna. */
@@ -316,7 +316,7 @@ export function descreverPersonalizacao(r: ResultadoPersonalizacao): string {
     const ajustes = [r.material_ajustado && 'material ajustado', r.mao_obra_ajustada && 'mão de obra ajustada'].filter(Boolean);
     return ['sem técnica de personalização', ...ajustes].join(' · ');
   }
-  const partes = [`${r.tecnica} · arte ${n(r.altura_cm ?? 0, 1)} × ${n(r.largura_cm ?? 0, 1)} cm`, `material ${n(r.material_m2)} m²`];
+  const partes = [`${r.tecnica} · arte ${n(r.largura_cm ?? 0, 1)} cm (L) × ${n(r.altura_cm ?? 0, 1)} cm (A)`, `material ${n(r.material_m2)} m²`];
   if (r.grupo && r.grupo.itens > 1) partes.push(`material somado entre ${r.grupo.itens} aplicações do produto (${n(r.grupo.material_m2)} m² no total)`);
   if (r.material_ajustado) partes.push('material ajustado');
   if (r.mao_obra_ajustada) partes.push('mão de obra ajustada');
