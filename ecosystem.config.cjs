@@ -25,7 +25,7 @@ module.exports = {
       },
     },
     {
-      // Atualização diária dos fornecedores (07:00 no fuso do servidor).
+      // Atualização diária dos fornecedores (06:37 no fuso do servidor; fora da hora cheia, para evitar indisponibilidade dos fornecedores).
       // Roda e termina; o PM2 a dispara de novo no horário do cron.
       name: 'raizes-atualizar',
       cwd: __dirname,
@@ -33,7 +33,7 @@ module.exports = {
       exec_mode: 'fork',
       instances: 1,
       autorestart: false,
-      cron_restart: '0 7 * * *',
+      cron_restart: '37 6 * * *',
       time: true,
       env: { NODE_ENV: 'production' },
     },
