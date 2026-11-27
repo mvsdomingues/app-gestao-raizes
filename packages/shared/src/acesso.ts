@@ -16,6 +16,7 @@ export const TELAS_SISTEMA = [
   { id: 'produtos-proprios', rotulo: 'Produtos Próprios', grupo: 'Cadastros' },
   { id: 'parametros', rotulo: 'Parâmetros', grupo: 'Cadastros' },
   { id: 'equipes', rotulo: 'Equipes de vendas', grupo: 'Cadastros' },
+  { id: 'site', rotulo: 'Site (catálogo público)', grupo: 'Cadastros' },
   { id: 'usuarios', rotulo: 'Usuários', grupo: 'Sistema' },
   { id: 'acessos', rotulo: 'Acessos', grupo: 'Sistema' },
   { id: 'status', rotulo: 'Atualização', grupo: 'Sistema' },

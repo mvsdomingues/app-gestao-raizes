@@ -37,6 +37,9 @@ function caminho(valor: string | undefined, padrao: string): string {
   return isAbsolute(v) ? v : resolve(RAIZ, v);
 }
 
+/** Tamanho mínimo do token de serviço da integração com o site. */
+export const TOKEN_INTEGRACAO_MIN = 32;
+
 export const config = {
   porta: Number(process.env.PORT) || 5000,
   host: process.env.HOST?.trim() || '127.0.0.1',
@@ -58,9 +61,19 @@ export const config = {
     /** Remoto do rclone (ex.: gdrive:raizes-backups); vazio = sem cópia fora do servidor */
     destinoExterno: process.env.BACKUP_RCLONE_DESTINO?.trim() || null,
   },
+  /**
+   * Token da API de integração com o site (/api/integracao/v1/…): o mesmo no .env do site.
+   * Vazio ou curto (menos de 32 caracteres) = integração desligada.
+   */
+  integracaoToken: tokenIntegracao(process.env.INTEGRACAO_TOKEN),
   /** Logs dos comandos agendados (backup) */
   logsDir: resolve(RAIZ, 'logs'),
 };
+
+function tokenIntegracao(v: string | undefined): string | null {
+  const t = v?.trim() ?? '';
+  return t.length >= TOKEN_INTEGRACAO_MIN ? t : null;
+}
 
 /** Configuração do Kommo; null quando não há token ou subdomínio. */
 export interface ConfigKommo {

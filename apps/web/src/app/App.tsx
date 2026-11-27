@@ -12,6 +12,7 @@ import { Clientes } from '../features/clientes/Clientes';
 import { TelaLogin } from '../features/login/TelaLogin';
 import { DashGeral } from '../features/dashboards/DashGeral';
 import { Equipes } from '../features/equipes/Equipes';
+import { Site } from '../features/site/Site';
 import { RelAbertos } from '../features/relatorios/RelAbertos';
 import { RelDesempenho } from '../features/relatorios/RelDesempenho';
 import { RelEvolucao } from '../features/relatorios/RelEvolucao';
@@ -95,6 +96,7 @@ const TELAS: Record<IdTela, ReactNode> = {
   'rel-funil': <RelFunil />,
   'rel-evolucao': <RelEvolucao />,
   equipes: <Equipes />,
+  site: <Site />,
   clientes: <Clientes />,
   'produtos-proprios': <ProdutosProprios />,
   parametros: <Parametros />,

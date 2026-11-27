@@ -44,6 +44,7 @@ const app = criarApp({
   urlPublica: config.urlPublica,
   backup: config.backup,
   expiracao,
+  integracaoToken: config.integracaoToken,
 });
 
 const servidor = app.listen(config.porta, config.host, () => {

@@ -23,6 +23,8 @@ import { rotasUsuarios } from './routes/usuarios';
 import { rotasClientes } from './routes/clientes';
 import { rotasComissoes } from './routes/comissoes';
 import { rotasPublicas } from './routes/publico';
+import { rotasIntegracao } from './routes/integracao';
+import { rotasSite } from './routes/site';
 import type { ServicoKommo } from './kommo/servico';
 import type { ConfigBackup } from './services/backup';
 import type { GerenciadorAtualizacao } from './services/gerenciador-atualizacao';
@@ -41,6 +43,8 @@ export interface OpcoesApp {
   backup?: ConfigBackup | null;
   /** Rotina de expiração dos orçamentos (ausente = uma parada, só para o cartão de situação) */
   expiracao?: ServicoExpiracao | null;
+  /** Token da API de integração com o site (INTEGRACAO_TOKEN); null/ausente = integração desligada */
+  integracaoToken?: string | null;
 }
 
 export function criarApp({
@@ -52,6 +56,7 @@ export function criarApp({
   urlPublica = null,
   backup = null,
   expiracao = null,
+  integracaoToken = null,
 }: OpcoesApp) {
   const app = express();
   app.disable('x-powered-by');
@@ -65,6 +70,9 @@ export function criarApp({
     if (err?.type === 'entity.parse.failed') return next();
     next(err);
   }) as ErrorRequestHandler);
+
+  // API de integração com o site: sem sessão de usuário (só do próprio servidor, com o token de serviço)
+  app.use(rotasIntegracao(db, { token: integracaoToken, imagensDir }));
 
   // Controle de acesso: identifica o usuário pelo cookie e bloqueia a API por tela
   app.use(carregarSessao(db));
@@ -84,6 +92,7 @@ export function criarApp({
   app.use(rotasProdutosProprios(db, imagensDir));
   app.use(rotasParametros(db));
   app.use(rotasComissoes(db));
+  app.use(rotasSite(db, { integracaoLigada: !!integracaoToken }));
   app.use(rotasAtualizacao(gerenciador));
   if (backup) app.use(rotasBackup(backup));
   app.use(rotasExpiracao(expiracao ?? new ServicoExpiracao(db)));

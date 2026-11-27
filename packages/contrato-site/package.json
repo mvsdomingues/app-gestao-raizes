@@ -1,0 +1,13 @@
+{
+  "name": "@raizes/contrato-site",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "description": "Contrato da API de integração entre a gestão e o site (formatos trocados, versão v1)",
+  "exports": {
+    ".": "./src/index.ts"
+  },
+  "scripts": {
+    "typecheck": "tsc -p tsconfig.json"
+  }
+}

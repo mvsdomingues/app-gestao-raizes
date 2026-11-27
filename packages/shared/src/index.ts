@@ -15,3 +15,4 @@ export * from './comissoes';
 export * from './cadastro-clientes';
 export * from './backup';
 export * from './relatorios';
+export * from './site';

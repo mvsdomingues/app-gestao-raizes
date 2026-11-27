@@ -12,6 +12,7 @@ import { CHAVES_FORNECEDORES, isChaveFornecedor } from '@raizes/shared';
 import { config } from '../config';
 import { abrirBanco } from '../db/conexao';
 import { registrarErro, substituirProdutosFornecedor } from '../db/repositorio-produtos';
+import { recalcularSite } from '../db/repositorio-site';
 import { COLETORES, type ContextoColeta } from '../fornecedores';
 import { dataHoraBR } from '../lib/datas';
 
@@ -48,6 +49,16 @@ async function main(): Promise<number> {
     } catch (e) {
       registrarErro(db, coletor.nome, mensagemErro(e));
     }
+  }
+
+  // Site: código público, categorias e o que mudou para a próxima sincronização
+  try {
+    const r = recalcularSite(db);
+    console.log(
+      `\n→ Site: ${r.produtos} produtos (${r.visiveis} visíveis); ${r.novos} novos, ${r.alterados} alterados, ${r.saidos} saíram.`,
+    );
+  } catch (e) {
+    console.log(`\n  ✘ Site: ${mensagemErro(e)}`);
   }
 
   db.close();

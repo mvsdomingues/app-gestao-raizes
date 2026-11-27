@@ -1,4 +1,9 @@
 import type {
+  CategoriaSiteGestao,
+  DeParaSite,
+  ModoVisibilidade,
+  ProdutoSiteGestao,
+  ResumoSite,
   Equipe,
   OpcoesRelatorio,
   RelatorioAbertos,
@@ -200,6 +205,33 @@ export const api = {
     enviar<Equipe>('POST', '/api/equipes', dados),
   alterarEquipe: (id: number, dados: { nome?: string; gestor_id?: number | null; ativa?: boolean; membros?: number[] }) =>
     enviar<Equipe>('PUT', `/api/equipes/${id}`, dados),
+
+  // ── Site (catálogo público): categorias, de-para e curadoria ──
+  siteResumo: () => enviar<ResumoSite>('GET', '/api/site/resumo'),
+  siteRecalcular: () =>
+    enviar<{ produtos: number; visiveis: number; alterados: number; novos: number; saidos: number }>('POST', '/api/site/recalcular'),
+  siteCategorias: () => enviar<CategoriaSiteGestao[]>('GET', '/api/site/categorias'),
+  siteSalvarCategoria: (
+    id: number | null,
+    dados: { nome: string; slug?: string; ordem: number; ativa: boolean; palavras_chave: string },
+  ) =>
+    id === null
+      ? enviar<{ id: number }>('POST', '/api/site/categorias', dados)
+      : enviar<{ id: number }>('PUT', `/api/site/categorias/${id}`, dados),
+  siteDePara: (pendentes: boolean, fornecedor: string) =>
+    enviar<DeParaSite[]>(
+      'GET',
+      `/api/site/depara?pendentes=${pendentes ? 1 : 0}${fornecedor ? `&fornecedor=${encodeURIComponent(fornecedor)}` : ''}`,
+    ),
+  siteGravarDePara: (itens: { fornecedor: string; categoria_fornecedor: string; categoria_id: number | null | 'sugerida' }[]) =>
+    enviar<{ gravados: number }>('PUT', '/api/site/depara', { itens }),
+  siteProdutos: (q: { busca: string; filtro: string; categoria: string; pagina: number }) =>
+    enviar<{ produtos: ProdutoSiteGestao[]; total: number; pagina: number; paginas: number }>(
+      'GET',
+      `/api/site/produtos?${new URLSearchParams({ ...q, pagina: String(q.pagina) })}`,
+    ),
+  siteAlterarProduto: (codigo: string, dados: { modo?: ModoVisibilidade; destaque?: boolean; categorias?: number[] | null }) =>
+    enviar<{ ok: true }>('PUT', `/api/site/produtos/${encodeURIComponent(codigo)}`, dados),
 
   /** Usuários para o filtro "Responsável" de orçamentos e pedidos */
   responsaveis: () => enviar<OpcaoResponsavel[]>('GET', '/api/usuarios/responsaveis'),

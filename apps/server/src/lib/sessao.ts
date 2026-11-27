@@ -116,6 +116,8 @@ const REGRAS: Regra[] = [
   { metodos: 'GET', caminho: /^\/api\/relatorios\/evolucao(\/excel)?$/, telas: ['rel-evolucao'] },
   { metodos: 'TODOS', caminho: /^\/api\/relatorios(\/|$)/, telas: ['rel-desempenho'] },
   { metodos: 'TODOS', caminho: /^\/api\/equipes(\/|$)/, telas: ['equipes'] },
+  // Tela Site: categorias, de-para e curadoria dos produtos do site
+  { metodos: 'TODOS', caminho: /^\/api\/site(\/|$)/, telas: ['site'] },
   // Comissões: parâmetros (leitura também para quem marca carteiras ou apura), marcação e apuração
   {
     metodos: 'GET',

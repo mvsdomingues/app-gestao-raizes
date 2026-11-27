@@ -595,4 +595,64 @@ function migrarColunas(db: Database.Database): void {
     CREATE UNIQUE INDEX IF NOT EXISTS ux_equipes_membro_atual ON equipes_membros(usuario_id) WHERE ate IS NULL;
     CREATE INDEX IF NOT EXISTS ix_equipes_membros_usuario ON equipes_membros(usuario_id, desde);
   `);
+  // Site (catálogo público): categorias próprias, de-para das categorias dos fornecedores e
+  // o código público estável de cada produto, com o que o site recebe (só campos públicos).
+  db.exec(`
+    CREATE TABLE IF NOT EXISTS site_categorias (
+      id             INTEGER PRIMARY KEY AUTOINCREMENT,
+      slug           TEXT NOT NULL UNIQUE,
+      nome           TEXT NOT NULL,
+      ordem          INTEGER NOT NULL DEFAULT 0,
+      ativa          INTEGER NOT NULL DEFAULT 1,
+      -- "Outros": nunca é inativada nem renomeada
+      fixa           INTEGER NOT NULL DEFAULT 0,
+      palavras_chave TEXT NOT NULL DEFAULT '[]',
+      criado         TEXT NOT NULL,
+      atualizado     TEXT NOT NULL,
+      usuario_id     INTEGER REFERENCES usuarios(id)
+    );
+    -- Uma linha por categoria de fornecedor; categoria_id NULL = pendente (produtos em "Outros")
+    CREATE TABLE IF NOT EXISTS site_depara (
+      fornecedor           TEXT NOT NULL,
+      categoria_fornecedor TEXT NOT NULL,
+      categoria_id         INTEGER REFERENCES site_categorias(id),
+      sugerida_id          INTEGER REFERENCES site_categorias(id),
+      produtos             INTEGER NOT NULL DEFAULT 0,
+      visto                TEXT NOT NULL,
+      atualizado           TEXT,
+      usuario_id           INTEGER REFERENCES usuarios(id),
+      PRIMARY KEY (fornecedor, categoria_fornecedor)
+    );
+    -- Código público (RZ-XXXXX) por fornecedor + modelo; nunca muda nem é reutilizado
+    CREATE TABLE IF NOT EXISTS site_produtos (
+      codigo             TEXT PRIMARY KEY,
+      fornecedor         TEXT NOT NULL,
+      chave              TEXT NOT NULL,
+      nome               TEXT,
+      visibilidade       TEXT NOT NULL DEFAULT 'auto',
+      destaque           INTEGER NOT NULL DEFAULT 0,
+      categorias_manuais TEXT,
+      publico_json       TEXT,
+      fotos_json         TEXT NOT NULL DEFAULT '[]',
+      impressao          TEXT,
+      visivel            INTEGER NOT NULL DEFAULT 0,
+      motivo             TEXT,
+      disponivel         INTEGER NOT NULL DEFAULT 0,
+      alterado           TEXT NOT NULL,
+      saiu               TEXT,
+      criado             TEXT NOT NULL,
+      curadoria_em       TEXT,
+      curadoria_por      INTEGER REFERENCES usuarios(id),
+      UNIQUE (fornecedor, chave)
+    );
+    CREATE INDEX IF NOT EXISTS ix_site_produtos_alterado ON site_produtos(alterado, codigo);
+    -- Quem mudou o quê no site (categorias, de-para, produtos ocultos/destaques)
+    CREATE TABLE IF NOT EXISTS site_historico (
+      id         INTEGER PRIMARY KEY AUTOINCREMENT,
+      data_hora  TEXT NOT NULL,
+      usuario_id INTEGER REFERENCES usuarios(id),
+      acao       TEXT NOT NULL,
+      detalhe    TEXT
+    );
+  `);
 }

@@ -32,6 +32,7 @@ const SUMARIO = [
   { id: 'man-atualizacao', titulo: 'Atualização de produtos' },
   { id: 'man-backup', titulo: 'Backup da base' },
   { id: 'man-kommo', titulo: 'Integração com o Kommo' },
+  { id: 'man-site', titulo: 'Site (catálogo público)' },
   { id: 'man-problemas', titulo: 'Problemas comuns' },
   { id: 'man-glossario', titulo: 'Glossário' },
 ];
@@ -1146,7 +1147,7 @@ export function ManualOperacao() {
         />
         <p>
           A atualização traz preço, estoque, fotos, descrição, ficha técnica e categorias. Também pode ser agendada no servidor
-          para rodar todos os dias. Orçamentos já gerados guardam o custo da época e não mudam (só ao reabrir um cancelado ou
+          para rodar todos os dias. Ao terminar, ela recalcula os produtos do site (veja <i>Site (catálogo público)</i>). Orçamentos já gerados guardam o custo da época e não mudam (só ao reabrir um cancelado ou
           expirado os custos são atualizados, na edição seguinte).
         </p>
         <h4>Expiração de orçamentos</h4>
@@ -1222,8 +1223,62 @@ export function ManualOperacao() {
         </ul>
       </Secao>
 
+      {/* ─────────────────────────────── Site */}
+      <Secao id="man-site" titulo="Site (catálogo público)" numero={28}>
+        <p>
+          A tela <Menu>Cadastros › Site</Menu> prepara os produtos que vão para o catálogo público da Raízes, onde o cliente
+          escolhe os produtos e pede a cotação. O site <b>nunca</b> recebe preço, custo, fornecedor, código do fornecedor,
+          tipo de gravação nem a quantidade em estoque: só nome, descrição, medidas, material, cores, fotos e “disponível” ou
+          “consultar”. <Ir tela="site">Abrir Site</Ir>
+        </p>
+        <h4>Código RZ</h4>
+        <p>
+          Cada produto do site tem um código próprio (ex.: RZ-7K3P9) que não muda na atualização diária e nunca é reutilizado.
+          As cores do mesmo produto viram um produto só, com as cores para escolher. Se o produto sair do fornecedor, ele sai do
+          site; se voltar, volta com o mesmo código.
+        </p>
+        <h4>Quais produtos aparecem</h4>
+        <Tabela
+          colunas={['Visibilidade', 'No site']}
+          linhas={[
+            ['Automático (padrão)', 'Aparece se tiver foto e estiver disponível em alguma cor.'],
+            ['Oculto', 'Nunca aparece (repetidos, fora de linha, que não queremos oferecer).'],
+            ['Sempre visível', 'Aparece mesmo sem foto ou sem estoque (fica como “consultar”).'],
+          ]}
+        />
+        <p>
+          A caixa <Bt>Destaque</Bt> põe o produto entre os destaques do site. Na aba <i>Produtos</i>, o botão{' '}
+          <Bt>Categorias</Bt> escolhe as categorias de um produto à mão; <Bt>Voltar às automáticas</Bt> desfaz.
+        </p>
+        <h4>Categorias e de-para</h4>
+        <Passos
+          itens={[
+            <>
+              Em <i>Categorias da Raízes</i>, mantenha a lista curta de categorias que o cliente vê (nome, ordem no menu e
+              palavras-chave). “Outros” é fixa: recebe os produtos sem outra categoria.
+            </>,
+            <>
+              Em <i>De-para de categorias</i>, ligue cada categoria de fornecedor a uma categoria da Raízes. Isso é feito uma vez
+              por categoria, não produto a produto. A sugestão (★) vem das palavras-chave; <Bt>Aceitar sugestões</Bt> confirma
+              todas de uma vez.
+            </>,
+            'Categoria nova de fornecedor aparece como pendente e não trava nada: enquanto isso os produtos dela ficam em “Outros”.',
+            'Produtos sem categoria do fornecedor (XBZ e produtos próprios) são classificados pelas palavras-chave no nome.',
+          ]}
+        />
+        <Dica>
+          O site é recalculado sozinho ao fim de cada atualização de produtos e a cada alteração nesta tela. O botão{' '}
+          <Bt>Recalcular agora</Bt> refaz o cálculo na hora. Só o que mudou de visível (nome, descrição, fotos, cores,
+          categorias, disponível ou não) é enviado ao site; preço e estoque, que mudam todo dia, não contam.
+        </Dica>
+        <Dica tipo="atencao">
+          “Integração desligada” no alto da tela quer dizer que o servidor ainda não tem o token do site (INTEGRACAO_TOKEN no
+          .env). A tela funciona igual; só o site ainda não consegue buscar os produtos.
+        </Dica>
+      </Secao>
+
       {/* ─────────────────────────────── 25 */}
-      <Secao id="man-problemas" titulo="Problemas comuns" numero={28}>
+      <Secao id="man-problemas" titulo="Problemas comuns" numero={29}>
         <Tabela
           colunas={['Situação', 'Causa e solução']}
           linhas={[
@@ -1273,13 +1328,15 @@ export function ManualOperacao() {
       </Secao>
 
       {/* ─────────────────────────────── 26 */}
-      <Secao id="man-glossario" titulo="Glossário" numero={29}>
+      <Secao id="man-glossario" titulo="Glossário" numero={30}>
         <Tabela
           colunas={['Termo', 'Significado']}
           linhas={[
             ['ORC-0001', 'Número do orçamento.'],
             ['PED-000001', 'Código do pedido.'],
             ['PDP-000001', 'Código de produto próprio.'],
+            ['RZ-7K3P9', 'Código público do produto no site (não mostra o fornecedor e não muda).'],
+            ['De-para', 'Ligação entre uma categoria do fornecedor e uma categoria da Raízes, usada no site.'],
             ['Custo do fornecedor', 'Preço que pagamos ao fornecedor por unidade.'],
             ['Técnica', 'Forma de personalização (Sublimação, DTF UV, Laser…), cadastrada em Tabelas gerais.'],
             ['Fração mínima', 'Menor quantidade de material que se usa/compra, em m².'],

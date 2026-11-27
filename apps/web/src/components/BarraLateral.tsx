@@ -45,6 +45,7 @@ const GRUPOS: { titulo: string; icone: NomeIcone; itens: ItemMenu[] }[] = [
       { tela: 'produtos-proprios', rotulo: 'Produtos Próprios', icone: 'produtos', id: 'tab-produtos-proprios' },
       { tela: 'parametros', rotulo: 'Parâmetros', icone: 'parametros', id: 'tab-parametros' },
       { tela: 'equipes', rotulo: 'Equipes', icone: 'equipes', id: 'tab-equipes' },
+      { tela: 'site', rotulo: 'Site', icone: 'site', id: 'tab-site' },
     ],
   },
   {

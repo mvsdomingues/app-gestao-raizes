@@ -16,5 +16,5 @@ export default defineConfig({
   clean: true,
   sourcemap: true,
   splitting: false,
-  noExternal: ['@raizes/shared'],
+  noExternal: ['@raizes/shared', '@raizes/contrato-site'],
 });
