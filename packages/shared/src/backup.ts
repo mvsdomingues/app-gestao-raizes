@@ -16,6 +16,8 @@ export interface ExecucaoBackup {
   externo: { ok: boolean; destino: string; mensagem: string | null } | null;
   /** Motivo da falha */
   erro: string | null;
+  /** Pastas de arquivos copiadas junto (logos das solicitações do site): arquivos novos copiados */
+  pastas?: { nome: string; copiados: number; erro: string | null }[];
 }
 
 export interface ArquivoBackup {

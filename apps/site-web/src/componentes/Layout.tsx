@@ -5,6 +5,7 @@ import logoClaro from '../assets/logo-raizes-claro.svg';
 import { buscar } from '../api';
 import { useSite } from '../contexto';
 import { Link, comQuery, navegar, useEndereco } from '../rota';
+import { useLista } from '../lista';
 import { linkWhatsApp } from '../whatsapp';
 import { Foto, fotoDoProduto } from './Basicos';
 
@@ -37,6 +38,7 @@ export function Layout({ children }: { children: ReactNode }) {
             {site.paginas.some((p) => p.chave === 'como-funciona') && <Link href="/como-funciona">Como funciona</Link>}
             <Link href="/contato">Contato</Link>
           </nav>
+          <BotaoLista />
         </div>
         <nav className="faixa-categorias" aria-label="Categorias">
           {site.categorias.map((c) => (
@@ -103,6 +105,19 @@ export function Layout({ children }: { children: ReactNode }) {
         </a>
       )}
     </>
+  );
+}
+
+function BotaoLista() {
+  const { itens, abrir } = useLista();
+  return (
+    <button type="button" className="botao-lista" onClick={abrir} aria-label={`Lista de cotação: ${itens.length} produto(s)`}>
+      <svg viewBox="0 0 24 24" aria-hidden="true">
+        <path d="M6 7h12l-1 13H7L6 7z M9 7V5a3 3 0 0 1 6 0v2" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinejoin="round" />
+      </svg>
+      <span className="botao-lista-texto">Lista</span>
+      {itens.length > 0 && <span className="contador">{itens.length}</span>}
+    </button>
   );
 }
 

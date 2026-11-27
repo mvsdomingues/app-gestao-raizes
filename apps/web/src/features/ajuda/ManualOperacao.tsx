@@ -33,6 +33,7 @@ const SUMARIO = [
   { id: 'man-backup', titulo: 'Backup da base' },
   { id: 'man-kommo', titulo: 'Integração com o Kommo' },
   { id: 'man-site', titulo: 'Site (catálogo público)' },
+  { id: 'man-solicitacoes', titulo: 'Solicitações do site' },
   { id: 'man-problemas', titulo: 'Problemas comuns' },
   { id: 'man-glossario', titulo: 'Glossário' },
 ];
@@ -1294,8 +1295,8 @@ export function ManualOperacao() {
         />
         <p>
           <b>Quantidade mínima</b>: vale a do produto (botão <Bt>Ajustes</Bt> na aba Produtos); se não houver, a menor entre as
-          categorias dele (aba Categorias); se não houver, a padrão do site. Enquanto a lista de cotação não existe no site, o
-          botão <i>Solicitar orçamento</i> abre o WhatsApp com o produto, a cor e a quantidade já escritos.
+          categorias dele (aba Categorias); se não houver, a padrão do site. No site, o cliente não consegue enviar a lista com
+          quantidade abaixo do mínimo.
         </p>
         <Dica tipo="atencao">
           “Integração desligada” no alto da tela quer dizer que o servidor ainda não tem o token do site (INTEGRACAO_TOKEN no
@@ -1303,8 +1304,48 @@ export function ManualOperacao() {
         </Dica>
       </Secao>
 
+      {/* ─────────────────────────────── Solicitações */}
+      <Secao id="man-solicitacoes" titulo="Solicitações do site" numero={29}>
+        <p>
+          No site, o cliente monta uma <b>lista de cotação</b> (produto, cor, quantidade, personalização em texto e, se quiser, o
+          arquivo do logo) e envia com nome, empresa, telefone, e-mail, CEP e prazo. Ele recebe um código (ex.: SOL-7K3P9QXA) e a
+          solicitação aparece em <Menu>Vendas › Solicitações</Menu>, com o número de novas no menu. <Ir tela="solicitacoes">Abrir Solicitações</Ir>
+        </p>
+        <Passos
+          itens={[
+            <>
+              Abra a solicitação e clique em <Bt>Assumir</Bt>: você vira o responsável e ela passa para <i>Em análise</i>.
+            </>,
+            <>
+              Em <i>Cliente do cadastro</i>, o sistema mostra os clientes com o mesmo CNPJ/CPF, telefone, e-mail ou nome. Clique em{' '}
+              <Bt>Vincular</Bt> no certo, busque outro, ou <Bt>Criar pré-cadastro com estes dados</Bt>. A empresa vira o cliente e a
+              pessoa vira o contato (se ela ainda não for contato, é incluída). A origem “Solicitação do site” fica no histórico do
+              cliente.
+            </>,
+            <>
+              Clique em <Bt>Gerar orçamento no carrinho</Bt>: os produtos (na cor pedida, com as quantidades), o cliente e o
+              contato vão para o carrinho. O pedido do cliente (cor, personalização, arte) fica na observação de cada produto; prazo,
+              CEP e mensagem, na observação do orçamento.
+            </>,
+            'No carrinho, escolha as técnicas, confira os preços e gere o orçamento como sempre. A solicitação passa para “Orçamento gerado” e guarda o número do orçamento.',
+          ]}
+        />
+        <Dica>
+          Os arquivos enviados pelo cliente (logo, arte) ficam na solicitação para baixar (📎). Produto que saiu do catálogo
+          aparece apagado e não vai para o carrinho: o carrinho avisa quais faltaram, para você escolher um parecido.
+        </Dica>
+        <Dica tipo="atencao">
+          Solicitação de teste, repetida ou sem retorno: use <Bt>Descartar</Bt> (o motivo é obrigatório e fica no histórico).{' '}
+          <Bt>Reabrir</Bt> desfaz. Depois de gerado o orçamento, a solicitação não muda mais.
+        </Dica>
+        <p>
+          Se a gestão estiver fora do ar quando o cliente enviar, o site guarda a solicitação e a reenvia sozinho; o cliente recebe
+          o código na hora do mesmo jeito. Depois que a gestão recebe, o site apaga a cópia dos dados de contato e dos arquivos.
+        </p>
+      </Secao>
+
       {/* ─────────────────────────────── 25 */}
-      <Secao id="man-problemas" titulo="Problemas comuns" numero={29}>
+      <Secao id="man-problemas" titulo="Problemas comuns" numero={30}>
         <Tabela
           colunas={['Situação', 'Causa e solução']}
           linhas={[
@@ -1354,7 +1395,7 @@ export function ManualOperacao() {
       </Secao>
 
       {/* ─────────────────────────────── 26 */}
-      <Secao id="man-glossario" titulo="Glossário" numero={30}>
+      <Secao id="man-glossario" titulo="Glossário" numero={31}>
         <Tabela
           colunas={['Termo', 'Significado']}
           linhas={[
@@ -1363,6 +1404,7 @@ export function ManualOperacao() {
             ['PDP-000001', 'Código de produto próprio.'],
             ['RZ-7K3P9', 'Código público do produto no site (não mostra o fornecedor e não muda).'],
             ['De-para', 'Ligação entre uma categoria do fornecedor e uma categoria da Raízes, usada no site.'],
+            ['SOL-7K3P9QXA', 'Código de uma solicitação de cotação enviada pelo site (o cliente recebe na hora).'],
             ['Custo do fornecedor', 'Preço que pagamos ao fornecedor por unidade.'],
             ['Técnica', 'Forma de personalização (Sublimação, DTF UV, Laser…), cadastrada em Tabelas gerais.'],
             ['Fração mínima', 'Menor quantidade de material que se usa/compra, em m².'],

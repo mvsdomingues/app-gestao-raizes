@@ -1,0 +1,48 @@
+/* ══════════════════════════════════════════════════════════
+   Vendas › Solicitações (pedidos de cotação do site)
+   ══════════════════════════════════════════════════════════ */
+.sol-contagem {
+  margin-left: 6px;
+  font-size: .72rem;
+  background: var(--fundo-tela);
+  color: var(--berinjela);
+  border-radius: 10px;
+  padding: 1px 7px;
+}
+.sol-linha { cursor: pointer; }
+.sol-linha.nova td:first-child { box-shadow: inset 3px 0 0 var(--uva); }
+.sol-linha.nova .cadastro-nome { font-weight: 600; }
+.sol-situacao { font-size: .74rem; font-weight: 600; padding: 3px 8px; border-radius: 4px; white-space: nowrap; }
+.sol-situacao.s-nova { background: #EFE6F5; color: var(--uva); }
+.sol-situacao.s-em_analise { background: #FDF3E1; color: #9A6216; }
+.sol-situacao.s-orcamento { background: #EAF5E8; color: var(--success); }
+.sol-situacao.s-descartada { background: #F4F1EC; color: var(--muted); }
+
+.sol-modal { max-width: 980px; width: 100%; max-height: 92vh; overflow-y: auto; }
+.sol-acoes { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; margin: 4px 0 16px; }
+.sol-acoes .btn-primary, .sol-acoes .btn-secondary { width: auto; padding: 9px 16px; }
+.sol-acoes .btn-secondary.perigo:hover { border-color: var(--danger); color: var(--danger); }
+.sol-orcamento { color: var(--success); font-weight: 500; }
+.sol-grade { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }
+.sol-bloco { border: 1px solid var(--border); border-radius: 8px; padding: 12px 14px; margin-bottom: 14px; background: #fff; }
+.sol-bloco h4 { margin: 0 0 8px; font-family: 'Cormorant Garamond', serif; font-size: 1.2rem; color: var(--berinjela); }
+.sol-dados { display: grid; grid-template-columns: 90px 1fr; gap: 4px 10px; margin: 0 0 8px; font-size: .88rem; }
+.sol-dados dt { color: var(--muted); }
+.sol-dados dd { margin: 0; }
+.sol-mensagem { font-style: italic; color: var(--text); background: var(--creme); padding: 8px 10px; border-radius: 6px; font-size: .88rem; }
+.sol-vincular { display: flex; flex-direction: column; gap: 8px; align-items: flex-start; }
+.sol-vincular .btn-secondary { width: auto; padding: 8px 14px; }
+.sol-sugestoes { list-style: none; margin: 0; padding: 0; width: 100%; }
+.sol-sugestoes li { display: flex; justify-content: space-between; align-items: center; gap: 8px; padding: 6px 0; border-bottom: 1px solid var(--border); font-size: .86rem; }
+.sol-sugestoes b { color: var(--uva); }
+.sol-busca-cliente { width: 100%; }
+.sol-itens td { vertical-align: top; }
+.sol-fora td { opacity: .6; }
+.sol-alerta { font-size: .72rem; color: #9A6216; }
+.sol-arquivo { display: inline-block; margin-right: 10px; font-size: .84rem; }
+.sol-arquivos { font-size: .84rem; margin: 8px 0 0; }
+.sol-historico { list-style: none; margin: 0; padding: 0; font-size: .84rem; }
+.sol-historico li { padding: 4px 0; border-bottom: 1px dashed var(--border); }
+@media (max-width: 760px) { .sol-grade { grid-template-columns: 1fr; } }
+.sol-modal a { color: var(--uva); }
+.sol-modal a:hover { color: var(--berinjela); }

@@ -1,4 +1,7 @@
 import type {
+  CarrinhoDaSolicitacao,
+  DetalheSolicitacao,
+  RespostaSolicitacoes,
   BannerGestao,
   ColecaoGestao,
   ConteudoSiteGestao,
@@ -208,6 +211,18 @@ export const api = {
     enviar<Equipe>('POST', '/api/equipes', dados),
   alterarEquipe: (id: number, dados: { nome?: string; gestor_id?: number | null; ativa?: boolean; membros?: number[] }) =>
     enviar<Equipe>('PUT', `/api/equipes/${id}`, dados),
+
+  // ── Solicitações de cotação do site ──
+  solicitacoes: (q: { situacao: string; busca: string; pagina: number }) =>
+    enviar<RespostaSolicitacoes>('GET', `/api/solicitacoes?${new URLSearchParams({ ...q, pagina: String(q.pagina) })}`),
+  solicitacoesNovas: () => enviar<{ novas: number }>('GET', '/api/solicitacoes/novas'),
+  solicitacao: (id: number) => enviar<DetalheSolicitacao>('GET', `/api/solicitacoes/${id}`),
+  assumirSolicitacao: (id: number) => enviar<DetalheSolicitacao>('POST', `/api/solicitacoes/${id}/assumir`),
+  descartarSolicitacao: (id: number, motivo: string) => enviar<DetalheSolicitacao>('POST', `/api/solicitacoes/${id}/descartar`, { motivo }),
+  reabrirSolicitacao: (id: number) => enviar<DetalheSolicitacao>('POST', `/api/solicitacoes/${id}/reabrir`),
+  vincularClienteSolicitacao: (id: number, dados: { cliente_id: number } | { criar: true }) =>
+    enviar<DetalheSolicitacao>('POST', `/api/solicitacoes/${id}/cliente`, dados),
+  carrinhoDaSolicitacao: (id: number) => enviar<CarrinhoDaSolicitacao>('GET', `/api/solicitacoes/${id}/carrinho`),
 
   // ── Site (catálogo público): categorias, de-para e curadoria ──
   siteResumo: () => enviar<ResumoSite>('GET', '/api/site/resumo'),

@@ -95,6 +95,8 @@ export interface EstadoCarrinho {
   entregaPrevista: string;
   /** Dados de faturamento e entrega (opcionais no orçamento) */
   faturamento: DadosFaturamento;
+  /** Solicitação do site que está virando orçamento (null = orçamento comum) */
+  solicitacao: { id: number; codigo: string; faltando: string[] } | null;
 }
 
 /** Orçamento do histórico carregado no carrinho para alteração. */
@@ -127,6 +129,13 @@ type Acao =
       cliente: ClienteVinculado | null;
       entregaPrevista: string;
       faturamento: DadosFaturamento;
+    }
+  | {
+      tipo: 'carregarSolicitacao';
+      itens: Itens;
+      observacao: string;
+      cliente: ClienteVinculado;
+      solicitacao: { id: number; codigo: string; faltando: string[] };
     }
   | { tipo: 'entregaPrevista'; valor: string }
   | { tipo: 'faturamento'; valor: DadosFaturamento }
@@ -166,6 +175,7 @@ function redutor(estado: EstadoCarrinho, acao: Acao): EstadoCarrinho {
         cliente: null,
         entregaPrevista: '',
         faturamento: faturamentoVazio(),
+        solicitacao: null,
       };
     case 'qtd': {
       const item = itens[acao.id];
@@ -208,6 +218,19 @@ function redutor(estado: EstadoCarrinho, acao: Acao): EstadoCarrinho {
         cliente: acao.cliente,
         entregaPrevista: acao.entregaPrevista,
         faturamento: acao.faturamento,
+        solicitacao: null,
+      };
+    case 'carregarSolicitacao':
+      return {
+        ...redesenho,
+        itens: acao.itens,
+        frete: '0',
+        observacao: acao.observacao,
+        edicao: null,
+        cliente: acao.cliente,
+        entregaPrevista: '',
+        faturamento: faturamentoVazio(),
+        solicitacao: acao.solicitacao,
       };
     case 'entregaPrevista':
       return { ...estado, entregaPrevista: acao.valor };
@@ -246,6 +269,14 @@ interface ContextoCarrinho {
   definirFaturamento: (valor: DadosFaturamento) => void;
   definirEntregaPrevista: (valor: string) => void;
   definirEdicao: (edicao: EdicaoOrcamento | null) => void;
+  /** Substitui o carrinho pelos itens de uma solicitação do site (com cliente e contato). */
+  carregarSolicitacao: (
+    itens: { produto: Produto; quantidade: number; observacao: string }[],
+    calc: ParametrosCalculo,
+    cliente: ClienteVinculado,
+    observacao: string,
+    solicitacao: { id: number; codigo: string; faltando: string[] },
+  ) => void;
 }
 
 const Ctx = createContext<ContextoCarrinho | null>(null);
@@ -260,6 +291,7 @@ export function ProvedorCarrinho({ children }: { children: ReactNode }) {
     cliente: null,
     entregaPrevista: '',
     faturamento: faturamentoVazio(),
+    solicitacao: null,
   });
   const valor = useMemo<ContextoCarrinho>(
     () => ({
@@ -289,6 +321,19 @@ export function ProvedorCarrinho({ children }: { children: ReactNode }) {
       definirEntregaPrevista: (valor) => despachar({ tipo: 'entregaPrevista', valor }),
       definirCliente: (cliente) => despachar({ tipo: 'cliente', cliente }),
       definirEdicao: (edicao) => despachar({ tipo: 'edicao', edicao }),
+      carregarSolicitacao: (lista, calc, cliente, observacao, solicitacao) => {
+        const itens: Itens = {};
+        for (const i of lista) {
+          itens[String(i.produto.id)] = {
+            produto: i.produto,
+            qty: i.quantidade,
+            calc: { ...calc },
+            observacao: i.observacao,
+            personalizacao: entradaVazia(),
+          };
+        }
+        despachar({ tipo: 'carregarSolicitacao', itens, observacao, cliente, solicitacao });
+      },
     }),
     [estado],
   );

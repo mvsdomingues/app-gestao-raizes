@@ -49,6 +49,11 @@ export const config = {
   sincronizacaoMinutos: Math.max(1, Number(process.env.SINCRONIZACAO_MINUTOS) || 10),
   /** 1 = liberado para os buscadores (só quando o site for ao ar) */
   indexar: process.env.SITE_INDEXAR?.trim() === '1',
+  /** Logos/artes enviados pelos clientes, até a solicitação chegar à gestão (depois são apagados daqui) */
+  arquivosDir: caminho(process.env.SITE_ARQUIVOS_DIR, 'data/site-arquivos'),
+  /** Anti-robô Cloudflare Turnstile: chave pública (vai para a página) e segredo (só aqui). Vazios = desligado. */
+  captchaChave: process.env.TURNSTILE_CHAVE_SITE?.trim() || null,
+  captchaSegredo: process.env.TURNSTILE_SEGREDO?.trim() || null,
   /** Build da vitrine (apps/site-web) */
   webDist: resolve(RAIZ, 'apps/site-web/dist'),
 };

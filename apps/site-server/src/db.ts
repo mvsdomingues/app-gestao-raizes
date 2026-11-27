@@ -48,6 +48,32 @@ export function abrirBancoSite(caminho: string): BancoSite {
       versao TEXT NOT NULL,
       dados  TEXT NOT NULL
     );
+    -- Logos/artes enviados pela lista de cotação (apagados quando a gestão recebe, ou em 48 h sem uso)
+    CREATE TABLE IF NOT EXISTS arquivos (
+      id          TEXT PRIMARY KEY,
+      nome        TEXT NOT NULL,
+      tipo        TEXT NOT NULL,
+      bytes       INTEGER NOT NULL,
+      criado      TEXT NOT NULL,
+      ip          TEXT NOT NULL,
+      solicitacao TEXT
+    );
+    -- Fila de envio das solicitações para a gestão. Depois de recebida lá, os dados de contato são
+    -- apagados daqui (fica só o código, para o acompanhamento).
+    CREATE TABLE IF NOT EXISTS solicitacoes (
+      codigo         TEXT PRIMARY KEY,
+      chave          TEXT NOT NULL UNIQUE,
+      dados          TEXT,
+      criada         TEXT NOT NULL,
+      ip             TEXT NOT NULL,
+      telefone_chave TEXT NOT NULL DEFAULT '',
+      situacao       TEXT NOT NULL DEFAULT 'pendente',
+      tentativas     INTEGER NOT NULL DEFAULT 0,
+      proxima        TEXT NOT NULL,
+      ultimo_erro    TEXT,
+      enviada_em     TEXT
+    );
+    CREATE INDEX IF NOT EXISTS ix_solicitacoes_fila ON solicitacoes(situacao, proxima);
     CREATE TABLE IF NOT EXISTS estado (
       chave TEXT PRIMARY KEY,
       valor TEXT NOT NULL

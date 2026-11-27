@@ -701,6 +701,53 @@ function migrarColunas(db: Database.Database): void {
       detalhe    TEXT
     );
   `);
+  // Solicitações de cotação vindas do site (fase 3)
+  db.exec(`
+    CREATE TABLE IF NOT EXISTS solicitacoes (
+      id               INTEGER PRIMARY KEY AUTOINCREMENT,
+      codigo           TEXT NOT NULL UNIQUE,
+      chave            TEXT NOT NULL UNIQUE,
+      situacao         TEXT NOT NULL DEFAULT 'NOVA',
+      solicitante_json TEXT NOT NULL,
+      itens_json       TEXT NOT NULL,
+      nome             TEXT NOT NULL,
+      empresa          TEXT NOT NULL DEFAULT '',
+      telefone         TEXT NOT NULL DEFAULT '',
+      email            TEXT NOT NULL DEFAULT '',
+      enviada_em       TEXT NOT NULL,
+      recebida_em      TEXT NOT NULL,
+      aceite_em        TEXT NOT NULL,
+      aceite_ip        TEXT NOT NULL,
+      responsavel_id   INTEGER REFERENCES usuarios(id),
+      cliente_id       INTEGER REFERENCES clientes(id),
+      contato_id       INTEGER REFERENCES clientes_pessoas(id),
+      orcamento_id     INTEGER REFERENCES orcamentos(id),
+      motivo_descarte  TEXT,
+      atualizado       TEXT NOT NULL
+    );
+    CREATE INDEX IF NOT EXISTS ix_solicitacoes_situacao ON solicitacoes(situacao, recebida_em);
+    CREATE TABLE IF NOT EXISTS solicitacoes_arquivos (
+      id             TEXT NOT NULL,
+      solicitacao_id INTEGER NOT NULL REFERENCES solicitacoes(id),
+      nome           TEXT NOT NULL,
+      tipo           TEXT NOT NULL,
+      bytes          INTEGER NOT NULL,
+      arquivo        TEXT NOT NULL,
+      PRIMARY KEY (solicitacao_id, id)
+    );
+    CREATE TABLE IF NOT EXISTS solicitacoes_historico (
+      id             INTEGER PRIMARY KEY AUTOINCREMENT,
+      solicitacao_id INTEGER NOT NULL REFERENCES solicitacoes(id),
+      data_hora      TEXT NOT NULL,
+      usuario_id     INTEGER REFERENCES usuarios(id),
+      acao           TEXT NOT NULL,
+      detalhe        TEXT
+    );
+    CREATE INDEX IF NOT EXISTS ix_solicitacoes_historico ON solicitacoes_historico(solicitacao_id);
+  `);
+  // Orçamento gerado a partir de uma solicitação do site
+  if (!colunas(db, 'orcamentos').includes('solicitacao_id'))
+    db.exec('ALTER TABLE orcamentos ADD COLUMN solicitacao_id INTEGER REFERENCES solicitacoes(id)');
   // Quantidade mínima para cotação: por categoria e por produto (NULL = a da categoria / o padrão do site)
   if (!colunas(db, 'site_categorias').includes('minimo')) db.exec('ALTER TABLE site_categorias ADD COLUMN minimo INTEGER');
   if (!colunas(db, 'site_produtos').includes('minimo')) db.exec('ALTER TABLE site_produtos ADD COLUMN minimo INTEGER');

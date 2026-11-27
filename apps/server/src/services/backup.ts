@@ -53,6 +53,11 @@ export type ExecutarRclone = (args: string[]) => { ok: boolean; saida: string };
 
 export interface OpcoesBackup extends ConfigBackup {
   dbPath: string;
+  /**
+   * Pastas de arquivos copiadas junto (ex.: logos das solicitações do site). Cópia espelho e
+   * acumulativa em <pasta>/<nome>/: só os arquivos novos são copiados e nada é apagado.
+   */
+  pastasExtras?: { nome: string; origem: string }[];
   /** Arquivo de log (uma linha por execução); null = não grava */
   arquivoLog?: string | null;
   agora?: () => Date;
@@ -203,7 +208,10 @@ export async function fazerBackup(o: OpcoesBackup): Promise<ExecucaoBackup> {
     ex.apagados = apagarAntigos(o.pasta, o.dias, inicio, nome);
     ex.ok = true;
 
-    // 5. Cópia fora do servidor (uma falha aqui não desfaz o backup local)
+    // 5. Pastas de arquivos (uma falha aqui não desfaz o backup da base)
+    if (o.pastasExtras?.length) ex.pastas = o.pastasExtras.map((p) => copiarPasta(p.origem, join(o.pasta, p.nome), p.nome));
+
+    // 6. Cópia fora do servidor (uma falha aqui não desfaz o backup local)
     if (o.destinoExterno) ex.externo = enviarParaFora(o, nome);
   } catch (e) {
     ex.erro = e instanceof Error ? e.message : String(e);
@@ -230,12 +238,39 @@ export async function fazerBackup(o: OpcoesBackup): Promise<ExecucaoBackup> {
   return ex;
 }
 
+/** Copia os arquivos que ainda não estão no destino (mesmo caminho relativo); nunca apaga. */
+function copiarPasta(origem: string, destino: string, nome: string): { nome: string; copiados: number; erro: string | null } {
+  let copiados = 0;
+  try {
+    if (!existsSync(origem)) return { nome, copiados: 0, erro: null };
+    const andar = (rel: string) => {
+      for (const e of readdirSync(join(origem, rel), { withFileTypes: true })) {
+        const r = join(rel, e.name);
+        if (e.isDirectory()) andar(r);
+        else if (e.isFile() && !existsSync(join(destino, r))) {
+          mkdirSync(dirname(join(destino, r)), { recursive: true, mode: 0o700 });
+          copyFileSync(join(origem, r), join(destino, r));
+          copiados++;
+        }
+      }
+    };
+    andar('');
+    return { nome, copiados, erro: null };
+  } catch (e) {
+    return { nome, copiados, erro: e instanceof Error ? e.message : String(e) };
+  }
+}
+
 /** Envia a cópia do dia e apaga lá as de mais de `dias` dias. */
 function enviarParaFora(o: OpcoesBackup, nome: string): NonNullable<ExecucaoBackup['externo']> {
   const destino = o.destinoExterno!;
   const rclone = o.rclone ?? rcloneDoSistema;
   const envio = rclone(['copy', join(o.pasta, nome), destino]);
   if (!envio.ok) return { ok: false, destino, mensagem: resumo(envio.saida) || 'falha no envio' };
+  for (const p of o.pastasExtras ?? []) {
+    const r = rclone(['copy', join(o.pasta, p.nome), `${destino.replace(/\/+$/, '')}/${p.nome}`]);
+    if (!r.ok) return { ok: false, destino, mensagem: `base enviada; pasta ${p.nome} falhou: ${resumo(r.saida)}` };
+  }
   const limpeza = rclone(['delete', destino, '--min-age', `${o.dias}d`, '--include', 'produtos-*.db.gz']);
   if (!limpeza.ok) return { ok: true, destino, mensagem: `enviado; não apagou os antigos: ${resumo(limpeza.saida)}` };
   return { ok: true, destino, mensagem: null };

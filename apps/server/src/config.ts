@@ -47,6 +47,8 @@ export const config = {
   dbPath: caminho(process.env.DB_PATH, 'data/produtos.db'),
   /** Pasta servida em /static/imagens (imagens baixadas localmente). */
   imagensDir: caminho(process.env.IMAGENS_DIR, 'data/imagens'),
+  /** Logos e artes enviados pelos clientes nas solicitações do site (fora do Git; entra no backup). */
+  solicitacoesDir: caminho(process.env.SOLICITACOES_DIR, 'data/solicitacoes'),
   /** Build do front-end servido pelo Express em produção. */
   webDist: resolve(RAIZ, 'apps/web/dist'),
   /** Endereço público dos links enviados aos clientes (sem barra no fim); null = o endereço de acesso. */

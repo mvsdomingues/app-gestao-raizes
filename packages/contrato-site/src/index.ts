@@ -329,6 +329,8 @@ export interface RespostaLayoutSite {
   paginas: { chave: ChavePaginaSite; titulo: string }[];
   tem_clientes: boolean;
   sincronizado_em: string | null;
+  /** Chave pública do anti-robô (Cloudflare Turnstile); null = desligado */
+  captcha_chave: string | null;
 }
 
 export interface VitrineInicio {
@@ -366,4 +368,140 @@ export interface RespostaSugestoesSite {
   produtos: { codigo: string; slug: string; nome: string; fotos: number }[];
   categorias: { slug: string; nome: string }[];
   ocasioes: { slug: string; nome: string }[];
+}
+
+// ══════════════════════════════════════════════════════════
+// SOLICITAÇÃO DE COTAÇÃO (fase 3)
+// ══════════════════════════════════════════════════════════
+//
+// O cliente monta a lista no site e envia. O site grava, devolve o código (SOL-…) na hora
+// e repassa à gestão (POST /api/integracao/v1/solicitacoes, com a chave de idempotência);
+// se a gestão estiver fora do ar, a solicitação fica na fila do site e é reenviada sozinha.
+
+/** Código da solicitação: "SOL-" + 8 caracteres sem ambiguidade (aleatório: serve para acompanhar). */
+export const CODIGO_SOLICITACAO_RE = /^SOL-[23456789ABCDEFGHJKMNPQRSTUVWXYZ]{8}$/;
+export function isCodigoSolicitacao(v: unknown): v is string {
+  return typeof v === 'string' && CODIGO_SOLICITACAO_RE.test(v);
+}
+
+export const LIMITES_SOLICITACAO = {
+  itens: 50,
+  quantidade: 1_000_000,
+  texto_item: 500,
+  mensagem: 2000,
+  arquivos: 5,
+  /** Por arquivo e no total da solicitação */
+  bytes_arquivo: 10 * 1024 * 1024,
+  bytes_total: 20 * 1024 * 1024,
+} as const;
+
+/** Tipos de arquivo aceitos para o logo/arte (extensão gravada). */
+export const TIPOS_ARQUIVO_SOLICITACAO: Record<string, string> = {
+  'image/png': 'png',
+  'image/jpeg': 'jpg',
+  'image/webp': 'webp',
+  'application/pdf': 'pdf',
+};
+
+export interface ItemSolicitacao {
+  /** Código público do produto */
+  codigo: string;
+  /** Nome no momento do pedido (o produto pode sair do catálogo depois) */
+  nome: string;
+  /** Chave e nome da cor escolhida (null = a definir com o vendedor) */
+  cor: string | null;
+  cor_nome: string | null;
+  quantidade: number;
+  /** Personalização em texto simples: local, tamanho, número de cores… */
+  personalizacao: string;
+  observacao: string;
+  /** Arquivo do logo/arte deste item (id do arquivo enviado junto) */
+  arquivo: string | null;
+}
+
+export interface SolicitanteSite {
+  nome: string;
+  empresa: string;
+  /** CPF ou CNPJ (opcional) */
+  documento: string;
+  telefone: string;
+  email: string;
+  /** Data desejada (AAAA-MM-DD) ou vazio */
+  prazo: string;
+  cep: string;
+  mensagem: string;
+}
+
+export interface ArquivoSolicitacao {
+  id: string;
+  nome: string;
+  tipo: string;
+  /** Conteúdo em base64 (só no envio do site para a gestão) */
+  base64: string;
+}
+
+/** POST /api/integracao/v1/solicitacoes (site → gestão). Cabeçalho Idempotency-Key = chave. */
+export interface EnvioSolicitacao {
+  codigo: string;
+  /** Chave única do envio: reenviar com a mesma chave não duplica */
+  chave: string;
+  /** Quando o cliente enviou (ISO, UTC) */
+  enviada_em: string;
+  solicitante: SolicitanteSite;
+  itens: ItemSolicitacao[];
+  arquivos: ArquivoSolicitacao[];
+  /** Aceite do aviso de privacidade (LGPD) */
+  aceite: { em: string; ip: string };
+}
+
+export interface RespostaEnvioSolicitacao {
+  codigo: string;
+  /** true = já tinha sido recebida antes (reenvio) */
+  repetida: boolean;
+}
+
+/** Situação para o cliente (GET /api/integracao/v1/solicitacoes/<código>/situacao). */
+export const SITUACOES_CLIENTE = ['recebida', 'em_analise', 'orcamento_enviado', 'encerrada'] as const;
+export type SituacaoCliente = (typeof SITUACOES_CLIENTE)[number];
+
+export interface RespostaSituacaoSolicitacao {
+  codigo: string;
+  situacao: SituacaoCliente;
+  /** Caminho do link do orçamento (/o/…) quando ele foi enviado ao cliente */
+  link: string | null;
+}
+
+// ── API pública do site para a lista e o envio ──
+
+/** POST /api/v1/arquivos (corpo = o arquivo; cabeçalhos Content-Type e X-Nome-Arquivo) */
+export interface RespostaArquivoSite {
+  id: string;
+  nome: string;
+  tipo: string;
+  bytes: number;
+}
+
+export const ARQUIVO_SITE_RE = /^ARQ-[0-9a-f]{20}$/;
+
+/** POST /api/v1/solicitacoes (vitrine → site) */
+export interface NovaSolicitacaoSite {
+  solicitante: SolicitanteSite;
+  itens: Omit<ItemSolicitacao, 'nome' | 'cor_nome'>[];
+  aceite_privacidade: boolean;
+  /** Resposta do anti-robô (Cloudflare Turnstile); vazio quando ele não está configurado */
+  captcha: string;
+}
+
+export interface RespostaNovaSolicitacaoSite {
+  codigo: string;
+}
+
+/** Confere se o conteúdo é mesmo do tipo declarado (não confia só no Content-Type). */
+export function tipoArquivoConfere(tipo: string, b: Uint8Array): boolean {
+  const ascii = (ini: number, fim: number) => String.fromCharCode(...b.subarray(ini, fim));
+  if (tipo === 'image/png') return [0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a].every((x, i) => b[i] === x);
+  if (tipo === 'image/jpeg') return b[0] === 0xff && b[1] === 0xd8 && b[2] === 0xff;
+  if (tipo === 'image/webp') return ascii(0, 4) === 'RIFF' && ascii(8, 12) === 'WEBP';
+  if (tipo === 'application/pdf') return ascii(0, 5) === '%PDF-';
+  return false;
 }

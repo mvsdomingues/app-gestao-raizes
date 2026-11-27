@@ -11,6 +11,7 @@ import {
 import type { Banco } from '../db/conexao';
 import { categoriasPublicas, fotoDoProduto, produtosParaSite } from '../db/repositorio-site';
 import { arquivoImagemSite, conteudoParaSite } from '../db/repositorio-site-conteudo';
+import { receberSolicitacao, situacaoParaCliente } from '../db/repositorio-solicitacoes';
 import { ErroHttp } from '../lib/http';
 
 /** Chamada feita do próprio servidor: conexão local e sem cabeçalhos de quem passou pelo Nginx. */
@@ -32,7 +33,10 @@ function tokenConfere(recebido: string, esperado: string): boolean {
  * Tudo o que sai daqui é montado campo a campo (`soCamposPublicos`): nunca preço,
  * custo, fornecedor, estoque exato, endereço de foto do fornecedor ou ids internos.
  */
-export function rotasIntegracao(db: Banco, opcoes: { token: string | null; imagensDir: string }): Router {
+export function rotasIntegracao(
+  db: Banco,
+  opcoes: { token: string | null; imagensDir: string; solicitacoesDir: string; aoReceber?: (codigo: string) => void },
+): Router {
   const r = Router();
 
   const guarda = (req: Request, res: Response, next: NextFunction) => {
@@ -83,6 +87,20 @@ export function rotasIntegracao(db: Banco, opcoes: { token: string | null; image
     const img = arquivoImagemSite(db, opcoes.imagensDir, String(req.params.id));
     if (!img) throw new ErroHttp(404, 'Imagem não encontrada');
     res.type(img.tipo).set('Cache-Control', 'public, max-age=86400').sendFile(img.caminho);
+  });
+
+  /** Solicitação de cotação enviada pelo cliente no site (idempotente pela chave). */
+  r.post(`${PREFIXO_INTEGRACAO}/solicitacoes`, (req, res) => {
+    const chave = typeof req.headers['idempotency-key'] === 'string' ? req.headers['idempotency-key'] : null;
+    const r2 = receberSolicitacao(db, opcoes.solicitacoesDir, req.body, chave);
+    if (!r2.repetida) opcoes.aoReceber?.(r2.codigo);
+    res.status(r2.repetida ? 200 : 201).json(r2);
+  });
+
+  r.get(`${PREFIXO_INTEGRACAO}/solicitacoes/:codigo/situacao`, (req, res) => {
+    const s2 = situacaoParaCliente(db, String(req.params.codigo));
+    if (!s2) throw new ErroHttp(404, 'Solicitação não encontrada');
+    res.json(s2);
   });
 
   /** Foto n do produto: buscada na hora e repassada (o endereço do fornecedor nunca sai da gestão). */

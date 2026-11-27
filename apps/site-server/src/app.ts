@@ -16,6 +16,7 @@ import * as consultas from './consultas';
 import type { BancoSite } from './db';
 import { IMAGEM_NEUTRA, fotoReduzida, tamanhoFoto } from './imagens';
 import type { ClienteGestao, Sincronizador } from './sincronizacao';
+import { ErroPedido, criarSolicitacao, guardarArquivo, type ConferirCaptcha, type FilaSolicitacoes } from './solicitacoes';
 
 export interface OpcoesAppSite {
   db: BancoSite;
@@ -26,6 +27,11 @@ export interface OpcoesAppSite {
   webDist?: string;
   urlPublica?: string | null;
   indexar?: boolean;
+  /** Lista de cotação: pasta dos arquivos, fila de envio e anti-robô */
+  arquivosDir: string;
+  fila: FilaSolicitacoes;
+  captchaChave?: string | null;
+  captcha?: ConferirCaptcha | null;
 }
 
 class ErroSite extends Error {
@@ -73,9 +79,10 @@ const CSP = [
   "img-src 'self' data:",
   "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com",
   'font-src https://fonts.gstatic.com',
-  "script-src 'self'",
-  'frame-src https://www.youtube.com https://player.vimeo.com',
-  "connect-src 'self'",
+  // Turnstile (anti-robô do envio da lista de cotação)
+  "script-src 'self' https://challenges.cloudflare.com",
+  'frame-src https://www.youtube.com https://player.vimeo.com https://challenges.cloudflare.com',
+  "connect-src 'self' https://challenges.cloudflare.com",
   "base-uri 'self'",
   "form-action 'self'",
   "frame-ancestors 'self'",
@@ -130,7 +137,28 @@ export function criarAppSite(o: OpcoesAppSite) {
   api.get('/site', (_req, res) => {
     const l = consultas.layout(db);
     if (!l) throw semDados();
-    res.json(l);
+    res.json({ ...l, captcha_chave: o.captchaChave ?? null });
+  });
+
+  // ── Lista de cotação ──
+  api.post(
+    '/arquivos',
+    limitar(20),
+    express.raw({ type: () => true, limit: '10mb' }),
+    (req, res) => {
+      res.set('Cache-Control', 'no-store');
+      const tipo = String(req.headers['content-type'] ?? '').split(';')[0]!.trim().toLowerCase();
+      const corpo = Buffer.isBuffer(req.body) ? req.body : Buffer.alloc(0);
+      const nome = String(req.headers['x-nome-arquivo'] ?? '');
+      res.status(201).json(guardarArquivo(db, o.arquivosDir, corpo, tipo, nome, req.ip ?? '?'));
+    },
+  );
+  api.post('/solicitacoes', limitar(10), async (req, res) => {
+    res.set('Cache-Control', 'no-store');
+    const codigo = await criarSolicitacao(db, req.body, { ip: req.ip ?? '?', captcha: o.captcha ?? null });
+    // Entrega à gestão agora; se ela estiver fora do ar, a fila tenta de novo depois
+    void o.fila.processar().catch(() => undefined);
+    res.status(201).json({ codigo });
   });
   api.get('/inicio', (_req, res) => {
     const r = consultas.inicio(db);
@@ -234,9 +262,12 @@ export function criarAppSite(o: OpcoesAppSite) {
   }
 
   const tratarErros: ErrorRequestHandler = (err, _req, res, _next) => {
-    const status = err instanceof ErroSite ? err.status : 500;
-    if (status >= 500 && !(err instanceof ErroSite)) console.error(err);
-    res.status(status).set('Cache-Control', 'no-store').json({ erro: err instanceof ErroSite ? err.message : 'Erro interno' });
+    const conhecido = err instanceof ErroSite || err instanceof ErroPedido;
+    // Arquivo grande demais ou corpo inválido (express)
+    const status = conhecido ? err.status : err?.type === 'entity.too.large' ? 413 : err?.type === 'entity.parse.failed' ? 400 : 500;
+    if (status >= 500 && !conhecido) console.error(err);
+    const msg = conhecido ? err.message : status === 413 ? 'Arquivo ou envio grande demais' : status === 400 ? 'Envio inválido' : 'Erro interno';
+    res.status(status).set('Cache-Control', 'no-store').json({ erro: msg });
   };
   app.use(tratarErros);
   return app;

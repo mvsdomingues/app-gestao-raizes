@@ -22,12 +22,18 @@ async function main(): Promise<number> {
     dias,
     destinoExterno,
     arquivoLog: join(config.logsDir, 'backup.log'),
+    // Logos e artes das solicitações do site
+    pastasExtras: [{ nome: 'solicitacoes', origem: config.solicitacoesDir }],
   });
   if (!r.ok) {
     console.error(`✗ Backup falhou: ${r.erro}`);
     return 1;
   }
   console.log(`✓ ${r.arquivo} (${((r.tamanho ?? 0) / 1024 / 1024).toFixed(1)} MB), conferido`);
+  for (const p of r.pastas ?? []) {
+    if (p.erro) console.error(`✗ Pasta ${p.nome}: ${p.erro}`);
+    else console.log(`  Pasta ${p.nome}: ${p.copiados} arquivo(s) novo(s) copiado(s)`);
+  }
   if (r.apagados.length) console.log(`  Apagados (mais de ${dias} dias): ${r.apagados.join(', ')}`);
   if (r.externo) {
     const e = r.externo;

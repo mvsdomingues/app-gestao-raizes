@@ -46,6 +46,7 @@ const app = criarApp({
   expiracao,
   integracaoToken: config.integracaoToken,
   siteUrlInterna: config.siteUrlInterna,
+  solicitacoesDir: config.solicitacoesDir,
 });
 
 const servidor = app.listen(config.porta, config.host, () => {

@@ -169,6 +169,8 @@ export interface NovoOrcamento {
   entrega_prevista?: string | null;
   /** Dados de faturamento (opcionais no orçamento; undefined = mantém, null = limpa) */
   faturamento?: import('./faturamento').DadosFaturamento | null;
+  /** Solicitação do site que originou o orçamento (só na criação) */
+  solicitacao_id?: number | null;
 }
 
 /** Resposta de POST /api/orcamentos */

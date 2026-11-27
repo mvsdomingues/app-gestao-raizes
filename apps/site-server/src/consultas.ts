@@ -102,6 +102,7 @@ export function layout(db: BancoSite): RespostaLayoutSite | null {
     paginas: PAGINAS_SITE.filter((k) => c.paginas[k]?.texto.trim()).map((k) => ({ chave: k, titulo: c.paginas[k].titulo })),
     tem_clientes: c.clientes.length > 0 || c.depoimentos.length > 0,
     sincronizado_em: lerEstado(db, 'sincronizado_em'),
+    captcha_chave: null,
   };
 }
 

@@ -40,6 +40,21 @@ export class ClienteGestao {
     });
   }
 
+  /** POST JSON para a gestão (com a chave de idempotência, quando houver). */
+  async enviar(caminho: string, corpo: unknown, chave?: string): Promise<Response> {
+    if (!this.token) throw new Error('INTEGRACAO_TOKEN não configurado no .env.site');
+    return this.fetcher(this.url + PREFIXO_INTEGRACAO + caminho, {
+      method: 'POST',
+      headers: {
+        Authorization: `Bearer ${this.token}`,
+        'Content-Type': 'application/json',
+        ...(chave ? { 'Idempotency-Key': chave } : {}),
+      },
+      body: JSON.stringify(corpo),
+      signal: AbortSignal.timeout(60_000),
+    });
+  }
+
   async json<T>(caminho: string): Promise<T> {
     const r = await this.pedir(caminho);
     if (!r.ok) {

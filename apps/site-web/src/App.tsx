@@ -2,7 +2,10 @@ import type { RespostaLayoutSite } from '@raizes/contrato-site';
 import { useDados } from './api';
 import { Aviso, Carregando } from './componentes/Basicos';
 import { Layout } from './componentes/Layout';
+import { PainelLista } from './componentes/PainelLista';
 import { ProtecaoErro } from './componentes/ProtecaoErro';
+import { ProvedorLista } from './lista';
+import { Cotacao } from './paginas/Cotacao';
 import { ContextoSite } from './contexto';
 import { Catalogo } from './paginas/Catalogo';
 import { Clientes } from './paginas/Clientes';
@@ -37,9 +40,12 @@ export function App() {
   }
   return (
     <ContextoSite.Provider value={dados}>
-      <Layout>
-        <RotasProtegidas />
-      </Layout>
+      <ProvedorLista>
+        <Layout>
+          <RotasProtegidas />
+        </Layout>
+        <PainelLista />
+      </ProvedorLista>
     </ContextoSite.Provider>
   );
 }
@@ -64,6 +70,7 @@ function Rotas() {
   if (a === 'kits' && b) return <Kit slug={b} key={b} />;
   if (b) return <NaoEncontrado />;
   if (a === 'contato') return <Contato />;
+  if (a === 'cotacao') return <Cotacao />;
   if (a === 'clientes') return <Clientes />;
   if (a === 'sobre' || a === 'como-funciona' || a === 'privacidade') return <Pagina chave={a} key={a} />;
   return <NaoEncontrado />;

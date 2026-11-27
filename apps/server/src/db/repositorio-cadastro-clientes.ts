@@ -49,7 +49,7 @@ import {
 export interface Autor {
   usuarioId: number | null;
   nome: string;
-  origem: 'CADASTRO' | 'CARRINHO' | 'ACEITE' | 'PEDIDO' | 'MESCLAGEM' | 'MIGRACAO';
+  origem: 'CADASTRO' | 'CARRINHO' | 'ACEITE' | 'PEDIDO' | 'MESCLAGEM' | 'MIGRACAO' | 'SITE';
 }
 
 const ROTULO_ORIGEM: Record<Autor['origem'], string> = {
@@ -59,6 +59,7 @@ const ROTULO_ORIGEM: Record<Autor['origem'], string> = {
   PEDIDO: 'Pedido',
   MESCLAGEM: 'Mesclagem',
   MIGRACAO: 'Migração',
+  SITE: 'Solicitação do site',
 };
 
 interface LinhaCliente {

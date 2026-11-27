@@ -32,6 +32,7 @@ import type { ServicoKommo } from '../kommo/servico';
 import { colunasResponsavel, extrairResponsavel } from '../db/repositorio-usuarios';
 import { falsyPython, floatPython } from '../lib/conversao';
 import { isoLocal } from '../lib/datas';
+import { registrarOrcamentoDaSolicitacao } from '../db/repositorio-solicitacoes';
 import { corpoJson, ErroHttp } from '../lib/http';
 import { exigirUsuario } from '../lib/sessao';
 import { faturamentoDoBanco, lerFaturamento } from '../lib/faturamento';
@@ -358,34 +359,43 @@ export function rotasOrcamentos(db: Banco, opcoes: OpcoesOrcamentos = {}): Route
     if (!clienteId) throw new ErroHttp(400, 'Escolha ou inclua o cliente do orçamento');
     const [cid, cnome, ctel, cemail, ckommo, kid, knome] = dadosDoCliente(clienteId, contatoId);
     const dataHora = isoLocal();
-    const info = db
-      .prepare(
-        `INSERT INTO orcamentos (data_hora, subtotal, frete, total, qtd_itens, itens_json, usuario_id, observacao,
-                                 cliente_id, cliente_nome, cliente_telefone, cliente_email, cliente_kommo_id, entrega_prevista, faturamento_json,
-                                 contato_id, contato_nome)
-         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
-      )
-      .run(
-        dataHora,
-        subtotal,
-        frete,
-        total,
-        itens.length,
-        JSON.stringify(itens),
-        eu.id,
-        observacao,
-        cid,
-        cnome,
-        ctel,
-        cemail,
-        ckommo,
-        entrega ?? null,
-        faturamento ?? null,
-        kid,
-        knome,
-      );
-    const id = Number(info.lastInsertRowid);
-    registrarMovimentoOrcamento(db, id, null, 'ABERTO', eu.id, null, dataHora);
+    // Orçamento gerado de uma solicitação do site: a solicitação passa para "Orçamento gerado" junto
+    const solBruto = corpoJson(req).solicitacao_id;
+    const solicitacaoId = solBruto === undefined || solBruto === null ? null : Number(solBruto);
+    if (solicitacaoId !== null && (!Number.isInteger(solicitacaoId) || solicitacaoId <= 0)) throw new ErroHttp(400, 'Solicitação inválida');
+    const gravar = db.transaction(() => {
+      const info = db
+        .prepare(
+          `INSERT INTO orcamentos (data_hora, subtotal, frete, total, qtd_itens, itens_json, usuario_id, observacao,
+                                   cliente_id, cliente_nome, cliente_telefone, cliente_email, cliente_kommo_id, entrega_prevista, faturamento_json,
+                                   contato_id, contato_nome)
+           VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+        )
+        .run(
+          dataHora,
+          subtotal,
+          frete,
+          total,
+          itens.length,
+          JSON.stringify(itens),
+          eu.id,
+          observacao,
+          cid,
+          cnome,
+          ctel,
+          cemail,
+          ckommo,
+          entrega ?? null,
+          faturamento ?? null,
+          kid,
+          knome,
+        );
+      const id = Number(info.lastInsertRowid);
+      registrarMovimentoOrcamento(db, id, null, 'ABERTO', eu.id, null, dataHora);
+      if (solicitacaoId !== null) registrarOrcamentoDaSolicitacao(db, solicitacaoId, id, eu.id);
+      return id;
+    });
+    const id = gravar();
     const corpo: OrcamentoCriado = { id, numero: numeroOrcamento(id), data_hora: dataHora };
     res.json(corpo);
   });

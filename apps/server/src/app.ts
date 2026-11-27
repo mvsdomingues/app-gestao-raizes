@@ -1,5 +1,5 @@
 import { existsSync } from 'node:fs';
-import { resolve } from 'node:path';
+import { join, resolve } from 'node:path';
 import express, { type ErrorRequestHandler } from 'express';
 import type { Banco } from './db/conexao';
 import { ErroHttp } from './lib/http';
@@ -25,6 +25,7 @@ import { rotasComissoes } from './routes/comissoes';
 import { rotasPublicas } from './routes/publico';
 import { rotasIntegracao } from './routes/integracao';
 import { rotasSite } from './routes/site';
+import { rotasSolicitacoes } from './routes/solicitacoes';
 import { AvisoSite } from './services/aviso-site';
 import type { ServicoKommo } from './kommo/servico';
 import type { ConfigBackup } from './services/backup';
@@ -48,6 +49,8 @@ export interface OpcoesApp {
   integracaoToken?: string | null;
   /** Endereço interno do site, para avisá-lo de novidades (SITE_URL_INTERNA) */
   siteUrlInterna?: string | null;
+  /** Pasta dos logos/artes das solicitações do site (padrão: data/solicitacoes ao lado das imagens) */
+  solicitacoesDir?: string;
 }
 
 export function criarApp({
@@ -61,7 +64,9 @@ export function criarApp({
   expiracao = null,
   integracaoToken = null,
   siteUrlInterna = null,
+  solicitacoesDir,
 }: OpcoesApp) {
+  const pastaSolicitacoes = solicitacoesDir ?? join(imagensDir, '..', 'solicitacoes');
   const app = express();
   app.disable('x-powered-by');
   app.set('json spaces', 0);
@@ -76,7 +81,7 @@ export function criarApp({
   }) as ErrorRequestHandler);
 
   // API de integração com o site: sem sessão de usuário (só do próprio servidor, com o token de serviço)
-  app.use(rotasIntegracao(db, { token: integracaoToken, imagensDir }));
+  app.use(rotasIntegracao(db, { token: integracaoToken, imagensDir, solicitacoesDir: pastaSolicitacoes }));
 
   // Controle de acesso: identifica o usuário pelo cookie e bloqueia a API por tela
   app.use(carregarSessao(db));
@@ -91,6 +96,7 @@ export function criarApp({
   app.use(rotasRelatorios(db));
   app.use(rotasEquipes(db));
   app.use(rotasMockups(db, imagensDir));
+  app.use(rotasSolicitacoes(db, { pasta: pastaSolicitacoes }));
   app.use(rotasOrcamentos(db, { exigirClienteAoEnviar: true, kommo, urlPublica, imagensDir }));
   app.use(rotasPedidos(db, kommo));
   app.use(rotasProdutosProprios(db, imagensDir));

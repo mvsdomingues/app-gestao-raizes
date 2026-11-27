@@ -4,6 +4,7 @@ import { useDados } from '../api';
 import { Aviso, Carregando, Foto, GradeProdutos, corCss } from '../componentes/Basicos';
 import { definirTitulo, useSite } from '../contexto';
 import { Link, navegar, useEndereco } from '../rota';
+import { useLista } from '../lista';
 import { linkWhatsApp, mensagemProduto } from '../whatsapp';
 
 export function Produto({ slug }: { slug: string }) {
@@ -14,6 +15,8 @@ export function Produto({ slug }: { slug: string }) {
   const [cor, setCor] = useState<string | null>(query.get('cor'));
   const [foto, setFoto] = useState(0);
   const [qtd, setQtd] = useState('');
+  const [aviso, setAviso] = useState('');
+  const lista = useLista();
 
   useEffect(() => {
     if (p) {
@@ -135,17 +138,37 @@ export function Produto({ slug }: { slug: string }) {
               Pedido mínimo: {minimo.toLocaleString('pt-BR')} unidades ·{' '}
               <span className={p.disponivel ? 'ok' : ''}>{p.disponivel ? 'Disponível' : 'Consultar disponibilidade'}</span>
             </p>
-            {wpp ? (
-              <a className="botao botao-grande" href={wpp} target="_blank" rel="noopener noreferrer">
-                Solicitar orçamento
+            <button
+              type="button"
+              className="botao botao-grande"
+              onClick={() => {
+                if (qtdBaixa) return setAviso(`A quantidade mínima deste produto é ${minimo.toLocaleString('pt-BR')} unidades.`);
+                if (p.cores.length > 1 && !corAtual) setAviso('Você pode escolher a cor agora ou deixar para combinar com a gente.');
+                else setAviso('');
+                lista.adicionar({
+                  codigo: p.codigo,
+                  slug: p.slug,
+                  nome: p.nome,
+                  fotos: p.fotos,
+                  foto: corAtual?.fotos[0] ?? 0,
+                  minimo,
+                  cor: corAtual?.chave ?? (p.cores.length === 1 ? p.cores[0]!.chave : null),
+                  cor_nome: corAtual?.nome ?? (p.cores.length === 1 ? p.cores[0]!.nome : null),
+                  quantidade: quantidade || minimo,
+                });
+              }}
+            >
+              Adicionar à lista de cotação
+            </button>
+            {aviso && <p className="minimo-info alerta">{aviso}</p>}
+            {wpp && (
+              <a className="link-whatsapp" href={wpp} target="_blank" rel="noopener noreferrer">
+                Prefere falar agora? Pedir pelo WhatsApp
               </a>
-            ) : (
-              <Link className="botao botao-grande" href="/contato">
-                Solicitar orçamento
-              </Link>
             )}
             <p className="pedido-nota">
-              A cotação sai com a personalização da sua marca. Conte no atendimento onde vai a logo e quantas cores ela tem.
+              Monte a lista com todos os produtos e envie de uma vez. Na lista você conta como quer a personalização e pode enviar o
+              seu logo.
             </p>
           </div>
 

@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import { useApp, type Tela } from '../app/contexto';
 import { useSessao } from '../app/sessao';
+import { api } from '../lib/api';
 import { useCarrinho } from '../state/carrinho';
 import { Icone, type NomeIcone } from './Icone';
 import { Logo } from './Logo';
@@ -26,6 +27,7 @@ const GRUPOS: { titulo: string; icone: NomeIcone; itens: ItemMenu[] }[] = [
       { tela: 'orcamentos', rotulo: 'Orçamentos', icone: 'orcamento', id: 'tab-orcamentos' },
       { tela: 'pedidos', rotulo: 'Pedidos', icone: 'pedidos', id: 'tab-pedidos' },
       { tela: 'mockup', rotulo: 'Mockups', icone: 'mockup', id: 'tab-mockup' },
+      { tela: 'solicitacoes', rotulo: 'Solicitações', icone: 'solicitacao', id: 'tab-solicitacoes' },
     ],
   },
   {
@@ -105,6 +107,24 @@ export function BarraLateral() {
   const grupos = GRUPOS.map((g) => ({ ...g, itens: g.itens.filter((i) => pode(i.tela)) })).filter((g) => g.itens.length);
   const { estado } = useCarrinho();
   const qtdItens = Object.keys(estado.itens).length;
+  // Solicitações novas do site (conferido a cada 2 minutos e ao trocar de tela)
+  const [novas, setNovas] = useState(0);
+  const veSolicitacoes = pode('solicitacoes');
+  useEffect(() => {
+    if (!veSolicitacoes) return;
+    let ativo = true;
+    const conferir = () =>
+      api
+        .solicitacoesNovas()
+        .then((r) => ativo && setNovas(r.novas))
+        .catch(() => undefined);
+    void conferir();
+    const id = setInterval(conferir, 120_000);
+    return () => {
+      ativo = false;
+      clearInterval(id);
+    };
+  }, [veSolicitacoes, tela]);
   const [recolhida, setRecolhida] = useState(lerRecolhida);
   // Sanfona: um grupo aberto por vez; ao trocar de tela, abre o grupo dela
   const grupoDaTela = grupos.find((g) => g.itens.some((i) => i.tela === tela))?.titulo ?? null;
@@ -161,7 +181,9 @@ export function BarraLateral() {
                   <Icone nome={g.icone} />
                 </span>
                 <span className="sidebar-group-nome">{g.titulo}</span>
-                {g.titulo === 'Vendas' && qtdItens > 0 && !expandido && <span className="tab-badge">{qtdItens}</span>}
+                {g.titulo === 'Vendas' && (qtdItens > 0 || novas > 0) && !expandido && (
+                  <span className="tab-badge">{qtdItens + novas}</span>
+                )}
                 <span className="sidebar-seta" aria-hidden="true">
                   ▾
                 </span>
@@ -186,6 +208,11 @@ export function BarraLateral() {
                       <Icone nome={item.icone} />
                     </span>
                     <span className="sidebar-label">{item.rotulo}</span>
+                    {item.tela === 'solicitacoes' && novas > 0 && (
+                      <span className="tab-badge" id="tab-solicitacoes-novas" title={`${novas} nova(s)`}>
+                        {novas}
+                      </span>
+                    )}
                     {item.tela === 'carrinho' && (
                       <span className={`tab-badge${qtdItens === 0 ? ' zero' : ''}`} id="tab-cart-count">
                         {qtdItens}

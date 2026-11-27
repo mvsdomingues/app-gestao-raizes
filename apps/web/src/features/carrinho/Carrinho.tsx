@@ -31,7 +31,7 @@ export function Carrinho() {
     definirEntregaPrevista,
     definirFaturamento,
   } = useCarrinho();
-  const { frete, edicao, observacao, cliente, entregaPrevista, faturamento } = estado;
+  const { frete, edicao, observacao, cliente, entregaPrevista, faturamento, solicitacao } = estado;
   const [editandoFaturamento, setEditandoFaturamento] = useState(false);
   const temFaturamento = faturamentoPreenchido(faturamento);
   const [gerando, setGerando] = useState(false);
@@ -93,10 +93,12 @@ export function Carrinho() {
   const unidades = itens.reduce((s, i) => s + i.qty, 0);
 
   const limparTudo = async () => {
-    if (!count && !edicao) return;
+    if (!count && !edicao && !solicitacao) return;
     const msg = edicao
       ? `Limpar o carrinho e sair da alteração do ${edicao.numero}?\n\nO orçamento salvo não é modificado.`
-      : 'Limpar todos os itens do orçamento?';
+      : solicitacao
+        ? `Limpar o carrinho? A solicitação ${solicitacao.codigo} continua na tela Solicitações.`
+        : 'Limpar todos os itens do orçamento?';
     if (!(await confirmar(msg, { titulo: 'Limpar carrinho', ok: 'Limpar', perigo: true }))) return;
     limpar();
   };
@@ -150,6 +152,8 @@ export function Carrinho() {
       contato_id: cliente?.contato?.id ?? null,
       entrega_prevista: entregaPrevista || null,
       faturamento: temFaturamento ? faturamento : null,
+      // Orçamento novo a partir de uma solicitação do site: ela passa para "Orçamento gerado"
+      ...(!edicao && solicitacao ? { solicitacao_id: solicitacao.id } : {}),
     };
     try {
       // Alteração de orçamento salvo: mesmo número, data atualizada
@@ -214,6 +218,28 @@ export function Carrinho() {
             </button>
           </div>
         </div>
+
+        {solicitacao && !edicao && (
+          <div className="edicao-banner" id="solicitacao-banner">
+            <div>
+              <div className="edicao-banner-titulo">
+                Orçamento da solicitação do site <span className="orc-num-badge">{solicitacao.codigo}</span>
+              </div>
+              <div className="edicao-banner-sub">
+                Cliente, contato, quantidades e o pedido do cliente (cor, personalização, arte) já estão em cada produto. Escolha as
+                técnicas, confira e gere: a solicitação passa para “Orçamento gerado”.
+              </div>
+              {solicitacao.faltando.length > 0 && (
+                <div className="edicao-banner-precos">
+                  <b>Fora do catálogo hoje (procure um parecido):</b> {solicitacao.faltando.join('; ')}
+                </div>
+              )}
+            </div>
+            <button className="btn-back" onClick={limparTudo}>
+              Cancelar
+            </button>
+          </div>
+        )}
 
         {edicao && (
           <div className="edicao-banner" id="edicao-banner">
