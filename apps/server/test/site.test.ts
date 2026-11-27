@@ -309,6 +309,20 @@ describe('Tela Site: categorias, de-para e curadoria', () => {
     expect((await fetch(base + '/api/site/resumo')).status).toBe(401);
   });
 
+  it('produtos calculados por uma versão anterior do sistema são recalculados e reenviados', async () => {
+    const { cursor, produtos } = await sincronizar();
+    const alvo = produtos[0]!;
+    // Como ficaria um produto calculado antes de existir a quantidade mínima
+    const atual = db.prepare('SELECT publico_json FROM site_produtos WHERE codigo = ?').get(alvo.codigo) as { publico_json: string };
+    const antigo = JSON.parse(atual.publico_json) as Record<string, unknown>;
+    delete antigo.minimo;
+    db.prepare('UPDATE site_produtos SET publico_json = ?, impressao = ? WHERE codigo = ?').run(JSON.stringify(antigo), 'antiga', alvo.codigo);
+    db.prepare("UPDATE parametros SET valor = json_set(valor, '$.base', 'versao-anterior') WHERE chave = 'site_base'").run();
+    const inc = await sincronizar(cursor);
+    expect(inc.produtos.map((p) => p.codigo)).toEqual([alvo.codigo]);
+    expect(inc.produtos[0]!.minimo).toBe(30);
+  });
+
   it('recalcular de novo, sem mudança, não gera nada novo para o site', async () => {
     const { cursor } = await sincronizar();
     const r = recalcularSite(db);

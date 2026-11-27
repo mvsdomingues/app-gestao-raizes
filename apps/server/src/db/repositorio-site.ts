@@ -50,6 +50,14 @@ import type { Banco } from './conexao';
 // campo a campo só com dados públicos; as fotos reais ficam em fotos_json (só a gestão).
 
 const CHAVE_BASE = 'site_base';
+/**
+ * Versão da montagem dos produtos do site. Aumente sempre que mudar o que vai em
+ * publico_json (campo novo no contrato, regra de nome, categoria, mínimo…): na
+ * primeira consulta depois da atualização do sistema tudo é recalculado e os produtos
+ * que mudaram ganham data nova, chegando ao site na sincronização seguinte.
+ * 1 = fase 1; 2 = quantidade mínima (fase 2).
+ */
+export const VERSAO_CALCULO_SITE = 2;
 const CHAVE_CATEGORIAS_INICIAIS = 'site_categorias_iniciais';
 
 /** Data/hora das mudanças vistas pelo site (UTC, com milissegundos: ordena o cursor da sincronização). */
@@ -310,7 +318,7 @@ const fotoValida = (u: unknown): u is string => typeof u === 'string' && (/^http
 function impressaoBase(db: Banco): string {
   const a = db.prepare('SELECT COUNT(*) AS n, MAX(atualizado) AS m, MAX(id) AS i FROM produtos').get();
   const b = db.prepare('SELECT COUNT(*) AS n, MAX(atualizado) AS m, MAX(id) AS i FROM produtos_proprios').get();
-  return JSON.stringify([a, b]);
+  return JSON.stringify([VERSAO_CALCULO_SITE, a, b]);
 }
 
 /** Recalcula se os produtos mudaram desde o último cálculo (chamado antes de responder ao site). */

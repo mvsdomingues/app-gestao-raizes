@@ -56,7 +56,7 @@ export function CartaoProduto({ p, linha }: { p: ProdutoResumo; linha?: boolean 
           </div>
         )}
         <div className="cartao-rodape">
-          <span className="minimo">Mín. {p.minimo.toLocaleString('pt-BR')} un.</span>
+          {p.minimo > 0 && <span className="minimo">Mín. {p.minimo.toLocaleString('pt-BR')} un.</span>}
           <span className={`estoque ${p.disponivel ? 'ok' : ''}`}>{p.disponivel ? 'Disponível' : 'Consultar'}</span>
         </div>
         <Link href={href} className="botao botao-contorno cartao-botao">

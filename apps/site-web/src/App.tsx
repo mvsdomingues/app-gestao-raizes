@@ -2,6 +2,7 @@ import type { RespostaLayoutSite } from '@raizes/contrato-site';
 import { useDados } from './api';
 import { Aviso, Carregando } from './componentes/Basicos';
 import { Layout } from './componentes/Layout';
+import { ProtecaoErro } from './componentes/ProtecaoErro';
 import { ContextoSite } from './contexto';
 import { Catalogo } from './paginas/Catalogo';
 import { Clientes } from './paginas/Clientes';
@@ -37,9 +38,18 @@ export function App() {
   return (
     <ContextoSite.Provider value={dados}>
       <Layout>
-        <Rotas />
+        <RotasProtegidas />
       </Layout>
     </ContextoSite.Provider>
+  );
+}
+
+function RotasProtegidas() {
+  const { caminho } = useEndereco();
+  return (
+    <ProtecaoErro chave={caminho}>
+      <Rotas />
+    </ProtecaoErro>
   );
 }
 

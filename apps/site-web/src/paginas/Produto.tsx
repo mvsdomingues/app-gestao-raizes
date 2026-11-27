@@ -45,11 +45,12 @@ export function Produto({ slug }: { slug: string }) {
   }
   if (erro) return <Aviso titulo="Não foi possível carregar o produto"><p>{erro.message}</p></Aviso>;
   if (!p) return <Carregando />;
+  const minimo = p.minimo > 0 ? p.minimo : 1;
 
   const cat = site.categorias.find((c) => p.categorias.includes(c.slug));
   const quantidade = Number(qtd) || 0;
-  const qtdBaixa = !!qtd && quantidade < p.minimo;
-  const wpp = linkWhatsApp(site.geral, mensagemProduto(p, corAtual?.nome, quantidade || undefined));
+  const qtdBaixa = !!qtd && quantidade < minimo;
+  const wpp = linkWhatsApp(site.geral, mensagemProduto({ ...p, minimo }, corAtual?.nome, quantidade || undefined));
   const fotoAtual = fotos[foto] ?? 0;
   const ficha: [string, string | null][] = [
     ['Medidas', p.medidas],
@@ -122,16 +123,16 @@ export function Produto({ slug }: { slug: string }) {
               <input
                 type="number"
                 inputMode="numeric"
-                min={p.minimo}
+                min={minimo}
                 step={1}
-                placeholder={`a partir de ${p.minimo}`}
+                placeholder={`a partir de ${minimo}`}
                 value={qtd}
                 onChange={(e) => setQtd(e.target.value)}
                 aria-invalid={qtdBaixa}
               />
             </label>
             <p className={`minimo-info${qtdBaixa ? ' alerta' : ''}`}>
-              Pedido mínimo: {p.minimo.toLocaleString('pt-BR')} unidades ·{' '}
+              Pedido mínimo: {minimo.toLocaleString('pt-BR')} unidades ·{' '}
               <span className={p.disponivel ? 'ok' : ''}>{p.disponivel ? 'Disponível' : 'Consultar disponibilidade'}</span>
             </p>
             {wpp ? (
