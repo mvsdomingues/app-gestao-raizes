@@ -1,4 +1,7 @@
 import type {
+  BannerGestao,
+  ColecaoGestao,
+  ConteudoSiteGestao,
   CategoriaSiteGestao,
   DeParaSite,
   ModoVisibilidade,
@@ -213,7 +216,7 @@ export const api = {
   siteCategorias: () => enviar<CategoriaSiteGestao[]>('GET', '/api/site/categorias'),
   siteSalvarCategoria: (
     id: number | null,
-    dados: { nome: string; slug?: string; ordem: number; ativa: boolean; palavras_chave: string },
+    dados: { nome: string; slug?: string; ordem: number; ativa: boolean; palavras_chave: string; minimo: number | null },
   ) =>
     id === null
       ? enviar<{ id: number }>('POST', '/api/site/categorias', dados)
@@ -230,8 +233,22 @@ export const api = {
       'GET',
       `/api/site/produtos?${new URLSearchParams({ ...q, pagina: String(q.pagina) })}`,
     ),
-  siteAlterarProduto: (codigo: string, dados: { modo?: ModoVisibilidade; destaque?: boolean; categorias?: number[] | null }) =>
-    enviar<{ ok: true }>('PUT', `/api/site/produtos/${encodeURIComponent(codigo)}`, dados),
+  siteAlterarProduto: (
+    codigo: string,
+    dados: { modo?: ModoVisibilidade; destaque?: boolean; categorias?: number[] | null; minimo?: number | null },
+  ) => enviar<{ ok: true }>('PUT', `/api/site/produtos/${encodeURIComponent(codigo)}`, dados),
+  siteConteudo: () => enviar<ConteudoSiteGestao>('GET', '/api/site/conteudo'),
+  siteSalvarConteudo: (chave: string, dados: unknown) => enviar<{ ok: true }>('PUT', `/api/site/conteudo/${chave}`, dados),
+  siteEnviarImagem: (dados: string) => enviar<{ id: string }>('POST', '/api/site/imagens', { dados }),
+  siteBanners: () => enviar<BannerGestao[]>('GET', '/api/site/banners'),
+  siteSalvarBanner: (id: number | null, dados: Partial<BannerGestao>) =>
+    id === null ? enviar<{ id: number }>('POST', '/api/site/banners', dados) : enviar<{ id: number }>('PUT', `/api/site/banners/${id}`, dados),
+  siteExcluirBanner: (id: number) => enviar<{ ok: true }>('DELETE', `/api/site/banners/${id}`),
+  siteColecoes: () => enviar<ColecaoGestao[]>('GET', '/api/site/colecoes'),
+  siteSalvarColecao: (id: number | null, dados: Partial<ColecaoGestao>) =>
+    id === null
+      ? enviar<{ id: number }>('POST', '/api/site/colecoes', dados)
+      : enviar<{ id: number }>('PUT', `/api/site/colecoes/${id}`, dados),
 
   /** Usuários para o filtro "Responsável" de orçamentos e pedidos */
   responsaveis: () => enviar<OpcaoResponsavel[]>('GET', '/api/usuarios/responsaveis'),

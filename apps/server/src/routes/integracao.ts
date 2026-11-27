@@ -10,6 +10,7 @@ import {
 } from '@raizes/contrato-site';
 import type { Banco } from '../db/conexao';
 import { categoriasPublicas, fotoDoProduto, produtosParaSite } from '../db/repositorio-site';
+import { arquivoImagemSite, conteudoParaSite } from '../db/repositorio-site-conteudo';
 import { ErroHttp } from '../lib/http';
 
 /** Chamada feita do próprio servidor: conexão local e sem cabeçalhos de quem passou pelo Nginx. */
@@ -71,6 +72,17 @@ export function rotasIntegracao(db: Banco, opcoes: { token: string | null; image
   r.get(`${PREFIXO_INTEGRACAO}/categorias`, (_req, res) => {
     const corpo: RespostaCategoriasSite = { categorias: categoriasPublicas(db) };
     res.json(corpo);
+  });
+
+  r.get(`${PREFIXO_INTEGRACAO}/conteudo`, (_req, res) => {
+    res.json(conteudoParaSite(db));
+  });
+
+  /** Imagem enviada na tela Site (banner, capa de coleção, logo de cliente). */
+  r.get(`${PREFIXO_INTEGRACAO}/imagens/:id`, (req, res) => {
+    const img = arquivoImagemSite(db, opcoes.imagensDir, String(req.params.id));
+    if (!img) throw new ErroHttp(404, 'Imagem não encontrada');
+    res.type(img.tipo).set('Cache-Control', 'public, max-age=86400').sendFile(img.caminho);
   });
 
   /** Foto n do produto: buscada na hora e repassada (o endereço do fornecedor nunca sai da gestão). */

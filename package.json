@@ -13,9 +13,12 @@
   },
   "scripts": {
     "dev": "concurrently -k -n api,web -c magenta,cyan \"npm run dev -w @raizes/server\" \"npm run dev -w @raizes/web\"",
-    "build": "npm run build -w @raizes/web && npm run build -w @raizes/server",
+    "dev:site": "concurrently -k -n site,vitrine -c green,yellow \"npm run dev -w @raizes/site-server\" \"npm run dev -w @raizes/site-web\"",
+    "build": "npm run build -w @raizes/web && npm run build -w @raizes/server && npm run build -w @raizes/site-web && npm run build -w @raizes/site-server",
     "start": "npm run start -w @raizes/server",
+    "start:site": "npm run start -w @raizes/site-server",
     "atualizar": "npm run atualizar -w @raizes/server --",
+    "sincronizar:site": "npm run sincronizar -w @raizes/site-server --",
     "imagens:spot": "npm run imagens:spot -w @raizes/server --",
     "backup": "npm run backup -w @raizes/server --",
     "restaurar": "npm run restaurar -w @raizes/server --",

@@ -14,8 +14,9 @@ import { ImagemProduto } from '../../components/ImagemProduto';
 import { api } from '../../lib/api';
 import { avisar, confirmar, erroDe } from '../../lib/dialogo';
 import { Paginacao } from '../catalogo/Paginacao';
+import { AbaConteudo, AbaPaginaInicial } from './SiteConteudo';
 
-type Aba = 'produtos' | 'depara' | 'categorias';
+type Aba = 'produtos' | 'depara' | 'categorias' | 'inicio' | 'conteudo';
 
 const ROTULO_MODO: Record<ModoVisibilidade, string> = {
   auto: 'Automático',
@@ -121,6 +122,8 @@ export function Site() {
             ['produtos', 'Produtos'],
             ['depara', `De-para de categorias${resumo?.depara_pendentes ? ` (${resumo.depara_pendentes})` : ''}`],
             ['categorias', 'Categorias da Raízes'],
+            ['inicio', 'Página inicial'],
+            ['conteudo', 'Conteúdo'],
           ] as [Aba, string][]
         ).map(([id, rotulo]) => (
           <button
@@ -141,6 +144,8 @@ export function Site() {
           {aba === 'produtos' && <AbaProdutos categorias={ativas} versao={versao} alterado={alterado} />}
           {aba === 'depara' && <AbaDePara categorias={ativas} versao={versao} alterado={alterado} />}
           {aba === 'categorias' && <AbaCategorias categorias={categorias} alterado={alterado} />}
+          {aba === 'inicio' && <AbaPaginaInicial versao={versao} alterado={alterado} />}
+          {aba === 'conteudo' && <AbaConteudo versao={versao} alterado={alterado} />}
         </>
       )}
     </div>
@@ -292,7 +297,9 @@ function AbaProdutos({
                 <td>
                   <div className="cadastro-nome">{p.nome}</div>
                   <div className="cadastro-data">
-                    {p.fornecedor} · {p.chave} · {p.cores} cor{p.cores !== 1 ? 'es' : ''} · {p.fotos} foto{p.fotos !== 1 ? 's' : ''}
+                    {p.fornecedor} · {p.chave} · {p.cores} cor{p.cores !== 1 ? 'es' : ''} · {p.fotos} foto{p.fotos !== 1 ? 's' : ''} · mín.{' '}
+                    {p.minimo}
+                    {p.minimo_proprio ? ' (do produto)' : ''}
                   </div>
                 </td>
                 <td>
@@ -337,7 +344,7 @@ function AbaProdutos({
                 </td>
                 <td className="cadastro-acoes">
                   <button type="button" className="site-acao" onClick={() => setEditando(p)}>
-                    Categorias
+                    Ajustes
                   </button>
                 </td>
               </tr>
@@ -381,11 +388,17 @@ function ModalCategoriasProduto({
   const porNome = new Map(categorias.map((c) => [c.nome, c.id]));
   const iniciais = produto.categorias_manuais ?? produto.categorias.map((n) => porNome.get(n)).filter((i): i is number => !!i);
   const [escolhidas, setEscolhidas] = useState<number[]>(iniciais);
+  const [minimo, setMinimo] = useState(produto.minimo_proprio ? String(produto.minimo_proprio) : '');
   const [erro, setErro] = useState('');
+  const minimoValor = minimo.trim() ? Number(minimo) : null;
 
-  const gravar = async (valor: number[] | null) => {
+  /** valor = categorias escolhidas à mão; null = continua automático; voltar = desfaz as escolhidas à mão */
+  const gravar = async (valor: number[] | null, voltar = false) => {
     try {
-      await api.siteAlterarProduto(produto.codigo, { categorias: valor });
+      await api.siteAlterarProduto(produto.codigo, {
+        ...(voltar ? { categorias: null } : valor ? { categorias: valor } : {}),
+        minimo: minimoValor,
+      });
       salvo();
     } catch (e) {
       setErro(e instanceof Error ? e.message : String(e));
@@ -396,7 +409,7 @@ function ModalCategoriasProduto({
     <div className="custom-modal-backdrop open" id="modal-site-categorias" onClick={(e) => e.target === e.currentTarget && fechar()}>
       <div className="custom-modal-card novo-cliente-modal" role="dialog" aria-label="Categorias do produto">
         <div className="custom-modal-header">
-          <h3 className="custom-modal-title">Categorias de {produto.nome}</h3>
+          <h3 className="custom-modal-title">Ajustes de {produto.nome}</h3>
           <button type="button" className="custom-modal-close" onClick={fechar} aria-label="Fechar">
             ✕
           </button>
@@ -418,17 +431,35 @@ function ModalCategoriasProduto({
             </label>
           ))}
         </fieldset>
+        <label className="site-minimo">
+          Quantidade mínima deste produto
+          <input
+            className="custom-input"
+            id="site-produto-minimo"
+            type="number"
+            min={1}
+            placeholder={`da categoria ou padrão (hoje ${produto.minimo_proprio ? '—' : produto.minimo})`}
+            value={minimo}
+            onChange={(e) => setMinimo(e.target.value)}
+          />
+        </label>
         {erro && <div className="form-mensagem erro">{erro}</div>}
         <div className="custom-modal-actions">
           {produto.categorias_manuais && (
-            <button type="button" className="btn-secondary" onClick={() => void gravar(null)}>
+            <button type="button" className="btn-secondary" onClick={() => void gravar(null, true)}>
               Voltar às automáticas
             </button>
           )}
           <button type="button" className="btn-secondary" onClick={fechar}>
             Cancelar
           </button>
-          <button type="button" className="btn-primary" id="btn-salvar-site-categorias" disabled={!escolhidas.length} onClick={() => void gravar(escolhidas)}>
+          <button
+            type="button"
+            className="btn-primary"
+            id="btn-salvar-site-categorias"
+            disabled={!escolhidas.length}
+            onClick={() => void gravar(produto.categorias_manuais || JSON.stringify(escolhidas) !== JSON.stringify(iniciais) ? escolhidas : null)}
+          >
             Salvar
           </button>
         </div>
@@ -611,6 +642,7 @@ function AbaCategorias({ categorias, alterado }: { categorias: CategoriaSiteGest
         ordem: c.ordem,
         ativa: !c.ativa,
         palavras_chave: c.palavras_chave.join(', '),
+        minimo: c.minimo,
       });
       alterado();
     } catch (e) {
@@ -654,7 +686,10 @@ function AbaCategorias({ categorias, alterado }: { categorias: CategoriaSiteGest
                   {c.ativa ? '' : ' · inativa'}
                 </div>
               </td>
-              <td className="site-palavras">{c.fixa ? 'Produtos sem outra categoria' : c.palavras_chave.join(', ') || '—'}</td>
+              <td className="site-palavras">
+                {c.fixa ? 'Produtos sem outra categoria' : c.palavras_chave.join(', ') || '—'}
+                {c.minimo ? <div className="cadastro-data">mínimo {c.minimo}</div> : null}
+              </td>
               <td className="num">{c.produtos.toLocaleString('pt-BR')}</td>
               <td className="cadastro-acoes">
                 <button type="button" className="site-acao" onClick={() => setEditando(c)}>
@@ -701,6 +736,7 @@ function ModalCategoria({
   const [slug, setSlug] = useState(categoria?.slug ?? '');
   const [ordem, setOrdem] = useState(String(categoria?.ordem ?? proximaOrdem));
   const [palavras, setPalavras] = useState(categoria?.palavras_chave.join(', ') ?? '');
+  const [minimo, setMinimo] = useState(categoria?.minimo ? String(categoria.minimo) : '');
   const [erro, setErro] = useState('');
   const [salvando, setSalvando] = useState(false);
 
@@ -714,6 +750,7 @@ function ModalCategoria({
         ordem: Number(ordem) || 0,
         ativa: categoria?.ativa ?? true,
         palavras_chave: palavras,
+        minimo: minimo.trim() ? Number(minimo) : null,
       });
       salvo();
     } catch (e) {
@@ -759,6 +796,10 @@ function ModalCategoria({
           <label>
             Ordem no menu
             <input className="custom-input" id="site-categoria-ordem" type="number" value={ordem} onChange={(e) => setOrdem(e.target.value)} />
+          </label>
+          <label>
+            Quantidade mínima (vazio = o padrão do site)
+            <input className="custom-input" id="site-categoria-minimo" type="number" min={1} value={minimo} onChange={(e) => setMinimo(e.target.value)} />
           </label>
           {!categoria?.fixa && (
             <label>

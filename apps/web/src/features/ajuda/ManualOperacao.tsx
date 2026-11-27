@@ -1248,7 +1248,8 @@ export function ManualOperacao() {
         />
         <p>
           A caixa <Bt>Destaque</Bt> põe o produto entre os destaques do site. Na aba <i>Produtos</i>, o botão{' '}
-          <Bt>Categorias</Bt> escolhe as categorias de um produto à mão; <Bt>Voltar às automáticas</Bt> desfaz.
+          <Bt>Ajustes</Bt> escolhe as categorias e a quantidade mínima de um produto; <Bt>Voltar às automáticas</Bt> desfaz as
+          categorias escolhidas à mão.
         </p>
         <h4>Categorias e de-para</h4>
         <Passos
@@ -1267,10 +1268,35 @@ export function ManualOperacao() {
           ]}
         />
         <Dica>
-          O site é recalculado sozinho ao fim de cada atualização de produtos e a cada alteração nesta tela. O botão{' '}
+          O site é recalculado sozinho ao fim de cada atualização de produtos e a cada alteração nesta tela, e o site é avisado na
+          hora (sem aviso, ele confere as novidades a cada 10 minutos). O botão{' '}
           <Bt>Recalcular agora</Bt> refaz o cálculo na hora. Só o que mudou de visível (nome, descrição, fotos, cores,
           categorias, disponível ou não) é enviado ao site; preço e estoque, que mudam todo dia, não contam.
         </Dica>
+        <h4>Página inicial e conteúdo</h4>
+        <Passos
+          itens={[
+            <>
+              Em <i>Página inicial</i>, cadastre os <b>banners</b> do carrossel (imagem para computador e, se quiser, para
+              celular; título, botão, link e período de exibição — o banner entra e sai do ar sozinho nas datas).
+            </>,
+            <>
+              Ainda em <i>Página inicial</i>, monte as <b>coleções</b>: <i>vitrine</i> é uma faixa de produtos na home (ex.:
+              Lançamentos); <i>kit por ocasião</i> tem página própria (/kits/…) com texto, capa e produtos sugeridos. Coleção
+              sem produto no site não aparece.
+            </>,
+            <>
+              Em <i>Conteúdo</i>, preencha WhatsApp, e-mail, horário, redes sociais, a <b>quantidade mínima padrão</b>, os
+              textos de Sobre nós, Como funciona e Aviso de privacidade, a faixa de benefícios, os depoimentos e os logos de
+              clientes. Cada bloco tem o seu botão <Bt>Salvar</Bt>.
+            </>,
+          ]}
+        />
+        <p>
+          <b>Quantidade mínima</b>: vale a do produto (botão <Bt>Ajustes</Bt> na aba Produtos); se não houver, a menor entre as
+          categorias dele (aba Categorias); se não houver, a padrão do site. Enquanto a lista de cotação não existe no site, o
+          botão <i>Solicitar orçamento</i> abre o WhatsApp com o produto, a cor e a quantidade já escritos.
+        </p>
         <Dica tipo="atencao">
           “Integração desligada” no alto da tela quer dizer que o servidor ainda não tem o token do site (INTEGRACAO_TOKEN no
           .env). A tela funciona igual; só o site ainda não consegue buscar os produtos.

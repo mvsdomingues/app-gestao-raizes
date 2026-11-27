@@ -37,6 +37,7 @@ import {
   type ResumoSite,
 } from '@raizes/shared';
 import { ErroHttp } from '../lib/http';
+import { minimoPadrao, validarMinimo } from './repositorio-site-conteudo';
 import { isoLocal } from '../lib/datas';
 import type { Banco } from './conexao';
 
@@ -88,6 +89,7 @@ interface LinhaCategoria {
   ativa: number;
   fixa: number;
   palavras_chave: string;
+  minimo: number | null;
 }
 
 /** Cria "Outros" e, uma vez só (banco sem categorias), a lista inicial sugerida. */
@@ -147,6 +149,7 @@ export function listarCategoriasSite(db: Banco): CategoriaSiteGestao[] {
     ativa: !!c.ativa,
     fixa: !!c.fixa,
     palavras_chave: lerJson<string[]>(c.palavras_chave, []),
+    minimo: c.minimo,
     produtos: contagem.get(c.slug) ?? 0,
   }));
 }
@@ -167,6 +170,7 @@ export function salvarCategoriaSite(db: Banco, corpo: Record<string, unknown>, u
   const ordem = Number.isFinite(Number(corpo.ordem)) ? Math.round(Number(corpo.ordem)) : 0;
   const palavras = JSON.stringify(lerPalavrasChave(corpo.palavras_chave));
   const ativa = corpo.ativa === undefined ? 1 : corpo.ativa ? 1 : 0;
+  const minimo = validarMinimo(corpo.minimo, false);
   const agora = isoLocal();
   linhasCategorias(db);
   const mesmoSlug = db.prepare('SELECT id FROM site_categorias WHERE slug = ?').get(slug) as { id: number } | undefined;
@@ -176,10 +180,10 @@ export function salvarCategoriaSite(db: Banco, corpo: Record<string, unknown>, u
     salvo = Number(
       db
         .prepare(
-          `INSERT INTO site_categorias (slug, nome, ordem, ativa, fixa, palavras_chave, criado, atualizado, usuario_id)
-           VALUES (?, ?, ?, ?, 0, ?, ?, ?, ?)`,
+          `INSERT INTO site_categorias (slug, nome, ordem, ativa, fixa, palavras_chave, minimo, criado, atualizado, usuario_id)
+           VALUES (?, ?, ?, ?, 0, ?, ?, ?, ?, ?)`,
         )
-        .run(slug, nome, ordem, ativa, palavras, agora, agora, usuarioId).lastInsertRowid,
+        .run(slug, nome, ordem, ativa, palavras, minimo, agora, agora, usuarioId).lastInsertRowid,
     );
     registrar(db, usuarioId, 'categoria criada', `${nome} (${slug})`);
   } else {
@@ -189,9 +193,9 @@ export function salvarCategoriaSite(db: Banco, corpo: Record<string, unknown>, u
       throw new ErroHttp(400, `"${atual.nome}" é a categoria dos produtos sem outra: não pode ser inativada nem mudar de endereço`);
     }
     db.prepare(
-      `UPDATE site_categorias SET slug = ?, nome = ?, ordem = ?, ativa = ?, palavras_chave = ?, atualizado = ?, usuario_id = ?
-        WHERE id = ?`,
-    ).run(slug, nome, ordem, ativa, palavras, agora, usuarioId, id);
+      `UPDATE site_categorias SET slug = ?, nome = ?, ordem = ?, ativa = ?, palavras_chave = ?, minimo = ?, atualizado = ?,
+              usuario_id = ? WHERE id = ?`,
+    ).run(slug, nome, ordem, ativa, palavras, minimo, agora, usuarioId, id);
     registrar(db, usuarioId, 'categoria alterada', `${atual.nome} → ${nome} (${slug}${ativa ? '' : ', inativa'})`);
     salvo = id;
   }
@@ -296,6 +300,7 @@ interface LinhaSite {
   impressao: string | null;
   visivel: number;
   saiu: string | null;
+  minimo: number | null;
 }
 
 /** Endereço de foto que a gestão sabe buscar (do fornecedor ou das imagens locais). */
@@ -351,6 +356,7 @@ export function recalcularSite(db: Banco): ResultadoCalculoSite {
   const ativas = categorias.filter((c) => c.ativa);
   const porId = new Map(ativas.map((c) => [c.id, c]));
   const regrasNome = ativas.filter((c) => !c.fixa).map(comPalavras);
+  const padrao = minimoPadrao(db);
   const base = impressaoBase(db);
 
   const linhas = db
@@ -431,6 +437,8 @@ export function recalcularSite(db: Banco): ResultadoCalculoSite {
       const montado = montarProduto(m, codigo, {
         manuais: lerJson<number[] | null>(atual?.categorias_manuais, null),
         destaque: !!atual?.destaque,
+        minimo: atual?.minimo ?? null,
+        padrao,
         porId,
         dePara,
         regrasNome,
@@ -482,6 +490,8 @@ function montarProduto(
   ctx: {
     manuais: number[] | null;
     destaque: boolean;
+    minimo: number | null;
+    padrao: number;
     porId: Map<number, LinhaCategoria>;
     dePara: Map<string, number>;
     regrasNome: CategoriaComPalavras[];
@@ -547,8 +557,12 @@ function montarProduto(
     }
   }
   if (!slugs.size) slugs.add(SLUG_OUTROS);
-  const outros = slugs.size > 1 && slugs.has(SLUG_OUTROS);
-  if (outros) slugs.delete(SLUG_OUTROS);
+  if (slugs.size > 1) slugs.delete(SLUG_OUTROS);
+
+  // Quantidade mínima: a do produto; senão a menor entre as categorias dele; senão o padrão do site
+  const porSlug = new Map([...ctx.porId.values()].map((c) => [c.slug, c]));
+  const daCategoria = [...slugs].map((s) => porSlug.get(s)?.minimo).filter((n): n is number => typeof n === 'number');
+  const minimo = ctx.minimo ?? (daCategoria.length ? Math.min(...daCategoria) : ctx.padrao);
 
   const publico: ProdutoSite = {
     codigo,
@@ -565,6 +579,7 @@ function montarProduto(
     categorias: [...slugs].sort(),
     disponivel: ls.some(disponivelLinha),
     destaque: ctx.destaque,
+    minimo,
     alterado: '',
   };
   return { publico, fotosReais };
@@ -740,6 +755,8 @@ export function listarProdutosSite(
         fotos: fotos.length,
         foto: fotos[0] ?? null,
         disponivel: !!r.disponivel,
+        minimo: p?.minimo ?? 0,
+        minimo_proprio: r.minimo,
         alterado: r.alterado,
       };
     }),
@@ -777,11 +794,16 @@ export function alterarProdutoSite(db: Banco, codigo: string, corpo: Record<stri
     }
     if (manuais !== atual.categorias_manuais) mudancas.push(manuais ? 'categorias escolhidas à mão' : 'categorias automáticas');
   }
+  let minimo = atual.minimo;
+  if (corpo.minimo !== undefined) {
+    minimo = validarMinimo(corpo.minimo, false);
+    if (minimo !== atual.minimo) mudancas.push(minimo ? `mínimo ${minimo}` : 'mínimo da categoria');
+  }
   if (!mudancas.length) return;
   db.prepare(
-    `UPDATE site_produtos SET visibilidade = ?, destaque = ?, categorias_manuais = ?, curadoria_em = ?, curadoria_por = ?
+    `UPDATE site_produtos SET visibilidade = ?, destaque = ?, categorias_manuais = ?, minimo = ?, curadoria_em = ?, curadoria_por = ?
       WHERE codigo = ?`,
-  ).run(modo, destaque, manuais, isoLocal(), usuarioId, codigo);
+  ).run(modo, destaque, manuais, minimo, isoLocal(), usuarioId, codigo);
   registrar(db, usuarioId, 'produto', `${codigo} ${atual.nome}: ${mudancas.join(', ')}`);
   recalcularSite(db);
 }

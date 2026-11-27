@@ -13,6 +13,7 @@ import { config } from '../config';
 import { abrirBanco } from '../db/conexao';
 import { registrarErro, substituirProdutosFornecedor } from '../db/repositorio-produtos';
 import { recalcularSite } from '../db/repositorio-site';
+import { AvisoSite } from '../services/aviso-site';
 import { COLETORES, type ContextoColeta } from '../fornecedores';
 import { dataHoraBR } from '../lib/datas';
 
@@ -57,6 +58,10 @@ async function main(): Promise<number> {
     console.log(
       `\n→ Site: ${r.produtos} produtos (${r.visiveis} visíveis); ${r.novos} novos, ${r.alterados} alterados, ${r.saidos} saíram.`,
     );
+    const aviso = new AvisoSite({ url: config.siteUrlInterna, token: config.integracaoToken });
+    if (aviso.ligado && (r.novos || r.alterados || r.saidos)) {
+      console.log((await aviso.avisarAgora()) ? '  ✔ Site avisado.' : '  ⚠ Site não respondeu ao aviso (vai sincronizar no intervalo).');
+    }
   } catch (e) {
     console.log(`\n  ✘ Site: ${mensagemErro(e)}`);
   }

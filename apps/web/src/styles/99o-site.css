@@ -95,3 +95,70 @@
 .site-acao:hover { border-color: var(--uva); background: var(--uva); color: #fff; }
 .site-acao.perigo { color: var(--muted); }
 .site-acao.perigo:hover { border-color: var(--danger); background: var(--danger); color: #fff; }
+
+/* ── Página inicial e Conteúdo ── */
+.site-secao-titulo { font-family: 'Cormorant Garamond', serif; font-size: 1.35rem; color: var(--berinjela); margin: 0; flex: 1; }
+.site-espaco { margin-top: 26px; }
+.site-banners { display: grid; gap: 10px; }
+.site-banner {
+  display: grid;
+  grid-template-columns: 200px 1fr auto;
+  gap: 14px;
+  align-items: center;
+  background: #fff;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 10px;
+}
+.site-banner img { width: 200px; height: 72px; object-fit: cover; border-radius: 4px; background: var(--creme); }
+.site-banner.desligado { opacity: .55; }
+.site-banner-texto { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
+.site-banner-texto b { color: var(--berinjela); }
+.site-banner-acoes { white-space: nowrap; }
+
+.site-imagem-campo { display: flex; flex-direction: column; gap: 6px; font-size: .85rem; }
+.site-imagem-rotulo { color: var(--text); }
+.site-imagem-linha { display: flex; gap: 12px; align-items: center; }
+.site-imagem-previa {
+  width: 120px; height: 72px; border: 1px dashed var(--border2); border-radius: 6px; background: var(--creme);
+  display: flex; align-items: center; justify-content: center; overflow: hidden; flex-shrink: 0;
+}
+.site-imagem-previa img { width: 100%; height: 100%; object-fit: contain; }
+.site-imagem-previa span { font-size: .72rem; color: var(--muted); }
+.site-imagem-acoes { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; }
+.site-dupla { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; align-items: end; }
+.site-check { display: flex; gap: 8px; align-items: center; padding-bottom: 10px; }
+.site-modal-largo { max-width: 760px; width: 100%; }
+.site-colecao-produtos { border: 1px solid var(--border); border-radius: 8px; padding: 10px 12px; }
+.site-colecao-produtos legend { padding: 0 6px; color: var(--berinjela); font-weight: 600; }
+.site-achados, .site-itens { list-style: none; margin: 8px 0 0; padding: 0; max-height: 220px; overflow: auto; }
+.site-itens { counter-reset: item; }
+.site-achados li, .site-itens li {
+  display: flex; justify-content: space-between; align-items: center; gap: 8px;
+  padding: 6px 4px; border-bottom: 1px solid var(--border); font-size: .84rem;
+}
+.site-achados b, .site-itens b { color: var(--uva); font-weight: 600; margin-right: 4px; }
+.site-itens li.fora { opacity: .6; }
+.site-itens-acoes { white-space: nowrap; }
+.site-minimo { display: flex; flex-direction: column; gap: 4px; font-size: .85rem; margin-bottom: 12px; }
+
+.site-conteudo { display: flex; flex-direction: column; gap: 12px; }
+.site-bloco { padding: 14px 18px; }
+.site-bloco summary { cursor: pointer; font-family: 'Cormorant Garamond', serif; font-size: 1.25rem; color: var(--berinjela); }
+.site-bloco[open] summary { margin-bottom: 12px; }
+.site-grade-campos { display: grid; grid-template-columns: repeat(auto-fill, minmax(260px, 1fr)); gap: 10px 16px; }
+.site-grade-campos label, .site-pagina label { display: flex; flex-direction: column; gap: 4px; font-size: .84rem; }
+.site-pagina { display: grid; grid-template-columns: 240px 1fr; gap: 14px; margin-bottom: 12px; }
+.site-salvar { display: flex; justify-content: flex-end; margin-top: 10px; }
+.site-salvar .btn-primary { width: auto; padding: 9px 22px; }
+.site-lista { display: flex; flex-direction: column; gap: 8px; align-items: flex-start; }
+.site-lista-item { display: flex; gap: 10px; width: 100%; align-items: flex-start; border-bottom: 1px solid var(--border); padding-bottom: 8px; }
+.site-lista-corpo { flex: 1; display: flex; flex-direction: column; gap: 6px; }
+.site-lista-acoes { white-space: nowrap; padding-top: 6px; }
+.site-depoimento { display: flex; flex-direction: column; gap: 6px; }
+@media (max-width: 760px) {
+  .site-dupla, .site-pagina { grid-template-columns: 1fr; }
+  .site-banner { grid-template-columns: 1fr; }
+}
+.novo-cliente-campos label.site-check { flex-direction: row; align-items: center; gap: 8px; }
+.novo-cliente-campos label.site-check input { width: 18px; height: 18px; flex: none; accent-color: var(--uva); }

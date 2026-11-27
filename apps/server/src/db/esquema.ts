@@ -646,6 +646,52 @@ function migrarColunas(db: Database.Database): void {
       UNIQUE (fornecedor, chave)
     );
     CREATE INDEX IF NOT EXISTS ix_site_produtos_alterado ON site_produtos(alterado, codigo);
+    -- Conteúdo do site (dados gerais, páginas, benefícios, depoimentos, clientes): chave → JSON
+    CREATE TABLE IF NOT EXISTS site_conteudo (
+      chave      TEXT PRIMARY KEY,
+      valor      TEXT NOT NULL,
+      atualizado TEXT NOT NULL,
+      usuario_id INTEGER REFERENCES usuarios(id)
+    );
+    -- Imagens enviadas para o site (banners, capas, logos de clientes), em IMAGENS_DIR/site/
+    CREATE TABLE IF NOT EXISTS site_imagens (
+      id         TEXT PRIMARY KEY,
+      arquivo    TEXT NOT NULL,
+      tipo       TEXT NOT NULL,
+      bytes      INTEGER NOT NULL,
+      criado     TEXT NOT NULL,
+      usuario_id INTEGER REFERENCES usuarios(id)
+    );
+    -- Banners do carrossel da home, com período de exibição
+    CREATE TABLE IF NOT EXISTS site_banners (
+      id             INTEGER PRIMARY KEY AUTOINCREMENT,
+      titulo         TEXT NOT NULL DEFAULT '',
+      subtitulo      TEXT NOT NULL DEFAULT '',
+      texto_botao    TEXT NOT NULL DEFAULT '',
+      link           TEXT NOT NULL DEFAULT '',
+      imagem         TEXT NOT NULL,
+      imagem_celular TEXT,
+      ordem          INTEGER NOT NULL DEFAULT 0,
+      inicio         TEXT,
+      fim            TEXT,
+      ativo          INTEGER NOT NULL DEFAULT 1,
+      atualizado     TEXT NOT NULL,
+      usuario_id     INTEGER REFERENCES usuarios(id)
+    );
+    -- Coleções: vitrines da home (Lançamentos…) e kits por ocasião (página própria)
+    CREATE TABLE IF NOT EXISTS site_colecoes (
+      id         INTEGER PRIMARY KEY AUTOINCREMENT,
+      slug       TEXT NOT NULL UNIQUE,
+      nome       TEXT NOT NULL,
+      tipo       TEXT NOT NULL DEFAULT 'vitrine',
+      texto      TEXT NOT NULL DEFAULT '',
+      imagem     TEXT,
+      ordem      INTEGER NOT NULL DEFAULT 0,
+      ativa      INTEGER NOT NULL DEFAULT 1,
+      produtos   TEXT NOT NULL DEFAULT '[]',
+      atualizado TEXT NOT NULL,
+      usuario_id INTEGER REFERENCES usuarios(id)
+    );
     -- Quem mudou o quê no site (categorias, de-para, produtos ocultos/destaques)
     CREATE TABLE IF NOT EXISTS site_historico (
       id         INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -655,4 +701,7 @@ function migrarColunas(db: Database.Database): void {
       detalhe    TEXT
     );
   `);
+  // Quantidade mínima para cotação: por categoria e por produto (NULL = a da categoria / o padrão do site)
+  if (!colunas(db, 'site_categorias').includes('minimo')) db.exec('ALTER TABLE site_categorias ADD COLUMN minimo INTEGER');
+  if (!colunas(db, 'site_produtos').includes('minimo')) db.exec('ALTER TABLE site_produtos ADD COLUMN minimo INTEGER');
 }

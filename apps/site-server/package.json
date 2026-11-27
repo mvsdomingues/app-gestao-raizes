@@ -1,0 +1,26 @@
+{
+  "name": "@raizes/site-server",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "description": "Site da Raízes (catálogo público): API pública, sincronização com a gestão e fotos",
+  "scripts": {
+    "dev": "tsx watch --clear-screen=false src/index.ts",
+    "build": "tsup",
+    "start": "node dist/index.js",
+    "sincronizar": "tsx src/cli/sincronizar.ts",
+    "typecheck": "tsc -p tsconfig.json"
+  },
+  "dependencies": {
+    "better-sqlite3": "^12.11.1",
+    "express": "^5.2.1",
+    "sharp": "^0.35.5"
+  },
+  "devDependencies": {
+    "@raizes/contrato-site": "^1.0.0",
+    "@types/better-sqlite3": "^7.6.13",
+    "@types/express": "^5.0.3",
+    "tsup": "^8.5.1",
+    "tsx": "^4.20.6"
+  }
+}

@@ -37,5 +37,23 @@ module.exports = {
       time: true,
       env: { NODE_ENV: 'production' },
     },
+    {
+      // Site (catálogo público): processo, porta, banco (data/catalogo.db) e configuração (.env.site) próprios.
+      // Se cair, a gestão continua de pé, e vice-versa. Fala com a gestão só por 127.0.0.1, com o token de serviço.
+      name: 'raizes-site',
+      cwd: __dirname,
+      script: 'apps/site-server/dist/index.js',
+      exec_mode: 'fork',
+      instances: 1,
+      autorestart: true,
+      max_memory_restart: '500M',
+      kill_timeout: 5000,
+      time: true,
+      env: {
+        NODE_ENV: 'production',
+        SITE_HOST: '127.0.0.1',
+        SITE_PORT: '5100',
+      },
+    },
   ],
 };

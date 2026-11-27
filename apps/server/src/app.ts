@@ -25,6 +25,7 @@ import { rotasComissoes } from './routes/comissoes';
 import { rotasPublicas } from './routes/publico';
 import { rotasIntegracao } from './routes/integracao';
 import { rotasSite } from './routes/site';
+import { AvisoSite } from './services/aviso-site';
 import type { ServicoKommo } from './kommo/servico';
 import type { ConfigBackup } from './services/backup';
 import type { GerenciadorAtualizacao } from './services/gerenciador-atualizacao';
@@ -45,6 +46,8 @@ export interface OpcoesApp {
   expiracao?: ServicoExpiracao | null;
   /** Token da API de integração com o site (INTEGRACAO_TOKEN); null/ausente = integração desligada */
   integracaoToken?: string | null;
+  /** Endereço interno do site, para avisá-lo de novidades (SITE_URL_INTERNA) */
+  siteUrlInterna?: string | null;
 }
 
 export function criarApp({
@@ -57,6 +60,7 @@ export function criarApp({
   backup = null,
   expiracao = null,
   integracaoToken = null,
+  siteUrlInterna = null,
 }: OpcoesApp) {
   const app = express();
   app.disable('x-powered-by');
@@ -92,7 +96,13 @@ export function criarApp({
   app.use(rotasProdutosProprios(db, imagensDir));
   app.use(rotasParametros(db));
   app.use(rotasComissoes(db));
-  app.use(rotasSite(db, { integracaoLigada: !!integracaoToken }));
+  app.use(
+    rotasSite(db, {
+      integracaoLigada: !!integracaoToken,
+      imagensDir,
+      aviso: new AvisoSite({ url: siteUrlInterna, token: integracaoToken }),
+    }),
+  );
   app.use(rotasAtualizacao(gerenciador));
   if (backup) app.use(rotasBackup(backup));
   app.use(rotasExpiracao(expiracao ?? new ServicoExpiracao(db)));

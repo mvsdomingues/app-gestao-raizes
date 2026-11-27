@@ -66,6 +66,8 @@ export const config = {
    * Vazio ou curto (menos de 32 caracteres) = integração desligada.
    */
   integracaoToken: tokenIntegracao(process.env.INTEGRACAO_TOKEN),
+  /** Endereço interno do site (ex.: http://127.0.0.1:5100), para avisar que há novidade; vazio = sem aviso */
+  siteUrlInterna: process.env.SITE_URL_INTERNA?.trim() || null,
   /** Logs dos comandos agendados (backup) */
   logsDir: resolve(RAIZ, 'logs'),
 };

@@ -17,6 +17,7 @@
     "react-konva": "^19.3.2"
   },
   "devDependencies": {
+    "@raizes/contrato-site": "^1.0.0",
     "@raizes/shared": "^2.0.0",
     "@types/react": "^19.2.2",
     "@types/react-dom": "^19.2.2",

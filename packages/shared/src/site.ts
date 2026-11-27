@@ -1,6 +1,16 @@
 // ══════════════════════════════════════════════════════════
 // SITE (catálogo público) — regras da gestão para montar o que o site recebe
 // ══════════════════════════════════════════════════════════
+import type {
+  BannerSite,
+  BeneficioSite,
+  ChavePaginaSite,
+  ClienteLogoSite,
+  ColecaoSite,
+  DadosGeraisSite,
+  DepoimentoSite,
+  PaginaSite,
+} from '@raizes/contrato-site';
 import { chaveCor } from './catalogo';
 import { FORNECEDOR_PROPRIO } from './fornecedores';
 
@@ -210,6 +220,8 @@ export interface CategoriaSiteGestao {
   ativa: boolean;
   fixa: boolean;
   palavras_chave: string[];
+  /** Quantidade mínima da categoria (null = o padrão do site) */
+  minimo: number | null;
   /** Produtos visíveis nesta categoria */
   produtos: number;
 }
@@ -241,6 +253,10 @@ export interface ProdutoSiteGestao {
   /** Primeira foto (endereço interno, como no catálogo da gestão) */
   foto: string | null;
   disponivel: boolean;
+  /** Quantidade mínima que vale para o produto */
+  minimo: number;
+  /** Quantidade mínima escolhida para este produto (null = a da categoria ou o padrão) */
+  minimo_proprio: number | null;
   alterado: string;
 }
 
@@ -270,3 +286,28 @@ export const FILTROS_PRODUTOS_SITE = {
   saidos: 'Saíram do fornecedor',
 } as const;
 export type FiltroProdutosSite = keyof typeof FILTROS_PRODUTOS_SITE;
+
+// ── Conteúdo do site na gestão (abas Página inicial e Conteúdo) ─────────────
+
+export interface BannerGestao extends BannerSite {
+  ordem: number;
+  ativo: boolean;
+  atualizado: string;
+}
+
+export interface ColecaoGestao extends ColecaoSite {
+  id: number;
+  ordem: number;
+  ativa: boolean;
+  atualizado: string;
+  /** Nome de cada produto escolhido (só na gestão) e se ele está no site */
+  itens: { codigo: string; nome: string; visivel: boolean }[];
+}
+
+export interface ConteudoSiteGestao {
+  geral: DadosGeraisSite;
+  paginas: Record<ChavePaginaSite, PaginaSite>;
+  beneficios: BeneficioSite[];
+  depoimentos: DepoimentoSite[];
+  clientes: ClienteLogoSite[];
+}
