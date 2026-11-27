@@ -502,5 +502,8 @@ describe('lista de cotação: do site ao orçamento', () => {
     for (let i = 0; i < 3; i++) await criarSolicitacao(dbSite, corpo, { ip: `10.1.0.${i}`, captcha: null });
     // Quarto envio com o mesmo telefone na mesma hora: recusado
     await expect(criarSolicitacao(dbSite, corpo, { ip: '10.1.0.9', captcha: null })).rejects.toThrow(/várias solicitações/);
+    // Com o limite desligado (0, para testes), passa
+    const semLimite = { envios_ip_hora: 0, envios_telefone_hora: 0, arquivos_ip_hora: 0 };
+    expect(await criarSolicitacao(dbSite, corpo, { ip: '10.1.0.9', captcha: null, limites: semLimite })).toMatch(/^SOL-/);
   });
 });

@@ -34,6 +34,12 @@ const caminho = (v: string | undefined, padrao: string) => {
 
 export const TOKEN_MIN = 32;
 
+/** Inteiro ≥ 0 da variável (0 = sem limite); vazia ou inválida = o padrão. */
+const limite = (v: string | undefined, padrao: number) => {
+  const n = Number(v?.trim());
+  return v?.trim() && Number.isInteger(n) && n >= 0 ? n : padrao;
+};
+
 export const config = {
   porta: Number(process.env.SITE_PORT) || 5100,
   host: process.env.SITE_HOST?.trim() || '127.0.0.1',
@@ -54,6 +60,12 @@ export const config = {
   /** Anti-robô Cloudflare Turnstile: chave pública (vai para a página) e segredo (só aqui). Vazios = desligado. */
   captchaChave: process.env.TURNSTILE_CHAVE_SITE?.trim() || null,
   captchaSegredo: process.env.TURNSTILE_SEGREDO?.trim() || null,
+  /** Limites por hora da lista de cotação (0 = sem limite; útil em testes, nunca em produção) */
+  limites: {
+    envios_ip_hora: limite(process.env.SITE_LIMITE_ENVIOS_IP_HORA, 5),
+    envios_telefone_hora: limite(process.env.SITE_LIMITE_ENVIOS_TELEFONE_HORA, 3),
+    arquivos_ip_hora: limite(process.env.SITE_LIMITE_ARQUIVOS_IP_HORA, 30),
+  },
   /** Build da vitrine (apps/site-web) */
   webDist: resolve(RAIZ, 'apps/site-web/dist'),
 };

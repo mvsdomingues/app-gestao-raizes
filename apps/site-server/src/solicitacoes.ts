@@ -37,10 +37,13 @@ const soDigitos = (s: string) => s.replace(/\D/g, '');
 /** Arquivos sem solicitação são apagados depois deste tempo. */
 const VIDA_ARQUIVO_MS = 48 * 60 * 60 * 1000;
 const UMA_HORA = 60 * 60 * 1000;
-/** Envios por hora: por IP e por telefone */
-const MAX_POR_IP_HORA = 5;
-const MAX_POR_TELEFONE_HORA = 3;
-const MAX_ARQUIVOS_POR_IP_HORA = 30;
+/** Limites por hora (0 = sem limite). Configuráveis no .env.site (SITE_LIMITE_*). */
+export interface LimitesEnvio {
+  envios_ip_hora: number;
+  envios_telefone_hora: number;
+  arquivos_ip_hora: number;
+}
+export const LIMITES_PADRAO: LimitesEnvio = { envios_ip_hora: 5, envios_telefone_hora: 3, arquivos_ip_hora: 30 };
 
 // ── Arquivos ─────────────────────────────────────────────────────────────────
 
@@ -58,14 +61,17 @@ export function guardarArquivo(
   tipo: string,
   nomeOriginal: string,
   ip: string,
+  limites: LimitesEnvio = LIMITES_PADRAO,
 ): RespostaArquivoSite {
   if (!TIPOS_ARQUIVO_SOLICITACAO[tipo]) throw new ErroPedido(415, 'Envie o logo em PNG, JPG, WEBP ou PDF');
   if (!conteudo.length) throw new ErroPedido(400, 'Arquivo vazio');
   if (conteudo.length > LIMITES_SOLICITACAO.bytes_arquivo) throw new ErroPedido(413, 'O arquivo deve ter no máximo 10 MB');
   if (!tipoArquivoConfere(tipo, conteudo)) throw new ErroPedido(415, 'O arquivo não é do tipo informado');
-  const desde = new Date(Date.now() - UMA_HORA).toISOString();
-  const recentes = (db.prepare('SELECT COUNT(*) AS n FROM arquivos WHERE ip = ? AND criado > ?').get(ip, desde) as { n: number }).n;
-  if (recentes >= MAX_ARQUIVOS_POR_IP_HORA) throw new ErroPedido(429, 'Muitos arquivos enviados. Tente de novo mais tarde.');
+  if (limites.arquivos_ip_hora > 0) {
+    const desde = new Date(Date.now() - UMA_HORA).toISOString();
+    const recentes = (db.prepare('SELECT COUNT(*) AS n FROM arquivos WHERE ip = ? AND criado > ?').get(ip, desde) as { n: number }).n;
+    if (recentes >= limites.arquivos_ip_hora) throw new ErroPedido(429, 'Muitos arquivos enviados. Tente de novo mais tarde.');
+  }
   let nome = nomeOriginal;
   try {
     nome = decodeURIComponent(nomeOriginal);
@@ -147,6 +153,7 @@ function novoCodigo(db: BancoSite): string {
 export interface OpcoesNovaSolicitacao {
   ip: string;
   captcha: ConferirCaptcha | null;
+  limites?: LimitesEnvio;
 }
 
 /** Confere e grava a solicitação na fila; devolve o código para o cliente. */
@@ -161,7 +168,8 @@ export async function criarSolicitacao(db: BancoSite, corpo: unknown, o: OpcoesN
   const porTel = (
     db.prepare('SELECT COUNT(*) AS n FROM solicitacoes WHERE telefone_chave = ? AND criada > ?').get(telChave, desde) as { n: number }
   ).n;
-  if (porIp >= MAX_POR_IP_HORA || porTel >= MAX_POR_TELEFONE_HORA) {
+  const lim = o.limites ?? LIMITES_PADRAO;
+  if ((lim.envios_ip_hora > 0 && porIp >= lim.envios_ip_hora) || (lim.envios_telefone_hora > 0 && porTel >= lim.envios_telefone_hora)) {
     throw new ErroPedido(429, 'Recebemos várias solicitações seguidas. Aguarde um pouco ou fale com a gente pelo WhatsApp.');
   }
   if (o.captcha && !(await o.captcha(typeof c.captcha === 'string' ? c.captcha : '', o.ip))) {

@@ -16,7 +16,14 @@ import * as consultas from './consultas';
 import type { BancoSite } from './db';
 import { IMAGEM_NEUTRA, fotoReduzida, tamanhoFoto } from './imagens';
 import type { ClienteGestao, Sincronizador } from './sincronizacao';
-import { ErroPedido, criarSolicitacao, guardarArquivo, type ConferirCaptcha, type FilaSolicitacoes } from './solicitacoes';
+import {
+  ErroPedido,
+  criarSolicitacao,
+  guardarArquivo,
+  type ConferirCaptcha,
+  type FilaSolicitacoes,
+  type LimitesEnvio,
+} from './solicitacoes';
 
 export interface OpcoesAppSite {
   db: BancoSite;
@@ -32,6 +39,8 @@ export interface OpcoesAppSite {
   fila: FilaSolicitacoes;
   captchaChave?: string | null;
   captcha?: ConferirCaptcha | null;
+  /** Limites por hora de envios e arquivos (ausente = os padrões) */
+  limites?: LimitesEnvio;
 }
 
 class ErroSite extends Error {
@@ -150,12 +159,12 @@ export function criarAppSite(o: OpcoesAppSite) {
       const tipo = String(req.headers['content-type'] ?? '').split(';')[0]!.trim().toLowerCase();
       const corpo = Buffer.isBuffer(req.body) ? req.body : Buffer.alloc(0);
       const nome = String(req.headers['x-nome-arquivo'] ?? '');
-      res.status(201).json(guardarArquivo(db, o.arquivosDir, corpo, tipo, nome, req.ip ?? '?'));
+      res.status(201).json(guardarArquivo(db, o.arquivosDir, corpo, tipo, nome, req.ip ?? '?', o.limites));
     },
   );
   api.post('/solicitacoes', limitar(10), async (req, res) => {
     res.set('Cache-Control', 'no-store');
-    const codigo = await criarSolicitacao(db, req.body, { ip: req.ip ?? '?', captcha: o.captcha ?? null });
+    const codigo = await criarSolicitacao(db, req.body, { ip: req.ip ?? '?', captcha: o.captcha ?? null, limites: o.limites });
     // Entrega à gestão agora; se ela estiver fora do ar, a fila tenta de novo depois
     void o.fila.processar().catch(() => undefined);
     res.status(201).json({ codigo });

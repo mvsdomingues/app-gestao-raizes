@@ -26,7 +26,13 @@ const app = criarAppSite({
   fila,
   captchaChave: config.captchaSegredo ? config.captchaChave : null,
   captcha: captchaTurnstile(config.captchaSegredo),
+  limites: config.limites,
 });
+const { envios_ip_hora, envios_telefone_hora, arquivos_ip_hora } = config.limites;
+console.log(
+  `[site] Limites por hora: ${envios_ip_hora || 'sem limite'} envios por IP, ${envios_telefone_hora || 'sem limite'} por telefone, ` +
+    `${arquivos_ip_hora || 'sem limite'} arquivos por IP.`,
+);
 
 const servidor = app.listen(config.porta, config.host, () => {
   console.log(`[site] No ar em http://${config.host}:${config.porta} (gestão: ${config.gestaoUrl})`);
